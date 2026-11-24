@@ -65,11 +65,13 @@ A cap needs something to count against, and that unit is a `turn_id`. The API mi
 
 The AI service does not mint it, for the same reason the `role` in the body is a claim rather than a fact. A service that produced a fresh id per call would hand itself an untouched budget on every call, and the three per-turn caps above would bound nothing. The party being counted cannot also be the party that decides what counts as one turn.
 
+`split_bill` is the one tool that writes many rows (up to 20 receivables and the contacts it creates). It is not capped per row; it is confirmed instead, like a delete, and counts as one write once confirmed (D122).
+
 Bulk paths deliberately do not exist as tools. There is no `bulk_delete_transactions`, no `delete_wallet`, no `delete_category`, no membership tool, no settings tool. Those operations exist only in the UI, where a human clicked them. The tool catalog is small on purpose (D17).
 
 ## Layer 3: confirmation
 
-`delete_transaction` requires `confirmed: true` (CHAT-6, D20).
+`delete_transaction`, `delete_debt` and `split_bill` require `confirmed: true` (CHAT-6, D20, D122). For `delete_debt` the key holds the debt ID; for `split_bill`, which has no row yet, it holds a hash of the call's arguments, so a confirmation answers that exact split and no other. The challenge's description of a split is the API's own computation: each person and share, the remainder, the contacts it would create.
 
 1. The first call returns `CONFIRMATION_REQUIRED` together with a description of the target row: date, name, amount, wallet.
 2. The assistant shows that to the user and asks.
@@ -139,7 +141,7 @@ Model output is untrusted too, in a different way.
 | Document RAG over the vault | Out of scope, and it would feed more attacker-controlled text into the tool-capable loop |
 | A tool that fetches a URL | Removes server-side request forgery as a class ([hardening](hardening.md#outbound-calls)) |
 | Autonomous or scheduled agent runs | Every turn is initiated by a user who sees the result |
-| Bulk write tools | See [blast radius](#layer-2-blast-radius) |
+| Bulk write tools | See [blast radius](#layer-2-blast-radius). `split_bill` is the one exception, behind a confirmation (D122) |
 | Membership, settings or workspace tools | Privilege-adjacent operations stay in the UI. This row is about the assistant: the MCP server (D106) exposes members and settings to an external app acting as the person, with the web's own role rules, and never to the in-app model |
 
 Each row is a control. Adding any of them needs a decision record and a review of this document.
@@ -150,7 +152,7 @@ An MCP client is someone else's model acting as the person, so none of oewang's 
 
 - Every tool runs the web's own handler with the person's live role in the chosen workspace. Nothing a session cannot do, a token can.
 - Caps per token per rolling minute, minted by the API: 120 calls, 30 writes, 5 deletes. The client cannot reset them, because they are keyed by the token the API looked up.
-- Every delete is two calls, the second with `confirmed: true` for the exact same call within five minutes. Unlike the chat, the API cannot prove a human answered in between: the client is trusted to ask, and `destructiveHint` tells it to. Soft delete keeps the cost of a wrong delete recoverable.
+- Every delete, `merge_contacts` and `split_bill` (D122) is two calls, the second with `confirmed: true` for the exact same call within five minutes. Unlike the chat, the API cannot prove a human answered in between: the client is trusted to ask, and `destructiveHint` tells it to. Soft delete keeps the cost of a wrong delete recoverable.
 - Not exposed: workspace deletion, currency conversion, account and token management, bulk update and delete. A token can never mint or widen another token.
 - Every write is audited with source `mcp`.
 

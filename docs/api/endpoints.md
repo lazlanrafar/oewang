@@ -169,6 +169,79 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 
 `GET /v1/budgets` answers `{ month, from, to, currency_code, budgeted, spent, remaining, percent, state, count, over_count, summary, budgets: [{ id, category_id, category_name, amount, spent, remaining, percent, state }] }`, each money field with its `_formatted` twin. The totals cover every budget whatever the search. `state` is `safe`, `warning` (80% or more) or `over` (past 100%). The same object is the `budget` canvas payload.
 
+## Contacts
+
+D120, CON-1 to CON-4. Rules in [features/debts.md](../features/debts.md).
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/v1/contacts` | any | Paginated list. Query: `search` (name, email, phone, contains), `sort=name\|created_at` (default `name`), `order=asc\|desc`, `page`, `per_page` |
+| POST | `/v1/contacts` | admin+ | Create. Body: `{ "id"?, "name", "email"?, "phone"?, "note"? }`. Optional client `id` (D114) |
+| GET | `/v1/contacts/{id}` | any | One contact with its live debt counts (`debt_count`, `open_debt_count`) |
+| PATCH | `/v1/contacts/{id}` | admin+ | Update name, email, phone, note. Optional `If-Match` (D115) |
+| DELETE | `/v1/contacts/{id}` | admin+ | Soft delete. `409 CONTACT_HAS_DEBTS` while any live debt names it, paid or not (CON-3) |
+| POST | `/v1/contacts/{id}/merge` | admin+ | Body: `{ "into_id" }`. Moves this contact's live debts to `into_id` and soft-deletes this one, in one transaction, with an audit row for each. `into_id` equal to `{id}` is `CONTACT_MERGE_SELF` (CON-4) |
+
+## Debts
+
+D120 and D121, DEBT-1 to DEBT-10. Rules in [features/debts.md](../features/debts.md). Money is a string (D12); every figure the API computes has a `_formatted` twin (D27).
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/v1/debts` | any | Paginated list with the contact's name. Query: `search` (contact name, description), `status=unpaid\|partial\|paid` (several allowed), `type=payable\|receivable`, `contact_id`, `today=YYYY-MM-DD` (marks `overdue`; default the UTC date), `sort=due_date\|amount\|remaining\|created_at\|contact` (default `due_date`), `order`, `page`, `per_page` |
+| GET | `/v1/debts/summary` | any | The page's cards. Query: `today=YYYY-MM-DD`. See below |
+| POST | `/v1/debts` | admin+ | Create. Optional client `id` (D114). See below |
+| GET | `/v1/debts/{id}` | any | One debt with its live payments (each with its transaction id and wallet) and its source transaction, if any |
+| PATCH | `/v1/debts/{id}` | admin+ | Update `contact_id`, `amount`, `description`, `due_date`; `type` and `currency_code` only while no live payment exists (`DEBT_HAS_PAYMENTS`). An amount below what is paid is `AMOUNT_BELOW_PAID`. Optional `If-Match` (D115) |
+| DELETE | `/v1/debts/{id}` | admin+ | Soft delete. `409 DEBT_HAS_PAYMENTS` while a live payment exists (DEBT-3) |
+| POST | `/v1/debts/{id}/payments` | admin+ | Pay. See below |
+| DELETE | `/v1/debts/{id}/payments/{payment_id}` | admin+ | Cancel a payment: soft-deletes it and its transaction, reverses the balance, restores the remaining amount and status (DEBT-7) |
+| POST | `/v1/debts/bulk-pay` | admin+ | Pay several debts at once, all or nothing, one payment and one transaction per debt (DEBT-6). See below |
+| POST | `/v1/debts/split` | admin+ | Split an expense equally and record a receivable per contact (DEBT-10). See below |
+
+### `POST /v1/debts` body
+
+```json
+{
+  "id": "clx…",
+  "type": "receivable",
+  "contact_id": "clx…",
+  "amount": "250000.0000",
+  "currency_code": "IDR",
+  "due_date": "2026-12-15",
+  "description": "Concert tickets",
+  "source_transaction_id": null
+}
+```
+
+`id`, `currency_code`, `due_date`, `description` and `source_transaction_id` are optional. `currency_code` defaults to the workspace currency, or to the source wallet's when `source_transaction_id` is set; then `origin` is `from_transaction` (DEBT-9). `remaining_amount` and `status` are never accepted.
+
+### `GET /v1/debts/summary` response
+
+`{ currency_code, owed_to_you, you_owe, net, overdue_count }`. `owed_to_you` sums the remaining amount of live receivables, `you_owe` of live payables, each converted to the workspace currency as `GET /v1/wallets/totals` does (D117); `net` is the first minus the second. `overdue_count` counts unpaid and partial debts whose `due_date` is before `today`. The cards cover every debt, whatever the list's filters.
+
+### `POST /v1/debts/{id}/payments` body
+
+```json
+{
+  "id": "clx…",
+  "amount": "100.0000",
+  "wallet_id": "clx…",
+  "date": "2026-11-24T10:00:00+08:00",
+  "exchange_rate": "16250.00000000"
+}
+```
+
+`amount` is in the debt's currency, above zero and at most the remaining amount (`PAYMENT_EXCEEDS_REMAINING`). `id`, `wallet_id` and `exchange_rate` are optional. With `wallet_id` the API writes one transaction (`expense` for a payable, `income` for a receivable); when the wallet's currency differs from the debt's, the payment is its `original_amount`, and `exchange_rate`, when absent, resolves as any transaction's does ([rate resolution](../data-model.md#rate-resolution-at-write-time)). Answers `201 { payment, debt, transaction }`, `transaction` null without a wallet.
+
+### `POST /v1/debts/bulk-pay` body
+
+`{ "wallet_id"?, "date", "payments": [{ "id"?, "debt_id", "amount" }] }`, 1 to 50 payments. Each follows the single payment's rules. With a wallet, every debt must be in its currency, otherwise `BULK_PAY_CURRENCY_MISMATCH`. Any refusal refuses the whole call.
+
+### `POST /v1/debts/split` body
+
+Either `{ "transaction_id" }`, a live `expense` (otherwise `SPLIT_SOURCE_NOT_EXPENSE`), or `{ "wallet_id", "amount", "name", "category_id"?, "date" }` for a new expense written in the same transaction. Plus `contact_names` and/or `contact_ids`, 1 to 20 people after dropping duplicates. Names match live contacts case-insensitively after trimming; an unknown name creates a contact. Each receivable is `floor(amount / (N + 1))` to the currency's minor unit; the remainder stays with the person. Answers `201 { transaction, debts }`.
+
 ## Transactions
 
 | Method | Path | Role | Description |
@@ -187,9 +260,10 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 | POST | `/v1/transactions/import/map-columns` | admin+ | Column names plus two sample rows in, a proposed mapping out (AI-9). Proxies the AI service, because the browser never calls it directly (PLT-4) |
 | GET | `/v1/transactions/import/{job_id}` | any | Poll an import job: status plus imported, skipped and duplicate counts, and whether it has gone stale (AI-6) |
 | GET | `/v1/transactions/{id}` | any | One transaction with items and attachments |
+| GET | `/v1/transactions/{id}/debts` | any | Debts sourced from this transaction and the debt payment it settles, if any (DEBT-12) |
 | GET | `/v1/transactions/{id}/history` | any | Audit history for this transaction: actor, surface, before and after, newest first (OPS-8) |
-| PATCH | `/v1/transactions/{id}` | admin+ | Update. Re-applies the balance delta (TXN-4). Optional `If-Match`, otherwise `STALE` (D115) |
-| DELETE | `/v1/transactions/{id}` | admin+ | Soft delete. Reverses the balance (TXN-5) |
+| PATCH | `/v1/transactions/{id}` | admin+ | Update. Re-applies the balance delta (TXN-4). Optional `If-Match`, otherwise `STALE` (D115). On a debt payment's transaction, a change to amount, wallet, type, destination, original amount or rate is `PAYMENT_TRANSACTION_LOCKED` (DEBT-8) |
+| DELETE | `/v1/transactions/{id}` | admin+ | Soft delete. Reverses the balance (TXN-5). Deleting a debt payment's transaction cancels the payment; deleting a debt's source clears the link (D121). The same holds for `bulk-delete` |
 
 ### `GET /v1/transactions` query parameters
 
@@ -232,9 +306,9 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 
 ### Client ids and If-Match
 
-The offline queue's two tools (MOB-6, MOB-7), on transactions, wallets and categories alike.
+The offline queue's two tools (MOB-6, MOB-7, MOB-10), on transactions, wallets, categories, contacts, debts and debt payments alike.
 
-**Client `id` on create (D114).** `POST /v1/transactions`, `/v1/wallets` and `/v1/categories` take an optional top-level `id`: a CUID2 of 24 to 32 lowercase letters and digits, starting with a letter, otherwise `VALIDATION_FAILED` on `id`. Without it the API makes the id, as before.
+**Client `id` on create (D114).** `POST /v1/transactions`, `/v1/wallets`, `/v1/categories`, `/v1/contacts`, `/v1/debts` and `/v1/debts/{id}/payments` take an optional top-level `id` (on bulk pay, one per payment): a CUID2 of 24 to 32 lowercase letters and digits, starting with a letter, otherwise `VALIDATION_FAILED` on `id`. Without it the API makes the id, as before.
 
 | The id… | Answer |
 |---|---|

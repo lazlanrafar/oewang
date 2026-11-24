@@ -170,6 +170,22 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `WORKSPACE_CURRENCY_LOCKED` | 409 | Changing the workspace currency once any transaction exists (WAL-6) |
 | `ID_TAKEN` | 409 | A create's client `id` already names a row the caller cannot have (D114) |
 | `STALE` | 409 | `If-Match` no longer matches the row, or the row is deleted; `details.current` holds the row or null (D115) |
+| `PAYMENT_TRANSACTION_LOCKED` | 409 | A change to the amount, wallet, type, destination wallet, original amount or currency, or rate of a debt payment's transaction. Change the payment instead; line items stay editable (DEBT-8, D121) |
+
+### Debts and contacts
+
+| Code | Status | Meaning |
+|---|---|---|
+| `CONTACT_NOT_FOUND` | 404 | Unknown contact in this workspace |
+| `CONTACT_HAS_DEBTS` | 409 | Delete blocked, a live debt names the contact, paid or not (CON-3) |
+| `CONTACT_MERGE_SELF` | 422 | A merge whose `into_id` is the contact itself (CON-4) |
+| `DEBT_NOT_FOUND` | 404 | Unknown debt in this workspace |
+| `PAYMENT_NOT_FOUND` | 404 | Unknown payment, or one of another debt |
+| `DEBT_HAS_PAYMENTS` | 409 | Delete, or a change of `type` or `currency_code`, blocked while a live payment exists (DEBT-2, DEBT-3) |
+| `AMOUNT_BELOW_PAID` | 422 | A debt amount below what is already paid (DEBT-2) |
+| `PAYMENT_EXCEEDS_REMAINING` | 422 | A payment above the debt's remaining amount, or any payment on a paid debt (DEBT-4) |
+| `BULK_PAY_CURRENCY_MISMATCH` | 422 | Bulk pay through a wallet with a debt in another currency (DEBT-6) |
+| `SPLIT_SOURCE_NOT_EXPENSE` | 422 | A split whose source transaction is not a live expense (DEBT-10) |
 | `WORKSPACE_CURRENCY_CHANGED` | 409 | A transaction write whose rate was resolved before a currency conversion committed. Retry (D105) |
 | `MCP_TOKEN_INVALID` | 401 | An MCP token that is unknown, revoked or expired (D106) |
 | `FX_RATE_UNAVAILABLE` | 503 | No rate could be resolved: the source did not answer and no cached rate has ever existed for this pair. The user may still enter one by hand (TXN-22) |
@@ -254,7 +270,7 @@ A client that parses money into a floating point number is a bug, in any languag
 | `X-Owe-Timestamp` | in | Unix seconds, within 120 seconds of server time |
 | `X-Owe-Query` | in | The encrypted query string. Required even when empty |
 | `Idempotency-Key` | in | Superseded by D114 and never built. A create that must be safe to repeat takes a client `id` instead |
-| `If-Match` | in | Optional on `PATCH` of transactions, wallets and categories: the `updated_at` the client last saw (D115) |
+| `If-Match` | in | Optional on `PATCH` of transactions, wallets, categories, contacts and debts: the `updated_at` the client last saw (D115) |
 | `Retry-After` | out | Set on 429 |
 
 ## Rate limits
@@ -277,8 +293,8 @@ Exceeding a limit returns `RATE_LIMITED` with `Retry-After`.
 ## Idempotency
 
 - `GET` and `DELETE` are idempotent by nature. Deleting an already-deleted row returns 204.
-- ~~`POST` creates accept `Idempotency-Key`.~~ Superseded by D114 before it was built. `POST /v1/transactions`, `/v1/wallets` and `/v1/categories` accept an optional client `id` (a CUID2). A repeat with an id that already names a row in the caller's workspace answers that row with 200 and changes nothing: no second balance change, no second audit row. An id that names a row in another workspace, or a different kind of row, answers `409 ID_TAKEN`.
-- `PATCH` is last-write-wins unless the request carries `If-Match` (D115). With it, on transactions, wallets and categories, a row whose `updated_at` differs, or that is soft-deleted, answers `409 STALE` with the current row (null when deleted) in `error.details.current`. Wallet balances are still protected by row locks, not by the client (D13).
+- ~~`POST` creates accept `Idempotency-Key`.~~ Superseded by D114 before it was built. `POST /v1/transactions`, `/v1/wallets`, `/v1/categories`, `/v1/contacts`, `/v1/debts` and `/v1/debts/{id}/payments` accept an optional client `id` (a CUID2). A repeat with an id that already names a row in the caller's workspace answers that row with 200 and changes nothing: no second balance change, no second audit row. An id that names a row in another workspace, or a different kind of row, answers `409 ID_TAKEN`.
+- `PATCH` is last-write-wins unless the request carries `If-Match` (D115). With it, on transactions, wallets, categories, contacts and debts, a row whose `updated_at` differs, or that is soft-deleted, answers `409 STALE` with the current row (null when deleted) in `error.details.current`. Wallet balances are still protected by row locks, not by the client (D13).
 
 ## Related docs
 

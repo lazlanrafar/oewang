@@ -54,6 +54,8 @@ One registry in Rust (`mcp/tools/*.rs`). Every tool deserializes its arguments i
 | Wallets and groups | `list_wallets`, `get_wallet`, `create_wallet`, `update_wallet`, `set_default_wallet`, `adjust_wallet_balance`, `delete_wallet`, `list_wallet_groups`, `create_wallet_group`, `update_wallet_group`, `delete_wallet_group` |
 | Categories | `list_categories`, `create_category`, `update_category`, `delete_category` |
 | Budgets | `get_budget_status`, `create_budget`, `update_budget`, `delete_budget` |
+| Debts | `get_outstanding_debts`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` (DEBT-15, D120) |
+| Contacts | `list_contacts`, `create_contact`, `update_contact`, `delete_contact`, `merge_contacts` |
 | Reports | `get_overview`, `get_spending_analysis`, `get_income_summary`, `get_burn_rate` |
 | Database | `list_items`, `get_item_history`, `list_exchange_rates`, `list_currencies` |
 | Vault | `list_files`, `get_file` (metadata only), `update_file`, `delete_file` |
@@ -70,7 +72,7 @@ Deliberately not exposed: deleting a workspace, converting its currency, anythin
 
 Per token, per rolling minute, minted by the API (the client cannot reset it): 120 calls, 30 writes, 5 deletes. The amount ceiling of every write path still applies.
 
-Every delete is two calls. The first deletes nothing and answers `CONFIRMATION_REQUIRED`; the same call with `confirmed: true` within five minutes deletes. The challenge is keyed by token and the exact call. Tools carry `readOnlyHint` and `destructiveHint`, so clients ask the person before writing. The API cannot prove a human answered between the two calls; soft delete keeps every delete reversible, and the audit source `mcp` keeps it traceable.
+Every delete is two calls, and so are `merge_contacts` and `split_bill` (D122). The first deletes nothing and answers `CONFIRMATION_REQUIRED`; the same call with `confirmed: true` within five minutes deletes. The challenge is keyed by token and the exact call. Tools carry `readOnlyHint` and `destructiveHint`, so clients ask the person before writing. The API cannot prove a human answered between the two calls; soft delete keeps every delete reversible, and the audit source `mcp` keeps it traceable.
 
 ## Screens
 

@@ -61,6 +61,11 @@ All of it inside one database transaction, with the affected wallet rows locked 
 | A foreign entry's currency differs from the source wallet's | `VALIDATION_FAILED` |
 | Both wallets live and in this workspace | `WALLET_NOT_FOUND` |
 | Category, if given, live and in this workspace | `CATEGORY_NOT_FOUND` |
+| A debt payment's transaction keeps its `amount`, `wallet_id`, `type`, `to_wallet_id`, `original_*` and `exchange_rate` (DEBT-8, D121) | `PAYMENT_TRANSACTION_LOCKED` |
+
+### Debt payments
+
+A payment on a debt through a wallet is an ordinary `expense` or `income` row and moves the balance by the rules above ([debts](debts.md)). Deleting it by any route (single, bulk, chat, MCP) also cancels the payment, in the same database transaction, and restores the debt's remaining amount (DEBT-8). Deleting a transaction that a debt was made from clears the debt's link and leaves the debt alone (DEBT-9).
 
 ### Audit
 
@@ -128,6 +133,8 @@ Clicking a tile opens the vault's file sheet stacked over this one, through `?fi
 File bytes arrive as chunks through the SvelteKit server's `/vault/files` routes, which read them from the API inside the envelope, and are shown from an object URL that is revoked when the sheet closes. No signed object-storage URL exists anywhere in the codebase (VLT-3, D23). The proxy routes moved from `transactions/files/` to `vault/files/` with D90, because both pages use them.
 
 Line items move no money: only the transaction's own `amount` does. When the items do not add up to it the sheet raises a badge and nothing more, because a receipt with a service charge on it legitimately does not add up (TXN-12).
+
+**Debts** is an accordion section shown when the row is a debt payment or the source of a debt: each debt with its contact, type, remaining amount and status, opening the debt's detail sheet. A writer also sees Create debt, which opens the debt form with this transaction as its source (DEBT-12).
 
 Every confirmation on this screen is the design system's alert dialog rather than the browser's `confirm`. The native one blocks the renderer until it is dismissed, which freezes the page, and it cannot be translated (UI-1, UI-4).
 

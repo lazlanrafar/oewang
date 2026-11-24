@@ -81,8 +81,10 @@ Public keys are not secrets. The FCM config files (`google-services.json`, `Goog
 | new: receipt scan | `POST /v1/ai/receipt/parse`, `POST /v1/receipts/pending` |
 | new: vault (also the form's attachment tiles, now thumbnails) | `/v1/vault/files*` |
 | new: Telegram | `/v1/integrations/telegram*` |
+| `debts/*` (and its bottom tab, back to five) | `/v1/debts*` (DEBT-16, D120) |
+| contacts (new screens from the web's `/contacts`; the old app picked contacts inside the debt form) | `/v1/contacts*` |
 
-Dropped from the old app with their API: debts (and its bottom tab, so the bar has four), contacts, sub-currencies, the separate transaction settings screen, Google and Apple sign-in (OAuth is a non-goal, so the email form shows without the old "Show other options" step), three locales (D15).
+Dropped from the old app with their API: sub-currencies, the separate transaction settings screen, Google and Apple sign-in (OAuth is a non-goal, so the email form shows without the old "Show other options" step), three locales (D15).
 
 What the transaction screens read, and where they differ from the old app:
 
@@ -121,7 +123,7 @@ Adapted from the web app's screens with the old app's components and tokens.
 
 ## Offline (D114, D115)
 
-- Offline writes cover transactions, wallets and categories. Everything else needs a connection and says so.
+- Offline writes cover transactions, wallets, categories, debts, debt payments (pay and cancel) and contacts, including merge (MOB-10, D120). Everything else needs a connection and says so.
 - Each create gets a CUID2 on the device, used as the row's `id` locally and sent to the API (D114). A transaction made offline can name a wallet or category made offline.
 - The queue is a drift table, replayed strictly in order, one request at a time. A create is safe to replay; a `200` for an existing id is success.
 - A queued edit carries `If-Match` with the `updated_at` it was based on. `409 STALE` stops that entry and shows the conflict: discard (drop the entry, take `details.current`) or apply anyway (resend without `If-Match`). Later entries for other rows keep going.
@@ -137,6 +139,7 @@ As built (`lib/data/services/{db,sync}`, `lib/data/repositories_offline/`):
 - Reads: wallets, wallet groups and categories refresh whole from the API when online and answer from the cache, so the account form can still pick a group offline. A whole month of transactions (what the month tabs read) refreshes every page on its first page and answers from the cache; other ranges read the API online and the cached months offline. The month summary falls back to the cached rows' `base_amount` and the last workspace currency seen; the Accounts tab's figures are the last `/v1/wallets/totals` answer kept in the cache, marked "Estimate, syncing" while a transaction or wallet write is queued (the queued deltas are flagged, not added), and it reloads after every transaction save, queued or sent. Offline with no answer ever kept, the tab says it has no connection. A row queued offline holds its own amount as `base_amount` until it syncs, and a queued transfer between two currencies estimates the receiving side with the sent amount.
 - Replay runs on start, when connectivity returns, when the app comes back to the foreground, after a workspace change, and on a backoff timer (2 s doubling to 5 min) after a failed attempt. There is no background task.
 - A member never queues: the write goes to the API, which refuses it, or the network error is shown.
+- Debts: a queued payment through a wallet adds its wallet delta to the balance estimate and lowers the cached debt's remaining amount; the cached status follows the API's rule (DEBT-2). A replay the API refuses (`PAYMENT_EXCEEDS_REMAINING` because the debt was paid on the web meanwhile, `DEBT_HAS_PAYMENTS`, `CONTACT_HAS_DEBTS`) is a failed entry like any other `4xx`. A queued split bill does not exist: split bill has no screen (DEBT-10).
 - Not offline: wallet and category reorder, wallet group writes, a wallet's opening balance (`/adjust`), attachments.
 
 ## Push (D116)

@@ -13,7 +13,7 @@ in browser" box ticked; or a written reason it is not done.
 
 - 158 with test evidence
 - 29 verified in browser only
-- 11 not done
+- 32 not done
 
 | ID | Evidence |
 |---|---|
@@ -70,6 +70,26 @@ in browser" box ticked; or a written reason it is not done.
 | CHAT-17 | `apps/api/crates/server/src/reports/tests.rs`, `apps/app/src/lib/canvas.test.ts` |
 | CHAT-18 | `apps/api/crates/server/src/ai/tests.rs`, `apps/app/src/lib/chat-tools.test.ts` |
 | CHAT-19 | not done: a layout requirement; US-046 has no browser box |
+| CON-1 | not done: specified 2026-11-24 (D120), built in US-070 |
+| CON-2 | not done: specified 2026-11-24 (D120), built in US-071 |
+| CON-3 | not done: specified 2026-11-24 (D120), built in US-070 |
+| CON-4 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-1 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-2 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-3 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-4 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-5 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-6 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-7 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-8 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-9 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-10 | not done: specified 2026-11-24 (D120), built in US-070 |
+| DEBT-11 | not done: specified 2026-11-24 (D120), built in US-071 |
+| DEBT-12 | not done: specified 2026-11-24 (D120), built in US-071 |
+| DEBT-13 | not done: specified 2026-11-24 (D120), built in US-071 |
+| DEBT-14 | not done: specified 2026-11-24 (D120), built in US-072 |
+| DEBT-15 | not done: specified 2026-11-24 (D120), built in US-072 |
+| DEBT-16 | not done: specified 2026-11-24 (D120), built in US-073 |
 | FB-1 | `apps/api/crates/server/src/main.rs` |
 | FX-1 | `apps/api/crates/server/src/transactions/tests.rs` |
 | FX-2 | `apps/api/crates/server/src/transactions/tests.rs` |
@@ -93,6 +113,7 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/offline.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/native/integration_test/m3_offline_flow_test.dart`, `apps/native/test/unit/offline_sync_test.dart` |
 | MOB-8 | `apps/native/integration_test/m4_ai_flow_test.dart`, `apps/native/test/unit/chat_view_model_test.dart`, `apps/native/test/unit/owe1_stream_test.dart`, `apps/native/test/unit/owe1_vectors_test.dart`, `apps/native/test/unit/receipt_scan_test.dart`, `apps/native/test/unit/vault_repository_remote_test.dart`, `apps/native/test/widget/chat_vault_screens_test.dart` |
 | MOB-9 | `apps/app/src/routes/.well-known/apple-app-site-association/server.test.ts`, `apps/app/src/routes/.well-known/assetlinks.json/server.test.ts`, `apps/native/integration_test/m5_integrations_flow_test.dart`, `apps/native/test/unit/invite_link_test.dart`, `apps/native/test/unit/telegram_view_model_test.dart` |
+| MOB-10 | not done: specified 2026-11-24 (D120), built in US-073 |
 | OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs` |
 | OPS-3 | `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_extraction_pdf.py`, `apps/ai/tests/test_extraction_routes.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |

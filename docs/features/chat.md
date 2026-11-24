@@ -90,12 +90,12 @@ Server-sent events, passed through two hops unchanged. The event protocol is spe
 
 ## Tools
 
-Eleven tools (D17), listed with their schemas in [AI service](../ai/service.md#tool-catalog). Four read, six write, one for asking the user to disambiguate.
+Twenty-one tools (D17, D88, D103, D120), listed with their schemas in [AI service](../ai/service.md#tool-catalog). Nine read, eleven write, one for asking the user to disambiguate.
 
 | Kind | Tools |
 |---|---|
-| Read | `get_workspace_context`, `get_recent_transactions`, `search_transactions`, `get_spending_summary` |
-| Write | `create_transaction`, `update_transaction`, `delete_transaction`, `add_transaction_items`, `create_wallet`, `create_category` |
+| Read | `get_workspace_context`, `get_recent_transactions`, `search_transactions`, `get_spending_summary`, `get_spending_analysis`, `get_income_summary`, `get_burn_rate`, `get_budget_status`, `get_outstanding_debts` |
+| Write | `create_transaction`, `update_transaction`, `delete_transaction`, `add_transaction_items`, `create_wallet`, `create_category`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` |
 | Interaction | `present_choices` |
 
 Every tool runs through `POST /v1/internal/tools/execute` in the API (CHAT-4). The API validates the arguments against the schema, checks the role, performs the work through the same services the web UI uses, and writes an audit row with `source: "chat"`.
@@ -108,7 +108,7 @@ The `role` in the tool-execute body is a claim. The API re-reads the membership 
 
 ### Blast radius
 
-Caps enforced in the API per turn, whatever the model asks for (D25): at most 3 write calls, 1 delete, 3 transactions created, and a configurable ceiling on a tool-created amount. There is no bulk write tool and no tool that touches members, settings or the workspace. Full reasoning in [AI safety](../security/ai-safety.md#layer-2-blast-radius).
+Caps enforced in the API per turn, whatever the model asks for (D25): at most 3 write calls, 1 delete, 3 transactions created, and a configurable ceiling on a tool-created amount. There is no bulk write tool except `split_bill`, which is confirmed first (D122), and no tool that touches members, settings or the workspace. Full reasoning in [AI safety](../security/ai-safety.md#layer-2-blast-radius).
 
 ### Untrusted text
 
@@ -116,7 +116,7 @@ A receipt or a bank statement is text somebody else wrote, and the assistant can
 
 ### Confirmation
 
-`delete_transaction` requires `confirmed: true` (CHAT-6, D20). The first call returns `CONFIRMATION_REQUIRED` with a description of what would be deleted. The assistant presents that to the user and only calls again, with `confirmed: true`, after the user agrees in a later turn.
+`delete_transaction`, `delete_debt` and `split_bill` require `confirmed: true` (CHAT-6, D20, D122). The first call returns `CONFIRMATION_REQUIRED` with a description of what would be written or deleted; for a split, every person and share as the API computed them. The assistant presents that to the user and only calls again, with `confirmed: true`, after the user agrees in a later turn.
 
 ### Loop safety
 

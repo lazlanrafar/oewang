@@ -925,3 +925,66 @@ Requirements: MOB-9, PUSH-1, PUSH-2, PUSH-3, PUSH-4, PUSH-5
 Requirements: MOB-1
 
 - [ ] Old signing material found or the upload key reset; version 2.0.0; manual GitHub Actions upload to TestFlight and Play internal
+
+## M14. Debts and contacts
+
+Epic OEW-105. Specified in [features/debts.md](features/debts.md), decisions D120 and D121.
+
+### US-069: Debts and contacts specification (OEW-106)
+Requirements: DEBT-1 to DEBT-16, CON-1 to CON-4, MOB-10
+
+- [x] `features/debts.md` written from the scoping interview of 2026-11-24
+- [x] PRD sections 6.20 and 6.21 and MOB-10; the non-goals for debts, contacts and bill splitting struck
+- [x] D120 and D121 in the decision log
+- [ ] `contacts`, `debts` and `debt_payments` in the data model; routes in endpoints; error codes in conventions
+- [ ] Chat, MCP, mobile, overview and transactions docs point at the new rules
+
+### US-070: Contacts, debts and payments in the API (OEW-107)
+Requirements: CON-1, CON-3, CON-4, DEBT-1 to DEBT-10
+
+- [ ] Migration 0020: `contacts`, `debts`, `debt_payments` with the amount, remaining and status `CHECK`s; every write audited in its transaction (Rust tests)
+- [ ] Status derived from the remaining amount; `AMOUNT_BELOW_PAID`; type and currency fixed and delete refused with `DEBT_HAS_PAYMENTS` (Rust tests)
+- [ ] A payment writes an expense for a payable and an income for a receivable, none without a wallet; `PAYMENT_EXCEEDS_REMAINING` (Rust tests)
+- [ ] Two concurrent payments cannot together exceed the remaining amount (Rust test with two connections)
+- [ ] A payment from a wallet in another currency stores `original_amount`, `original_currency_code` and the rate, and the remaining drops in the debt's currency (Rust test)
+- [ ] Bulk pay writes one transaction per debt and is all or nothing: one failing debt leaves every balance and remaining amount as it was; `BULK_PAY_CURRENCY_MISMATCH` (Rust tests)
+- [ ] Cancelling a payment soft-deletes its transaction, reverses the balance and restores remaining and status (Rust test)
+- [ ] Every transaction delete route cancels the payment: single delete, bulk delete, the chat tool and the MCP tool (one Rust test each)
+- [ ] `PAYMENT_TRANSACTION_LOCKED` on amount, wallet, type, destination, original and rate changes; items, name, description, category, date and attachments still edit (Rust tests)
+- [ ] Deleting a debt's source transaction clears the link and leaves the debt (Rust test)
+- [ ] Split bill: 100,000 IDR between the person and two contacts gives 33,333 each with the remainder left to the person; 10.00 USD in three gives 3.33; names matched case-insensitively, duplicates dropped, unknown names created, 0 or 21 contacts refused (Rust tests)
+- [ ] A create replayed with the same client `id` answers the first row and pays once (D114, Rust test); `If-Match` on debt and contact `PATCH` (D115)
+- [ ] `CONTACT_HAS_DEBTS`; merge moves live debts and soft-deletes the merged contact (Rust tests)
+- [ ] Summary figures in the workspace currency and the overdue count against `?today=` (Rust tests)
+- [ ] clippy and `cargo test` pass in the containers
+
+### US-071: Debts and contacts pages in the web app (OEW-108)
+Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13
+
+- [ ] `/debts` ported exactly from the old page: cards, filter bar with Status and Type facets, `molecules/data-table` with bulk selection, form, detail, payment and bulk pay sheets, both empty states
+- [ ] `/contacts` ported from the old page minus the invoice columns; merge dialog; detail sheet with the contact's debts
+- [ ] `molecules/select-contact`, creatable (D80)
+- [ ] Transaction detail: related debts and payments, Create debt; locked fields shown read-only on a payment transaction
+- [ ] Overview Debt balance card (net from `GET /v1/debts/summary`, open count in the footer) and its prompt chip, as in the old app
+- [ ] Filters, sort and page survive a reload (UI-8); every string in `en.json`
+- [ ] `bun run check` and `bun run test` pass in the containers
+- [ ] Verified locally: create, pay from a foreign-currency wallet, cancel, bulk pay, delete the payment transaction from Transactions and see the debt reopen, merge two contacts
+- [ ] Verify in production after deploy
+
+### US-072: Debt and contact tools in chat and MCP (OEW-109)
+Requirements: DEBT-14, DEBT-15
+
+- [ ] `get_outstanding_debts`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` in the Rust and Python catalogs; `delete_debt` and `split_bill` behind a confirming turn, the split's challenge keyed by its arguments (D122, Rust and pytest tests)
+- [ ] Unknown contact names created; the tool amount cap applies to a payment's wallet amount (Rust tests)
+- [ ] MCP: the six plus `list_contacts`, `create_contact`, `update_contact`, `delete_contact`, `merge_contacts`; deletes and merge need `confirmed` (Rust tests)
+- [ ] ruff, pytest, clippy and `cargo test` pass in the containers
+- [ ] Verified locally: "Budi owes me 50k", "Budi paid 20k into BCA", "split 300k dinner with Ani and Budi" each do what they say, and the figures match the database
+
+### US-073: Debts and contacts on mobile, offline (OEW-110)
+Requirements: DEBT-16, MOB-10
+
+- [ ] Debts and contacts screens ported from the old Flutter app
+- [ ] Debt, payment and contact writes queue offline with client ids and `If-Match`; a queued payment's wallet delta joins the balance estimate
+- [ ] A replay refused by the API (for example `PAYMENT_EXCEEDS_REMAINING`) is marked failed and shown in the sync banner; a `STALE` edit offers discard or apply anyway
+- [ ] `fvm flutter analyze` and `fvm flutter test` pass
+- [ ] Verified on a device: pay offline, reconnect, the payment lands once and the balance matches the API
