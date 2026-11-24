@@ -412,7 +412,7 @@ Added by D113, from the old Flutter app. Specified in [features/mobile.md](featu
 | MOB-6 | Creating, editing and deleting transactions, wallets and categories work offline. Writes queue on the device and replay in order when the connection returns. A balance shown offline is a local estimate, replaced by the API's figure after the queue drains. |
 | MOB-7 | A queued edit whose row changed or was deleted elsewhere is refused by the API (`409 STALE`, D115). The app shows the conflict and the person chooses to discard their change or apply it over the current row. Nothing is overwritten silently. |
 | MOB-8 | Chat with streaming answers, receipt scanning from the camera or gallery, and the vault, on the web's routes. |
-| MOB-9 | Passkey sign-in, Telegram linking through its deep link, and invitation links (`/accept-invite?token=`) that open the app: a signed-out person registers with the invited address filled in, then the invitation is accepted. |
+| MOB-9 | Passkey sign-in, Telegram linking through its deep link, and invitation links (`/accept-invite?token=`) that open the app: a signed-out person registers or signs in, then the invitation is accepted. The address is not filled in: the API does not tell whoever holds a link which address it was sent to. |
 
 ### 6.19 Push notifications (PUSH)
 
