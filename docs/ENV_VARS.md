@@ -4,7 +4,7 @@
 modules. Do not edit by hand: change the configuration and run it
 again.** CI runs `--check` and fails when this file is stale.
 
-Last generated 2026-11-23.
+Last generated 2026-11-24.
 
 A value shown as `secret` is never printed, logged or committed
 (OPS-3). `required` means the process refuses to start without it.
@@ -24,6 +24,7 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 | `AI_SERVICE_API_KEY` | secret |
 | `AI_SERVICE_URL` | unset |
 | `AI_SIGNING_PUBLIC_KEYS` | unset |
+| `ANDROID_CERT_SHA256` | unset |
 | `API_PORT` | `3002` |
 | `APP_ENV` | unset |
 | `APP_RELAY_KEY` | secret |
@@ -106,6 +107,7 @@ reaches the browser (D5).
 
 | Variable |
 |---|
+| `ANDROID_CERT_SHA256` |
 | `API_URL` |
 | `APP_ENV` |
 | `APP_RELAY_KEY` |

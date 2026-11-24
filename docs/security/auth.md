@@ -123,6 +123,7 @@ A second way in, beside the password (AUTH-14, D110). WebAuthn through `webauthn
 - **User handle.** The first 16 bytes of SHA-256 of the user ID. Nothing on the authenticator names the account, and the same handle for every registration means a second passkey on the same device replaces the first.
 - **Removing.** Soft delete, audited `passkey.removed`. The copy on the device stays until the person deletes it there; the server no longer accepts it.
 - Passkeys do not end with a password change: they are separate credentials, each removable on its own.
+- **The mobile apps.** iOS signs with the site's own origin, which `webcredentials` in `/.well-known/apple-app-site-association` lets the app claim (D113). Android's Credential Manager reports `android:apk-key-hash:` and the base64url, without padding, of the SHA-256 of the app's signing certificate instead. The API admits one such origin per fingerprint in `ANDROID_CERT_SHA256`, matched exactly, and the app serves the same fingerprints in `/.well-known/assetlinks.json` under `delegate_permission/common.get_login_creds` (D119). Without the setting, Android passkeys are refused and the Android app does not offer them.
 
 ## Password reset
 

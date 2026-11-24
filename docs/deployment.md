@@ -349,6 +349,17 @@ A missing required secret fails its job before anything is built, naming the sec
 
 Locally, without `android/key.properties`, `flutter build appbundle --release` signs with the debug key (`android/app/build.gradle.kts`). Such a build installs on a device but Play refuses it.
 
+### Android passkeys and app links
+
+Off until the signing fingerprint is known (D119). When it is:
+
+1. **The fingerprint.** Play Console, Test and release, App integrity, App signing: copy the **App signing key certificate** SHA-256 (`AB:CD:...`, 32 pairs). That is the key the installed app carries. Optionally add the upload key's SHA-256 from the same page (for a locally signed release build) and a debug key's (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`) for testing on an emulator.
+2. **`ANDROID_CERT_SHA256` on both `api` and `app`** in Coolify, the same value on each: the fingerprints comma-separated. The API accepts passkeys from those certificates; the app answers `/.well-known/assetlinks.json` with them. Redeploy both. A malformed value stops the API at startup, naming the variable.
+3. **Check** `curl -s https://app.oewang.com/.well-known/assetlinks.json` lists `com.oewang.app` with both relations, and Google's checker agrees: `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://app.oewang.com&relation=delegate_permission/common.get_login_creds`.
+4. **`"PASSKEYS_ANDROID": true` in `apps/native/env/prod.json`**, then cut an Android release. Earlier builds keep the buttons hidden.
+
+Invitation links on Android become verified app links at step 2 as well; until then they open in the browser.
+
 ## Open questions
 
 Each of these needs the repository owner's decision. None of them is a value this document should guess.

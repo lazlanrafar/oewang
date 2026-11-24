@@ -1,27 +1,37 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:passkeys/authenticator.dart';
 import 'package:passkeys/types.dart';
 
 /// The device's own passkey prompt (MOB-9, D110), around the `passkeys`
 /// package. Takes and returns the WebAuthn JSON the API speaks.
 class DevicePasskeys {
+  DevicePasskeys({this.onAndroid = false});
+
+  /// `PASSKEYS_ANDROID`, see [offered].
+  final bool onAndroid;
+
   final _authenticator = PasskeyAuthenticator();
 
-  /// Whether to offer passkeys on this device at all.
+  /// Whether [platform] may offer passkeys at all, before asking the device.
   ///
-  /// iOS only. iOS reports the relying party's own origin,
-  /// `https://app.oewang.com`, which the API accepts once the app is in the
-  /// site's `webcredentials` (OEW-098). Android reports
-  /// `android:apk-key-hash:<sha256 of the signing cert>`, which the API's
-  /// webauthn-rs refuses until that exact origin is appended to its allowed
-  /// origins.
-  // shortcut: Android hidden, until the API allows the apk-key-hash origin.
+  /// iOS always: it reports the relying party's own origin, which the site's
+  /// `webcredentials` vouches for. Android only with `PASSKEYS_ANDROID`
+  /// (D119): it reports `android:apk-key-hash:<sha256 of the signing cert>`,
+  /// which the API admits and `assetlinks.json` vouches for only once that
+  /// certificate's fingerprint is configured.
+  static bool offered(TargetPlatform platform, {required bool onAndroid}) =>
+      platform == TargetPlatform.iOS ||
+      (platform == TargetPlatform.android && onAndroid);
+
+  /// Whether to offer passkeys on this device at all.
   Future<bool> supported() async {
-    if (!Platform.isIOS) return false;
+    final platform = defaultTargetPlatform;
+    if (!offered(platform, onAndroid: onAndroid)) return false;
     try {
-      final ios = await _authenticator.getAvailability().iOS();
-      return ios.hasPasskeySupport;
+      final availability = _authenticator.getAvailability();
+      return platform == TargetPlatform.iOS
+          ? (await availability.iOS()).hasPasskeySupport
+          : (await availability.android()).hasPasskeySupport;
     } on Exception {
       return false;
     }

@@ -52,6 +52,7 @@ pub fn config() -> Config {
         access_token_ttl: Duration::from_secs(900),
         refresh_token_ttl: Duration::from_secs(2_592_000),
         app_url: "http://localhost:3000".into(),
+        android_origins: Vec::new(),
         resend_api_key: None,
         email_from: "oewang <no-reply@localhost>".into(),
         ai_service_url: NOWHERE.into(),
@@ -109,7 +110,10 @@ pub fn state(pool: PgPool, ai_url: &str) -> AppState {
         mcp: crate::mcp::budget::McpBudget::new(),
         rate_limits: crate::limits::RateLimiter::new(config.rate_limits),
         telegram: None,
-        webauthn: Arc::new(crate::passkeys::service::relying_party(&config.app_url).unwrap()),
+        webauthn: Arc::new(
+            crate::passkeys::service::relying_party(&config.app_url, &config.android_origins)
+                .unwrap(),
+        ),
         db: pool,
         config: Arc::new(config),
     }
