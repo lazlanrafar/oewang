@@ -62,7 +62,27 @@ export function setWorkspaceLists(lists: () => WorkspaceLists) {
  */
 export function workspaceLists(): WorkspaceLists {
 	const read = getContext<(() => WorkspaceLists) | undefined>(KEY);
-	return read?.() ?? { wallets: [], groups: [], categories: [], contacts: [], currencies: [] };
+	if (!read) return { wallets: [], groups: [], categories: [], contacts: [], currencies: [] };
+	// Each property calls the getter when read, so a `$derived` over it reruns
+	// after `invalidateAll`; calling it once here kept the first load forever,
+	// and a row made from a picker never appeared in that picker.
+	return {
+		get wallets() {
+			return read().wallets;
+		},
+		get groups() {
+			return read().groups;
+		},
+		get categories() {
+			return read().categories;
+		},
+		get contacts() {
+			return read().contacts;
+		},
+		get currencies() {
+			return read().currencies;
+		}
+	};
 }
 
 type Created = { id: string; name: string };
