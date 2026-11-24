@@ -4,14 +4,17 @@
 //! audit row inside it (D14, OPS-1). Handlers parse and map to HTTP;
 //! repositories run SQL.
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use oewang_db::{
     repositories::{accounts, categories, wallets},
     PgPool,
 };
 use oewang_domain::{
+    format_money,
     ledger::{round_money, TransactionType},
-    validate_currency_code, AppError, Result,
+    validate_currency_code,
+    wallet_totals::{GroupTotal, WalletBalance},
+    AppError, Result,
 };
 use rust_decimal::Decimal;
 
@@ -23,6 +26,7 @@ use oewang_db::repositories::{
 pub use crate::audit::Actor;
 use crate::{
     audit::{log, snapshot},
+    offline,
     transactions::service::{self as ledger, TransactionInput},
 };
 
@@ -161,6 +165,103 @@ pub async fn find_wallet(pool: &PgPool, workspace_id: &str, id: &str) -> Result<
         .ok_or(AppError::WalletNotFound)
 }
 
+/// The figures above the wallet list, in the workspace currency (D117).
+#[derive(Debug, serde::Serialize)]
+pub struct WalletTotalsView {
+    pub currency_code: String,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub total: Decimal,
+    pub total_formatted: String,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub assets: Decimal,
+    pub assets_formatted: String,
+    /// The negative counted balances as a positive figure; `total` is
+    /// `assets - liabilities`.
+    #[serde(with = "rust_decimal::serde::str")]
+    pub liabilities: Decimal,
+    pub liabilities_formatted: String,
+    pub count: usize,
+    pub counted: usize,
+    pub left_out: usize,
+    pub missing_currencies: Vec<String>,
+    pub groups: Vec<GroupTotalView>,
+}
+
+/// Every live group in list order, then the ungrouped wallets (`id` and
+/// `name` null) when there are any.
+#[derive(Debug, serde::Serialize)]
+pub struct GroupTotalView {
+    pub id: Option<String>,
+    pub name: Option<String>,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub subtotal: Decimal,
+    pub subtotal_formatted: String,
+    pub left_out: usize,
+}
+
+/// Converts at the newest stored snapshot, the rates the currency pickers
+/// show (FX-2), so no rate source is called here (D96).
+pub async fn wallet_totals(pool: &PgPool, workspace_id: &str) -> Result<WalletTotalsView> {
+    let (rows, groups, (home, snapshot)) = tokio::try_join!(
+        list_wallets(pool, workspace_id),
+        list_groups(pool, workspace_id),
+        crate::fx::service::list_currencies(pool, workspace_id),
+    )?;
+
+    let rates = snapshot
+        .into_iter()
+        .map(|row| (row.currency_code, row.rate))
+        .collect();
+    let balances: Vec<_> = rows
+        .iter()
+        .map(|row| WalletBalance {
+            group_id: row.group_id.as_deref(),
+            currency_code: &row.currency_code,
+            balance: row.balance,
+            is_included_in_totals: row.is_included_in_totals,
+        })
+        .collect();
+    let mut totals = oewang_domain::wallet_totals::wallet_totals(&balances, &home, &rates);
+
+    let money = |value: Decimal| format_money(value, &home, false);
+    let group = |id: Option<String>, name: Option<String>, sum: GroupTotal| GroupTotalView {
+        id,
+        name,
+        subtotal: sum.subtotal,
+        subtotal_formatted: money(sum.subtotal),
+        left_out: sum.left_out,
+    };
+    let mut views: Vec<GroupTotalView> = groups
+        .into_iter()
+        .map(|g| {
+            let sum = totals
+                .groups
+                .remove(&Some(g.id.clone()))
+                .unwrap_or_default();
+            group(Some(g.id), Some(g.name), sum)
+        })
+        .collect();
+    if let Some(sum) = totals.groups.remove(&None) {
+        views.push(group(None, None, sum));
+    }
+
+    let total = totals.total();
+    Ok(WalletTotalsView {
+        total_formatted: money(total),
+        total,
+        assets_formatted: money(totals.assets),
+        assets: totals.assets,
+        liabilities_formatted: money(totals.liabilities),
+        liabilities: totals.liabilities,
+        count: totals.count,
+        counted: totals.counted,
+        left_out: totals.left_out,
+        missing_currencies: totals.missing_currencies,
+        groups: views,
+        currency_code: home,
+    })
+}
+
 #[derive(Debug)]
 pub struct NewWalletInput<'a> {
     pub name: &'a str,
@@ -176,6 +277,28 @@ pub async fn create_wallet(
     actor: Actor<'_>,
     input: NewWalletInput<'_>,
 ) -> Result<WalletRow> {
+    create_wallet_with_id(pool, actor, None, input)
+        .await
+        .map(|(wallet, _)| wallet)
+}
+
+/// The create `POST /v1/wallets` runs, and whether this call made the row.
+///
+/// A client `id` that already names a wallet of this workspace, live or
+/// deleted, writes nothing and answers that wallet (D114).
+pub async fn create_wallet_with_id(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: Option<&str>,
+    input: NewWalletInput<'_>,
+) -> Result<(WalletRow, bool)> {
+    if let Some(id) = id {
+        offline::validate_id(id)?;
+        if offline::is_repeat(pool, actor.workspace_id, offline::WALLET, id).await? {
+            return repeated_wallet(pool, actor.workspace_id, id).await;
+        }
+    }
+
     let name = clean_name("name", input.name)?;
     let currency = input
         .currency_code
@@ -201,10 +324,11 @@ pub async fn create_wallet(
         require_group(&mut tx, actor.workspace_id, group_id).await?;
     }
 
-    let wallet = wallets::insert_wallet(
+    let id = id.map_or_else(cuid2::create_id, str::to_string);
+    let Some(wallet) = wallets::insert_wallet(
         &mut *tx,
         NewWallet {
-            id: &cuid2::create_id(),
+            id: &id,
             workspace_id: actor.workspace_id,
             group_id: input.group_id,
             name: &name,
@@ -214,7 +338,12 @@ pub async fn create_wallet(
         },
     )
     .await
-    .map_err(internal)?;
+    .map_err(internal)?
+    else {
+        // A concurrent create with the same id committed first.
+        drop(tx);
+        return repeated_wallet(pool, actor.workspace_id, &id).await;
+    };
 
     log(
         &mut tx,
@@ -228,7 +357,17 @@ pub async fn create_wallet(
     .await?;
 
     tx.commit().await.map_err(internal)?;
-    Ok(wallet)
+    Ok((wallet, true))
+}
+
+/// The wallet a repeated create names. `None` means the id is held by
+/// another workspace, which is answered without the row.
+async fn repeated_wallet(pool: &PgPool, workspace_id: &str, id: &str) -> Result<(WalletRow, bool)> {
+    wallets::find_wallet_with_deleted(pool, workspace_id, id)
+        .await
+        .map_err(internal)?
+        .map(|wallet| (wallet, false))
+        .ok_or(AppError::IdTaken)
 }
 
 #[derive(Debug, Default)]
@@ -241,11 +380,14 @@ pub struct WalletPatchInput<'a> {
     pub sort_order: Option<i32>,
 }
 
+/// `if_match` is the `updated_at` the client last read, checked on the
+/// locked row (D115). Without it the edit is last-write-wins.
 pub async fn update_wallet(
     pool: &PgPool,
     actor: Actor<'_>,
     id: &str,
     input: WalletPatchInput<'_>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<WalletRow> {
     let name = input
         .name
@@ -260,10 +402,18 @@ pub async fn update_wallet(
 
     // Locked, because the currency check below and a concurrent transaction
     // write must not disagree about whether this wallet has transactions.
-    let before = wallets::lock_wallet(&mut *tx, actor.workspace_id, id)
+    // The same lock makes the If-Match check below final.
+    let Some(before) = wallets::lock_wallet(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
-        .ok_or(AppError::WalletNotFound)?;
+    else {
+        let not_found = AppError::WalletNotFound;
+        let kind = offline::WALLET;
+        return Err(
+            offline::missing(&mut *tx, actor.workspace_id, kind, id, if_match, not_found).await,
+        );
+    };
+    offline::check(if_match, before.updated_at)?;
 
     // Re-sending the currency the wallet already has is not a change, and a
     // locked wallet should not reject a patch that only renames it.
@@ -511,6 +661,13 @@ pub async fn list_categories(
         .map_err(internal)
 }
 
+pub async fn find_category(pool: &PgPool, workspace_id: &str, id: &str) -> Result<CategoryRow> {
+    categories::find_category(pool, workspace_id, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::CategoryNotFound)
+}
+
 pub async fn create_category(
     pool: &PgPool,
     actor: Actor<'_>,
@@ -518,21 +675,50 @@ pub async fn create_category(
     kind: &str,
     sort_order: Option<i32>,
 ) -> Result<CategoryRow> {
+    create_category_with_id(pool, actor, None, name, kind, sort_order)
+        .await
+        .map(|(category, _)| category)
+}
+
+/// The create `POST /v1/categories` runs, and whether this call made the
+/// row. A client `id` that already names a category of this workspace, live
+/// or deleted, writes nothing and answers that category (D114).
+pub async fn create_category_with_id(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: Option<&str>,
+    name: &str,
+    kind: &str,
+    sort_order: Option<i32>,
+) -> Result<(CategoryRow, bool)> {
+    if let Some(id) = id {
+        offline::validate_id(id)?;
+        if offline::is_repeat(pool, actor.workspace_id, offline::CATEGORY, id).await? {
+            return repeated_category(pool, actor.workspace_id, id).await;
+        }
+    }
+
     let name = clean_name("name", name)?;
     let kind = validate_type(kind)?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
-    let category = categories::insert_category(
+    let id = id.map_or_else(cuid2::create_id, str::to_string);
+    let Some(category) = categories::insert_category(
         &mut *tx,
-        &cuid2::create_id(),
+        &id,
         actor.workspace_id,
         &name,
         &kind,
         sort_order.unwrap_or(0),
     )
     .await
-    .map_err(internal)?;
+    .map_err(internal)?
+    else {
+        // A concurrent create with the same id committed first.
+        drop(tx);
+        return repeated_category(pool, actor.workspace_id, &id).await;
+    };
 
     log(
         &mut tx,
@@ -546,9 +732,25 @@ pub async fn create_category(
     .await?;
 
     tx.commit().await.map_err(internal)?;
-    Ok(category)
+    Ok((category, true))
 }
 
+/// The category a repeated create names. `None` means the id is held by
+/// another workspace, which is answered without the row.
+async fn repeated_category(
+    pool: &PgPool,
+    workspace_id: &str,
+    id: &str,
+) -> Result<(CategoryRow, bool)> {
+    categories::find_category_with_deleted(pool, workspace_id, id)
+        .await
+        .map_err(internal)?
+        .map(|category| (category, false))
+        .ok_or(AppError::IdTaken)
+}
+
+/// `if_match` is the `updated_at` the client last read (D115). Checked on
+/// the row read here, and again by the update statement under its row lock.
 pub async fn update_category(
     pool: &PgPool,
     actor: Actor<'_>,
@@ -556,16 +758,24 @@ pub async fn update_category(
     name: Option<&str>,
     kind: Option<&str>,
     sort_order: Option<i32>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<CategoryRow> {
     let name = name.map(|value| clean_name("name", value)).transpose()?;
     let kind = kind.map(validate_type).transpose()?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
 
-    let before = categories::find_category(&mut *tx, actor.workspace_id, id)
+    let Some(before) = categories::find_category(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
-        .ok_or(AppError::CategoryNotFound)?;
+    else {
+        let not_found = AppError::CategoryNotFound;
+        let kind = offline::CATEGORY;
+        return Err(
+            offline::missing(&mut *tx, actor.workspace_id, kind, id, if_match, not_found).await,
+        );
+    };
+    offline::check(if_match, before.updated_at)?;
 
     let after = categories::update_category(
         &mut *tx,
@@ -574,10 +784,14 @@ pub async fn update_category(
         name.as_deref(),
         kind.as_deref(),
         sort_order,
+        if_match,
     )
     .await
     .map_err(internal)?
-    .ok_or(AppError::CategoryNotFound)?;
+    .ok_or(match if_match {
+        Some(_) => AppError::Stale(None),
+        None => AppError::CategoryNotFound,
+    })?;
 
     log(
         &mut tx,

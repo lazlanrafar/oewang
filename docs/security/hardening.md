@@ -138,7 +138,7 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 
 | Advisory | Where | Why it is accepted |
 |---|---|---|
-| RUSTSEC-2023-0071 | `rsa` 0.9.10, reached through `sqlx-mysql` | No fixed version exists. `sqlx-macros-core` lists `sqlx-mysql` unconditionally, but this build uses PostgreSQL only and `cargo tree -i rsa` finds no path that compiles it. Passed to `cargo audit --ignore` with this reasoning in the workflow, not hidden in a config file |
+| RUSTSEC-2023-0071 | `rsa` 0.10.0-rc.19, reached through `webauthn-rs` -> `crypto-glue` | The fix is `rsa` 0.10.0, which `crypto-glue` 0.2.2 cannot take (it asks for an `rsa` feature that 0.10.0 removed). The passkey code uses RSA only to verify RS256 signatures with public keys; the attack recovers a private key from decryption timing, and the API holds no RSA private key. The old path through `sqlx-mysql` (`rsa` 0.9) left with sqlx 0.9. Passed to `cargo audit --ignore` with this reasoning in the workflow, not hidden in a config file |
 | GHSA-gcqx-w48m-w2h4 | `deepmerge`, through `@sveltejs/vite-plugin-svelte` | Low. A build-time dependency: it never runs in the browser and never sees a request |
 
 ## Rate limits and resource limits
@@ -147,9 +147,11 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 
 | Scope | Limit | Requirement |
 |---|---|---|
-| Credential routes | 10 requests per 15 minutes per IP | AUTH-6 |
-| Authenticated routes | 300 per minute per IP | OPS-5 |
-| Unauthenticated routes | 30 per minute per IP | OPS-5 |
+| Credential routes | 10 requests per 15 minutes per browser address | AUTH-6 |
+| `login`, `register`, `forgot-password` | 10 per 15 minutes per email address, per route | AUTH-6, D112 |
+| Credential routes, all callers together | 1,000 per 15 minutes per source | D112 |
+| Authenticated routes | 300 per minute per browser address | OPS-5 |
+| Unauthenticated routes | 30 per minute per browser address | OPS-5 |
 | `POST /v1/handshake` | 30 per minute per IP | [encryption](../api/encryption.md#handshake) |
 | Chat stream | 20 turns per minute per workspace | SEC-17 |
 | Request body | 1 MB, except file chunk routes | SEC-18 |
@@ -159,14 +161,16 @@ Enforcement: request and response bodies are never passed to the logger, and sec
 | List `limit` parameter | 100 | [conventions](../api/conventions.md#pagination) |
 | Bulk operation size | 500 rows | SEC-18 |
 | Import rows per job | 5,000 | SEC-18 |
+| Import spreadsheet (`.xlsx`) | 512 KB file, 32 MB unpacked, 1,000,000 shared strings, 100 columns; rows as above | D111 |
 | Model calls per extracted document | 2 full passes plus 4 targeted field calls | AI-10 |
 | Wall clock per extracted document | 45 seconds | AI-10 |
-| Request timeout | 30 seconds, except the chat stream | SEC-19 |
-| Chat stream timeout | 120 seconds | SEC-19 |
+| Request timeout | 30 seconds, except the routes that wait on the AI service | SEC-19 |
+| AI route timeout | The AI call timeout (60 seconds) plus 5, for chat stream, receipt parse and map-columns; covers producing the response, not a stream's body | SEC-19, D118 |
+| Chat stream timeout | 120 seconds for the whole turn, and 60 seconds (the AI call timeout) between two reads from the AI service | SEC-19, D118 |
 | Database statement timeout | 10 seconds | SEC-19 |
 | Database pool | 20 connections, 5 second acquire timeout | SEC-19 |
 
-Every limit above is a configuration value with the listed default, not a literal buried in code, **except two**: the list `limit` parameter and the bulk-operation size. Those are part of the API contract rather than a deployment question. A client pages against them and a change to either is an API change with a client to update, not a knob an operator turns, so they are constants and a test fails if they move. `Config::default_rate_limits` is where the defaults live and a test asserts each one still equals the number in this table, so the two cannot drift apart quietly.
+Every limit above is a configuration value with the listed default, not a literal buried in code, **except two**: the list `limit` parameter and the bulk-operation size. Those are part of the API contract rather than a deployment question. A client pages against them and a change to either is an API change with a client to update, not a knob an operator turns, so they are constants and a test fails if they move. The spreadsheet bounds are constants as well (`oewang_domain::spreadsheet`), for a different reason: the file size is the vault chunk's, set by the body limit's arithmetic, and the rest bound what a hostile package can make the API allocate. `Config::default_rate_limits` is where the defaults live and a test asserts each one still equals the number in this table, so the two cannot drift apart quietly.
 
 **Credential routes** means the ones something can be guessed at: `register`, `login`, `refresh`, `forgot-password`, `reset-password` and `accept-invite`. An earlier draft of this table said `/v1/auth/*`, which was wrong: `/v1/auth/me` is read on every page load, and ten of those per fifteen minutes would lock a working session out of the product. The limit exists for guessing, so it covers what can be guessed.
 
@@ -176,7 +180,18 @@ The window slides rather than resetting on the minute. A fixed window lets a cal
 
 The counters live in process memory, so a restart forgives everyone and a second instance counts separately. Both are acceptable: this bounds abuse and spend, it is not accounting, and the alternative is a shared store on the request path of every call (D10). The daily upload ceiling is the exception and is counted from the rows, because a day is long enough that a restart must not hand anybody a fresh allowance.
 
-Behind a reverse proxy every request arrives from the proxy, so `X-Forwarded-For` is read only when `TRUST_PROXY_HEADERS` says there is one in front. Anyone can send that header, and a limiter that believes it is a limiter anyone can step around.
+### Whose address is counted
+
+The API's only intended caller is the SvelteKit server, so every user arrives from the same address. Counted by that address, one person guessing passwords locks everyone out, and a limit raised to stop that lets each account be guessed at freely. That was the state before D112.
+
+So there are two addresses, and the limiter (`apps/api/crates/server/src/limits.rs`) keeps them apart:
+
+- **The source** is what connected: the peer, or behind the proxy the last `X-Forwarded-For` entry, the one the proxy itself appended. Never the first entry: anything left of the last came from the caller. `X-Forwarded-For` is read at all only when `TRUST_PROXY_HEADERS` says there is a proxy in front.
+- **The browser's address** is `x-client-ip`, which the app sets from `event.getClientAddress()`. It is believed only when the request also carries `x-relay-key` equal to `APP_RELAY_KEY`, compared in constant time. The API's domain is routed from the internet and the OWE1 handshake is open to anyone, so "came through OWE1" does not mean "came from the app"; the key is what does. A request without it is counted against its source and its `x-client-ip` is ignored.
+
+Every per-address budget counts the browser's address when there is a vouched one and the source's otherwise. Credential routes count twice more: against the source's ceiling, after the caller's own budget so a caller already refused does not spend what everybody shares, and, in the handler after decryption, against the normalised email for `login`, `register` and `forgot-password`, because one account guessed at from a thousand addresses is still one account ([auth](auth.md#rate-limits) has the trade-offs). The layer stays outside OWE1: a flood costs a hash lookup and a key comparison, not a key agreement.
+
+The relay key is required in production; the API refuses to start without one of at least 32 characters. The browser's address is only as good as the app's `ADDRESS_HEADER` and `XFF_DEPTH` ([deployment](../deployment.md#app)): set wrong, every browser is the proxy's address and the per-address budgets collapse into one again.
 
 ### Why each matters
 
@@ -205,6 +220,7 @@ A body limit layer stops a large body before a handler allocates for it. A state
 | Secrets in logs | A representative workload runs against a captured log sink; known secret values must not appear |
 | Upload type sniffing | A PHP file renamed to `.jpg`, an SVG, and an oversized file are each rejected |
 | Rate limits | The auth bucket is exhausted and the next request returns 429 with `Retry-After` |
+| Whose address is counted | Two browsers behind the app's one address are limited apart; one email is limited however many addresses try it; the ceiling still stops everyone; an `x-client-ip` without the relay key is ignored (`limits.rs` tests) |
 | Replay | A captured OWE1 request is replayed and returns `CRYPTO_REPLAY_DETECTED` |
 | Tamper | A flipped bit in a ciphertext returns `CRYPTO_DECRYPT_FAILED` |
 | CSP | A response header snapshot test, so a loosened policy shows up in review |

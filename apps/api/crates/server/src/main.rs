@@ -10,6 +10,8 @@ mod audit;
 mod auth;
 mod budgets;
 mod config;
+mod contacts;
+mod debts;
 mod feedback;
 mod fx;
 #[cfg(test)]
@@ -18,14 +20,18 @@ mod images;
 mod items;
 mod limits;
 mod mcp;
+mod offline;
 mod owe1;
 mod passkeys;
+mod push;
 mod receipts;
 mod reports;
 mod response;
 mod routes;
 mod state;
 mod telegram;
+#[cfg(test)]
+mod test_support;
 mod transactions;
 mod usage;
 mod vault;
@@ -169,6 +175,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(ai = ?ai, "ai service client ready");
 
     let request_timeout = config.request_timeout;
+    let ai_request_timeout = config.ai_request_timeout;
     let body_limit = config.body_limit_bytes;
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
 
@@ -183,9 +190,25 @@ async fn main() -> anyhow::Result<()> {
         username: bot.username.clone(),
     });
 
+    // Push is optional everywhere (D116). A key file that is set but
+    // unreadable stops the start, rather than every push failing later.
+    match &config.fcm_service_account_json {
+        Some(json) => {
+            push::install(Arc::new(oewang_clients::FcmClient::new(
+                json.expose(),
+                oewang_clients::push::FCM_URL,
+            )?));
+            tracing::info!("push ready (fcm)");
+        }
+        None => tracing::info!("push off: FCM_SERVICE_ACCOUNT_JSON is not set"),
+    }
+
     // Built from APP_URL, so a deployment whose address cannot be a relying
     // party refuses to start rather than failing at the first passkey.
-    let webauthn = Arc::new(passkeys::service::relying_party(&config.app_url)?);
+    let webauthn = Arc::new(passkeys::service::relying_party(
+        &config.app_url,
+        &config.android_origins,
+    )?);
 
     let state = AppState {
         db,
@@ -208,7 +231,7 @@ async fn main() -> anyhow::Result<()> {
     // Receipts the reader could not answer for, retried until it can (D95).
     receipts::queue::spawn(state.clone());
 
-    let app = Router::new()
+    let ordinary = Router::new()
         .route("/health", get(routes::health::live))
         .route("/health/ready", get(routes::health::ready))
         // Plaintext by design: a client needs the keys before it can do
@@ -224,40 +247,43 @@ async fn main() -> anyhow::Result<()> {
         .merge(protected_routes(state.clone()))
         // An unknown path answers in the envelope like everything else, not
         // with Axum's empty 404 (docs/api/conventions.md#the-envelope).
-        .fallback(not_found)
-        .layer(
-            // Order matters, and it is outside-in: the first layer listed
-            // wraps every one below it. The body-limit and compression layers
-            // sit above the trace layer because both rewrap the response body,
-            // and the trace layer needs a body it can construct on its own
-            // error path.
-            ServiceBuilder::new()
-                // Outermost: a panic becomes a 500 with a request id rather
-                // than a dropped connection.
-                .layer(CatchPanicLayer::new())
-                // The request id is set and propagated above the rate
-                // limiter, so a refusal names the request like every other
-                // answer does.
-                .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
-                .layer(PropagateRequestIdLayer::x_request_id())
-                // Counted before anything expensive happens. A flood should
-                // cost a hash lookup, not a key agreement (OPS-5, AUTH-6).
-                // Above the body limit because that layer rewraps the body
-                // into a type a plain middleware cannot take.
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    limits::enforce,
-                ))
-                // Rejects an oversized body before a handler allocates for it.
-                .layer(RequestBodyLimitLayer::new(body_limit))
-                .layer(CompressionLayer::new())
-                .layer(TraceLayer::new_for_http().make_span_with(RequestSpan))
-                .layer(TimeoutLayer::with_status_code(
-                    StatusCode::REQUEST_TIMEOUT,
-                    request_timeout,
-                )),
-        )
-        .with_state(state);
+        .fallback(not_found);
+
+    let app = with_timeouts(
+        ordinary,
+        ai_routes(state.clone()),
+        request_timeout,
+        ai_request_timeout,
+    )
+    .layer(
+        // Order matters, and it is outside-in: the first layer listed
+        // wraps every one below it. The body-limit and compression layers
+        // sit above the trace layer because both rewrap the response body,
+        // and the trace layer needs a body it can construct on its own
+        // error path.
+        ServiceBuilder::new()
+            // Outermost: a panic becomes a 500 with a request id rather
+            // than a dropped connection.
+            .layer(CatchPanicLayer::new())
+            // The request id is set and propagated above the rate
+            // limiter, so a refusal names the request like every other
+            // answer does.
+            .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+            .layer(PropagateRequestIdLayer::x_request_id())
+            // Counted before anything expensive happens. A flood should
+            // cost a hash lookup, not a key agreement (OPS-5, AUTH-6).
+            // Above the body limit because that layer rewraps the body
+            // into a type a plain middleware cannot take.
+            .layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                limits::enforce,
+            ))
+            // Rejects an oversized body before a handler allocates for it.
+            .layer(RequestBodyLimitLayer::new(body_limit))
+            .layer(CompressionLayer::new())
+            .layer(TraceLayer::new_for_http().make_span_with(RequestSpan)),
+    )
+    .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!(%addr, "listening");
@@ -302,10 +328,6 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             post(auth::handler::change_password),
         )
         .route("/v1/auth/sessions", get(auth::handler::sessions))
-        .route(
-            "/v1/auth/switch-workspace",
-            post(auth::handler::switch_workspace),
-        )
         // Passkeys (D110). Signing in with one is public; the rest take the
         // token.
         .route("/v1/auth/passkeys", get(passkeys::handler::list))
@@ -320,6 +342,11 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/auth/passkeys/{id}",
             axum::routing::delete(passkeys::handler::remove),
+        )
+        // Push devices (D116). The token is in the body on both.
+        .route(
+            "/v1/device-tokens",
+            post(push::handler::register).delete(push::handler::remove),
         )
         .route(
             "/v1/auth/passkey/sign-in/start",
@@ -396,6 +423,8 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/wallets",
             get(accounts::handler::list_wallets).post(accounts::handler::create_wallet),
         )
+        // In the workspace currency, so no client sums money (D117).
+        .route("/v1/wallets/totals", get(accounts::handler::wallet_totals))
         .route(
             "/v1/wallets/{id}",
             get(accounts::handler::get_wallet)
@@ -429,6 +458,37 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/budgets/{id}",
             axum::routing::patch(budgets::handler::update).delete(budgets::handler::delete),
+        )
+        // Contacts and debts (D120, D121). The fixed sub-paths come before
+        // `{id}`, so `/summary` is never read as a debt id.
+        .route(
+            "/v1/contacts",
+            get(contacts::handler::list).post(contacts::handler::create),
+        )
+        .route(
+            "/v1/contacts/{id}",
+            get(contacts::handler::get)
+                .patch(contacts::handler::update)
+                .delete(contacts::handler::delete),
+        )
+        .route("/v1/contacts/{id}/merge", post(contacts::handler::merge))
+        .route(
+            "/v1/debts",
+            get(debts::handler::list).post(debts::handler::create),
+        )
+        .route("/v1/debts/summary", get(debts::handler::summary))
+        .route("/v1/debts/bulk-pay", post(debts::handler::bulk_pay))
+        .route("/v1/debts/split", post(debts::handler::split))
+        .route(
+            "/v1/debts/{id}",
+            get(debts::handler::get)
+                .patch(debts::handler::update)
+                .delete(debts::handler::delete),
+        )
+        .route("/v1/debts/{id}/payments", post(debts::handler::pay))
+        .route(
+            "/v1/debts/{id}/payments/{payment_id}",
+            axum::routing::delete(debts::handler::cancel_payment),
         )
         // MCP (D106): the JSON-RPC endpoint the app's `/mcp` relays, and
         // the account area's tokens and connected apps.
@@ -485,16 +545,20 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/transactions/import/csv",
             post(transactions::handler::import_csv),
         )
+        // Step one for a spreadsheet: read on the server, never in the
+        // browser (D111). Answers the shape a parsed CSV has.
+        .route(
+            "/v1/transactions/import/xlsx",
+            post(transactions::handler::import_xlsx),
+        )
         // A statement that is a picture rather than a table. Answers 202
         // and a job id; the ladder runs in a task (AI-4, AI-6).
         .route(
             "/v1/transactions/import",
             post(transactions::handler::import_statement),
         )
-        .route(
-            "/v1/transactions/import/map-columns",
-            post(transactions::handler::map_columns),
-        )
+        // `/v1/transactions/import/map-columns` waits on the AI service, so
+        // it lives in `ai_routes` (D118).
         .route(
             "/v1/transactions/import/{job_id}",
             get(transactions::handler::import_job),
@@ -518,6 +582,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             get(transactions::handler::history),
         )
         .route(
+            "/v1/transactions/{id}/debts",
+            get(debts::handler::for_transaction),
+        )
+        .route(
             "/v1/transactions/{id}/items",
             get(transactions::handler::list_items).post(transactions::handler::add_item),
         )
@@ -538,13 +606,8 @@ fn protected_routes(state: AppState) -> Router<AppState> {
                 .patch(ai::handler::rename_session)
                 .delete(ai::handler::delete_session),
         )
-        // One chat turn, answered as server-sent events. Any member: a
-        // viewer who cannot write can still ask.
-        .route("/v1/ai/chat/stream", post(ai::handler::chat_stream))
-        // A receipt the user uploaded, read and checked. Persists nothing
-        // (AI-1, AI-2). The bytes are already in the vault; the body names
-        // the file, because a receipt does not fit in one (D23, SEC-18).
-        .route("/v1/ai/receipt/parse", post(ai::handler::parse_receipt))
+        // The chat stream and receipt parse wait on the AI service, so they
+        // live in `ai_routes` (D118).
         // Receipts waiting for the reader (D95, AI-12).
         .route(
             "/v1/receipts/pending",
@@ -560,14 +623,6 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route(
             "/v1/ai/settings",
             get(ai::handler::get_settings).patch(ai::handler::update_settings),
-        )
-        // Internal. Service to service, gated by the key rather than by a
-        // token, and never routable from the internet (OPS-6). The caller
-        // is the AI service; who the call is for arrives in the body and is
-        // re-checked against the membership row (D4, CHAT-4).
-        .route(
-            "/v1/internal/tools/execute",
-            post(ai::handler::execute_tool),
         )
         // Telegram (D83 to D86). The member's own link in the token's
         // workspace; the bot itself is reached by long polling, not by a
@@ -605,10 +660,80 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/vault/files/{id}/complete",
             post(vault::handler::complete),
         )
+        // Inside OWE1, so it reads the plaintext (AUTH-4).
+        .layer(axum::middleware::from_fn(
+            auth::workspace_param::reject_workspace_id,
+        ))
+        // The two routes whose job is to name a workspace, outside that
+        // layer. Switching names the one to switch into, checked against the
+        // membership row (NOT_A_MEMBER). A tool call from the AI service
+        // states who it acts for, checked against the membership row too (D4,
+        // CHAT-4); it is internal, gated by the service key and never routable
+        // from the internet (OPS-6).
+        .route(
+            "/v1/auth/switch-workspace",
+            post(auth::handler::switch_workspace),
+        )
+        .route(
+            "/v1/internal/tools/execute",
+            post(ai::handler::execute_tool),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state,
             owe1::middleware::owe1_layer,
         ))
+}
+
+/// The protected routes that wait on the AI service before they answer.
+///
+/// Sealed and checked exactly like `protected_routes`; only their timeout
+/// differs (D118).
+fn ai_routes(state: AppState) -> Router<AppState> {
+    Router::new()
+        // One chat turn, answered as server-sent events. Any member: a
+        // viewer who cannot write can still ask.
+        .route("/v1/ai/chat/stream", post(ai::handler::chat_stream))
+        // A receipt the user uploaded, read and checked. Persists nothing
+        // (AI-1, AI-2). The bytes are already in the vault; the body names
+        // the file, because a receipt does not fit in one (D23, SEC-18).
+        .route("/v1/ai/receipt/parse", post(ai::handler::parse_receipt))
+        .route(
+            "/v1/transactions/import/map-columns",
+            post(transactions::handler::map_columns),
+        )
+        .layer(axum::middleware::from_fn(
+            auth::workspace_param::reject_workspace_id,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            state,
+            owe1::middleware::owe1_layer,
+        ))
+}
+
+/// What a route that waits on the AI service may spend around that wait:
+/// reading the file, the session handshake, the usage row.
+const AI_ROUTE_MARGIN: Duration = Duration::from_secs(5);
+
+/// The request timeout bounds every route but the ones that wait on the AI
+/// service, which get that service's own bound plus a margin (SEC-19, D118).
+///
+/// The layer bounds producing a response. A stream's body is bounded by the
+/// stream itself (`ai::stream::pump`), never by this.
+fn with_timeouts<S: Clone + Send + Sync + 'static>(
+    ordinary: Router<S>,
+    ai: Router<S>,
+    request_timeout: Duration,
+    ai_request_timeout: Duration,
+) -> Router<S> {
+    ordinary
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            request_timeout,
+        ))
+        .merge(ai.layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            ai_request_timeout + AI_ROUTE_MARGIN,
+        )))
 }
 
 /// Store one snapshot of every exchange rate per UTC day (D44, D96).
@@ -781,4 +906,43 @@ async fn shutdown_signal() {
     tracing::info!("shutdown signal received, draining");
     // Give in-flight requests the same budget a request itself has.
     tokio::time::sleep(Duration::from_millis(50)).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::Body;
+    use tower::ServiceExt;
+
+    use super::*;
+
+    /// A handler slower than the request timeout and faster than the AI one.
+    async fn slow() -> &'static str {
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        "ok"
+    }
+
+    async fn status(path: &str) -> StatusCode {
+        let app = with_timeouts(
+            Router::new().route("/v1/wallets", get(slow)),
+            Router::new().route("/v1/ai/receipt/parse", get(slow)),
+            Duration::from_millis(100),
+            Duration::from_secs(1),
+        );
+        app.oneshot(Request::get(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+            .status()
+    }
+
+    /// D118
+    #[tokio::test]
+    async fn should_not_cut_an_ai_route_at_the_request_timeout() {
+        assert_eq!(status("/v1/ai/receipt/parse").await, StatusCode::OK);
+    }
+
+    /// SEC-19
+    #[tokio::test]
+    async fn should_still_cut_an_ordinary_route_at_the_request_timeout() {
+        assert_eq!(status("/v1/wallets").await, StatusCode::REQUEST_TIMEOUT);
+    }
 }

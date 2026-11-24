@@ -1,0 +1,101 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id, p.debt_id, p.transaction_id, t.wallet_id AS \"wallet_id?\", p.amount,\n                  p.date, p.created_at\n           FROM debt_payments p\n           LEFT JOIN transactions t ON t.id = p.transaction_id\n           WHERE p.workspace_id = $1 AND p.debt_id = $2 AND p.deleted_at IS NULL\n           ORDER BY p.date DESC, p.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "debt_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "debt_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "transaction_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "transaction_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "wallet_id?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "wallet_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "amount",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "amount"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "date",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "fff70f79a89dbb88900f7bac85203a7e10c026a1ab4259726dfbc521cd342d30"
+}

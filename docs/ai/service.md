@@ -116,7 +116,7 @@ The workspace context is supplied by the API (CHAT-7). The service does not fetc
 
 ## Tool catalog
 
-Fifteen tools (D17, D88, D103): eleven cut down from thirty-four in the old app, three analysis tools brought back for the canvas, and the budget status that came back with budgets. The schemas the model sees live in one Python module and are exposed at `GET /tools/definitions`, so the API's own validator can be checked against them.
+Twenty-one tools (D17, D88, D103, D120): eleven cut down from thirty-four in the old app, three analysis tools brought back for the canvas, the budget status that came back with budgets, and six debt tools that came back with debts. The schemas the model sees live in one Python module and are exposed at `GET /tools/definitions`, so the API's own validator can be checked against them.
 
 ### Read tools
 
@@ -130,6 +130,7 @@ Fifteen tools (D17, D88, D103): eleven cut down from thirty-four in the old app,
 | `get_income_summary` | `from`, `to` | Income total with the comparison, monthly series and average, the category breakdown and the latest ten rows. Leaves an `income` artifact; the year-before series goes to the artifact only |
 | `get_burn_rate` | `from`, `to` | Monthly spending, the average per month, and how many months ran above it. Leaves a `burn-rate` artifact |
 | `get_budget_status` | `month` (`YYYY-MM`, optional, defaults to the current month) | Every budget for that month with its limit, spent, remaining, percentage and state, the totals, and a summary sentence; fullest first. Leaves a `budget` artifact when any budget exists (D103) |
+| `get_outstanding_debts` | none | Unpaid and partial debts with id, contact, type, amount, remaining, currency, status and due date, each figure formatted by the API, plus the totals per currency (D120) |
 
 ### Write tools
 
@@ -141,6 +142,11 @@ Fifteen tools (D17, D88, D103): eleven cut down from thirty-four in the old app,
 | `add_transaction_items` | `transaction_id`, `items[]` | admin+ |
 | `create_wallet` | `name`, `group_id`, `currency_code` | admin+ |
 | `create_category` | `name`, `type` | admin+ |
+| `create_debt` | `type`, `contact_name`, `amount`, `currency_code` (optional, the workspace's by default), `description`, `due_date` | admin+. An unknown contact name creates the contact (DEBT-14) |
+| `pay_debt` | `debt_id`, `amount`, `wallet_id` (optional, the default wallet when absent, as in the old app) | admin+. Writes a transaction dated today and counts as one created |
+| `update_debt` | `debt_id`, `amount`, `description`, `due_date` | admin+ |
+| `delete_debt` | `debt_id`, `confirmed` | admin+, plus confirmation; counts as the turn's one delete |
+| `split_bill` | `amount`, `name`, `wallet_id`, `category_id`, `contact_names[]`, `confirmed` | admin+, plus confirmation keyed by the arguments (D122) |
 
 ### Interaction tool
 
@@ -154,13 +160,14 @@ Three things the table cannot carry on its own:
 
 - `create_wallet` has no opening balance. `wallets.balance` defaults to 0 and the only thing that moves it is a transaction, so a tool that offered one would be offering something the ledger cannot do.
 - `create_wallet.currency_code` is optional. Absent means the workspace currency (WAL-5), which is what almost every wallet wants.
+- The debt tools keep the old app's arguments. `pay_debt` always pays through a wallet, the default one when none is named, so a payment outside any wallet is recorded on the web or over MCP. `split_bill` always writes a new expense; splitting an existing transaction is the API's and MCP's.
 - `to_amount` is on both write tools because a transfer is refused without it: `amount` leaves the source wallet in its currency and `to_amount` arrives in the destination's (TXN-18), and a transfer missing it answers `TRANSFER_AMOUNT_REQUIRED`. A tool that cannot supply `to_amount` cannot make a transfer at all.
 
 **The enforcing copy of these schemas is `apps/api/crates/domain/src/tools.rs`,** not this table and not the Python module. The model is shown the Python definitions; the Rust validator decides whether a call runs, and it rejects an argument key the tool does not declare rather than ignoring it. A model that invented a parameter misunderstood the call it was making, and dropping that parameter silently turns a misunderstanding into a write the user did not ask for. `GET /tools/definitions` exists so the two copies can be compared rather than assumed equal.
 
 ### What was dropped
 
-From the old app's thirty-four tools: everything for debts (4), contacts (4), budget writes (3; the read came back with D103), wallet groups (3), documents (4), bill splitting (1), export (1), recall (1), receipt re-send (1), plus eleven analysis tools that produced canvas artifacts. All belong to features out of scope ([PRD non-goals](../prd.md#non-goals-for-v1)).
+From the old app's thirty-four tools: contacts (4; contacts are reached through the debt tools by name, and listed only over MCP), budget writes (3; the read came back with D103), wallet groups (3), documents (4), export (1), recall (1), receipt re-send (1), plus eleven analysis tools that produced canvas artifacts. Debts (4) and bill splitting (1) came back with D120 as the six debt tools above. The rest belong to features out of scope ([PRD non-goals](../prd.md#non-goals-for-v1)).
 
 ## The arithmetic rule
 

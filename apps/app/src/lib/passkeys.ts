@@ -12,6 +12,9 @@ import {
 	startRegistration
 } from '@simplewebauthn/browser';
 
+import { messageForCode } from '$lib/errors';
+import { t } from '$lib/i18n';
+
 /**
  * How a ceremony ended. `cancelled` is the person closing the prompt,
  * which needs no message; `code` is an API error code, or null when the
@@ -34,6 +37,16 @@ export function signInWithPasskey(next: string) {
 		(optionsJSON) => startAuthentication({ optionsJSON: optionsJSON as never }),
 		{ next }
 	);
+}
+
+/**
+ * What a failed passkey sign-in says. The API answers every refusal with
+ * `INVALID_CREDENTIALS`, whose message is about an email and password the
+ * person never typed, so a refusal gets the passkey's own words; other
+ * codes (a rate limit, say) keep theirs.
+ */
+export function passkeySignInError(code: string | null): string {
+	return code && code !== 'INVALID_CREDENTIALS' ? messageForCode(code) : t('auth.passkey_failed');
 }
 
 /** Make a passkey on this device for the signed-in person. */

@@ -259,6 +259,7 @@ async def test_a_handshake_signed_by_an_unpinned_key_is_refused(
     assert ECHO_PATH not in transport.paths()
 
 
+# SEC-3
 async def test_a_signature_that_does_not_verify_stops_the_client(
     server: FastAPI, config: Settings
 ) -> None:

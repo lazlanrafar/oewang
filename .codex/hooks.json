@@ -1,0 +1,73 @@
+{
+  "hooks": {
+    "PostModelRequest": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "boekti hook --cli codex event",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "boekti hook --cli codex event",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "apply_patch|Bash|shell"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "boekti hook --cli codex pre-edit",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "apply_patch"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "boekti hook --cli codex event",
+            "timeout": 3,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "boekti hook --cli codex session-start",
+            "timeout": 10,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "boekti hook --cli codex event",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

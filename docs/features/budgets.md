@@ -45,6 +45,6 @@ Bar colours live in `src/lib/budgets.ts`, shared by the page and the canvas.
 
 ## Not built
 
-- Budget-exceeded notifications: notifications are a non-goal.
+- Budget-exceeded notifications in the web app. The mobile app gets a push at 80% and at 100% (D116, PUSH-3); there is no in-app notice.
 - Budget write tools in chat.
 - A budget card on the overview.

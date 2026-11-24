@@ -14,6 +14,7 @@ use crate::{
         },
     },
     mcp_handler,
+    offline::IfMatch,
     transactions::handler::{self as web, ItemBody, ListQuery, TransactionBody},
 };
 
@@ -323,6 +324,7 @@ async fn update(ctx: Ctx, mut value: Value) -> Result<Value> {
         ctx.auth_write()?,
         Path(id),
         ctx.request_id(),
+        IfMatch(None),
         Json(body),
     )
     .await)

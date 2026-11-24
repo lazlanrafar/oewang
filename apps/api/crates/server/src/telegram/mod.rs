@@ -41,3 +41,5 @@ impl Bot {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod update_tests;

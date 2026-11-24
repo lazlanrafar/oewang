@@ -28,10 +28,10 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use oewang_domain::AppError;
+use oewang_domain::{AppError, Secret};
 
 use crate::{
-    config::Config,
+    auth::extractor::constant_time_eq,
     owe1::session::now_secs,
     response::{ApiError, RequestId},
     state::AppState,
@@ -44,8 +44,12 @@ use crate::{
 /// about them is alike.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Bucket {
-    /// The routes that take a credential or mint one (AUTH-6).
+    /// The routes that take a credential or mint one (AUTH-6), per browser
+    /// address and, after decryption, per account (D112).
     Credential,
+    /// The same routes, per source: everything the app relays shares one
+    /// of these, so it bounds the product's total rather than one caller's.
+    CredentialCeiling,
     /// Opening a crypto session (docs/api/encryption.md#handshake).
     Handshake,
     /// A request carrying a token.
@@ -77,6 +81,7 @@ impl Limit {
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
     pub credential: Limit,
+    pub credential_ceiling: Limit,
     pub handshake: Limit,
     pub authenticated: Limit,
     pub anonymous: Limit,
@@ -87,6 +92,7 @@ impl Limits {
     fn of(&self, bucket: Bucket) -> Limit {
         match bucket {
             Bucket::Credential => self.credential,
+            Bucket::CredentialCeiling => self.credential_ceiling,
             Bucket::Handshake => self.handshake,
             Bucket::Authenticated => self.authenticated,
             Bucket::Anonymous => self.anonymous,
@@ -142,6 +148,40 @@ impl RateLimiter {
 
         window.push_back(now);
         Ok(())
+    }
+
+    /// Count one request against its caller, the browser's address when the
+    /// app vouched for one and the source's otherwise, and a credential
+    /// request against its source's ceiling as well.
+    ///
+    /// The caller first, so one caller's refused attempts do not spend the
+    /// ceiling everybody shares.
+    pub fn count(
+        &self,
+        bucket: Bucket,
+        caller: Option<IpAddr>,
+        source: IpAddr,
+        now: i64,
+    ) -> Result<(), AppError> {
+        self.check(bucket, &caller.unwrap_or(source).to_string(), now)?;
+        if bucket == Bucket::Credential {
+            self.check(Bucket::CredentialCeiling, &source.to_string(), now)?;
+        }
+        Ok(())
+    }
+
+    /// Count one attempt against the account it names (D112).
+    ///
+    /// The browser's address alone lets one account be guessed at from as
+    /// many addresses as an attacker has, so the account is a budget of its
+    /// own. The action is part of the key: a flood of wrong passwords must
+    /// not also block the owner's password reset.
+    pub fn check_account(&self, action: &str, email: &str, now: i64) -> Result<(), AppError> {
+        let key = format!(
+            "account:{action}:{}",
+            oewang_domain::auth::normalize_email(email)
+        );
+        self.check(Bucket::Credential, &key, now)
     }
 
     /// Drop windows that have aged out entirely. Returns how many went.
@@ -206,7 +246,8 @@ fn is_credential_route(path: &str) -> bool {
 /// Count this request, or refuse it.
 ///
 /// Placed outside the OWE1 layer on purpose: a flood should cost a hash
-/// lookup, not a key agreement and a decryption.
+/// lookup, not a key agreement and a decryption. OWE1 would not vouch for
+/// the caller anyway: its handshake is open to anyone (D112).
 pub async fn enforce(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
@@ -217,9 +258,11 @@ pub async fn enforce(
         return next.run(request).await;
     };
 
-    let caller = client_ip(&state.config, request.headers(), peer).to_string();
+    let config = &state.config;
+    let source = source_ip(config.trust_proxy_headers, request.headers(), peer);
+    let caller = relayed_client_ip(config.app_relay_key.as_ref(), request.headers());
 
-    if let Err(error) = state.rate_limits.check(bucket, &caller, now_secs()) {
+    if let Err(error) = state.rate_limits.count(bucket, caller, source, now_secs()) {
         // The address is not logged: it is the one piece of this that is
         // personal data, and the bucket is what makes the line useful.
         tracing::info!(?bucket, "a caller was rate limited");
@@ -230,22 +273,43 @@ pub async fn enforce(
     next.run(request).await
 }
 
-/// Who to count this against.
+/// Set by the app on every call it makes for a browser request.
+pub const CLIENT_IP: &str = "x-client-ip";
+/// The app's proof that it is the one setting [`CLIENT_IP`].
+pub const RELAY_KEY: &str = "x-relay-key";
+
+/// The browser's address, when the app vouches for it (D112).
+///
+/// The app is the API's only intended caller, so its own address is every
+/// user's address. It relays the browser's, and the key is what makes that
+/// believable: `api.oewang.com` is routed from the internet and the OWE1
+/// handshake is open to anyone, so the header alone is a value an attacker
+/// picks. Without the key, or with a wrong one, the header is ignored.
+pub fn relayed_client_ip(key: Option<&Secret>, headers: &HeaderMap) -> Option<IpAddr> {
+    let key = key?;
+    let presented = headers.get(RELAY_KEY)?.to_str().ok()?;
+    if !constant_time_eq(presented.as_bytes(), key.expose().as_bytes()) {
+        return None;
+    }
+    headers.get(CLIENT_IP)?.to_str().ok()?.trim().parse().ok()
+}
+
+/// The address of whatever connected: the app, or a direct caller.
 ///
 /// Behind a reverse proxy every request arrives from the proxy, so the
-/// peer address would be one bucket for the whole internet. The forwarded
-/// header is read **only** when the deployment says there is a proxy in
-/// front, because anyone can send that header and a limiter that believes
-/// it is a limiter anyone can step around.
-fn client_ip(config: &Config, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
-    if !config.trust_proxy_headers {
+/// forwarded header is read **only** when the deployment says there is a
+/// proxy in front. And only its last entry, the one the proxy itself
+/// appended: anything to the left of it came from the caller, and a
+/// limiter that believes a caller's header is one anyone can step around.
+fn source_ip(trust_proxy_headers: bool, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
+    if !trust_proxy_headers {
         return peer.ip();
     }
 
     headers
         .get("x-forwarded-for")
         .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.split(',').next())
+        .and_then(|value| value.rsplit(',').next())
         .and_then(|value| value.trim().parse::<IpAddr>().ok())
         .unwrap_or_else(|| peer.ip())
 }
@@ -275,6 +339,7 @@ mod tests {
     fn limits() -> Limits {
         Limits {
             credential: Limit::new(3, 900),
+            credential_ceiling: Limit::new(100, 900),
             handshake: Limit::new(30, 60),
             authenticated: Limit::new(5, 60),
             anonymous: Limit::new(2, 60),
@@ -437,5 +502,151 @@ mod tests {
             classify("/v1/handshake", &headers(false)),
             Some(Bucket::Handshake)
         );
+    }
+}
+
+#[cfg(test)]
+mod whose_address_tests {
+    use axum::http::HeaderValue;
+
+    use super::*;
+
+    const KEY: &str = "relay-key-for-tests-0123456789abcdef";
+    const APP: &str = "10.0.0.5:41000";
+
+    fn limiter() -> RateLimiter {
+        RateLimiter::new(Limits {
+            credential: Limit::new(3, 900),
+            credential_ceiling: Limit::new(10, 900),
+            handshake: Limit::new(0, 60),
+            authenticated: Limit::new(0, 60),
+            anonymous: Limit::new(0, 60),
+            chat_turn: Limit::new(0, 60),
+        })
+    }
+
+    fn headers(pairs: &[(&'static str, &str)]) -> HeaderMap {
+        let mut map = HeaderMap::new();
+        for (name, value) in pairs {
+            map.insert(*name, HeaderValue::from_str(value).unwrap());
+        }
+        map
+    }
+
+    /// One credential call from the app, relaying `browser` with `key`.
+    fn login_via_app(limiter: &RateLimiter, browser: &str, key: &str) -> Result<(), AppError> {
+        let map = headers(&[(CLIENT_IP, browser), (RELAY_KEY, key)]);
+        let secret = Secret::new(KEY);
+        let caller = relayed_client_ip(Some(&secret), &map);
+        let source = source_ip(false, &map, APP.parse().unwrap());
+        limiter.count(Bucket::Credential, caller, source, 1_000)
+    }
+
+    #[test]
+    fn should_limit_two_browsers_behind_the_app_independently() {
+        let limiter = limiter();
+        for _ in 0..3 {
+            login_via_app(&limiter, "203.0.113.1", KEY).unwrap();
+        }
+        assert!(login_via_app(&limiter, "203.0.113.1", KEY).is_err());
+
+        // Same app address, another browser: its own budget, not the first one's.
+        login_via_app(&limiter, "203.0.113.2", KEY).unwrap();
+    }
+
+    #[test]
+    fn should_still_stop_everyone_at_the_ceiling() {
+        let limiter = limiter();
+        for n in 0..10 {
+            login_via_app(&limiter, &format!("198.51.100.{n}"), KEY).unwrap();
+        }
+        assert!(login_via_app(&limiter, "198.51.100.200", KEY).is_err());
+    }
+
+    #[test]
+    fn should_not_spend_the_ceiling_on_a_refused_caller() {
+        let limiter = limiter();
+        for _ in 0..20 {
+            let _ = login_via_app(&limiter, "203.0.113.9", KEY);
+        }
+        // 3 counted, 17 refused before the ceiling: 7 left for everyone else.
+        for n in 0..7 {
+            login_via_app(&limiter, &format!("198.51.100.{n}"), KEY).unwrap();
+        }
+        assert!(login_via_app(&limiter, "198.51.100.99", KEY).is_err());
+    }
+
+    #[test]
+    fn should_limit_one_account_however_many_addresses_try_it() {
+        let limiter = limiter();
+        for _ in 0..3 {
+            limiter
+                .check_account("login", "victim@example.com", 1_000)
+                .unwrap();
+        }
+        // Spelled differently, still the same account.
+        let error = limiter
+            .check_account("login", " Victim@Example.COM ", 1_000)
+            .unwrap_err();
+        assert_eq!(error.status(), 429);
+
+        // Another account, and the owner's own reset, are untouched.
+        limiter
+            .check_account("login", "other@example.com", 1_000)
+            .unwrap();
+        limiter
+            .check_account("forgot-password", "victim@example.com", 1_000)
+            .unwrap();
+    }
+
+    #[test]
+    fn should_ignore_a_client_address_the_app_did_not_vouch_for() {
+        let secret = Secret::new(KEY);
+        let forged = headers(&[(CLIENT_IP, "203.0.113.7")]);
+        assert_eq!(relayed_client_ip(Some(&secret), &forged), None);
+
+        let wrong_key = headers(&[(CLIENT_IP, "203.0.113.7"), (RELAY_KEY, "guess")]);
+        assert_eq!(relayed_client_ip(Some(&secret), &wrong_key), None);
+
+        // No key configured: nothing is believed, whatever is sent.
+        let keyed = headers(&[(CLIENT_IP, "203.0.113.7"), (RELAY_KEY, KEY)]);
+        assert_eq!(relayed_client_ip(None, &keyed), None);
+
+        let not_an_address = headers(&[(CLIENT_IP, "evil, 1.2.3.4"), (RELAY_KEY, KEY)]);
+        assert_eq!(relayed_client_ip(Some(&secret), &not_an_address), None);
+
+        assert_eq!(
+            relayed_client_ip(Some(&secret), &keyed),
+            Some("203.0.113.7".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn should_count_a_forged_address_against_the_real_source() {
+        // A direct caller rotating x-client-ip without the key is still one caller.
+        let limiter = limiter();
+        let secret = Secret::new(KEY);
+        let peer: SocketAddr = "192.0.2.50:5000".parse().unwrap();
+        for n in 0..4 {
+            let map = headers(&[(CLIENT_IP, &format!("203.0.113.{n}"))]);
+            let outcome = limiter.count(
+                Bucket::Credential,
+                relayed_client_ip(Some(&secret), &map),
+                source_ip(false, &map, peer),
+                1_000,
+            );
+            assert_eq!(outcome.is_ok(), n < 3, "attempt {n}");
+        }
+    }
+
+    #[test]
+    fn should_read_only_the_entry_the_proxy_appended() {
+        let peer: SocketAddr = "172.18.0.2:443".parse().unwrap();
+        let map = headers(&[("x-forwarded-for", "1.2.3.4, 198.51.100.7")]);
+        assert_eq!(
+            source_ip(true, &map, peer),
+            "198.51.100.7".parse::<IpAddr>().unwrap()
+        );
+        assert_eq!(source_ip(false, &map, peer), peer.ip());
     }
 }

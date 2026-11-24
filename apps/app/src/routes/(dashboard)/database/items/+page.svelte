@@ -27,9 +27,11 @@
 
 	let { data } = $props();
 
-	const held = pagedRows<ItemSummary>();
+	const loaded = $derived({ rows: data.items, page: data.meta.page ?? 1, key: data.filterKey });
+	// Seeded from the load, so the server render and the first paint show the rows.
+	const held = pagedRows<ItemSummary>(untrack(() => loaded));
 	$effect(() => {
-		const next = { rows: data.items, page: data.meta.page ?? 1, key: data.filterKey };
+		const next = loaded;
 		untrack(() => held.update(next));
 	});
 

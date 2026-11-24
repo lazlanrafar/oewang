@@ -61,6 +61,11 @@ All of it inside one database transaction, with the affected wallet rows locked 
 | A foreign entry's currency differs from the source wallet's | `VALIDATION_FAILED` |
 | Both wallets live and in this workspace | `WALLET_NOT_FOUND` |
 | Category, if given, live and in this workspace | `CATEGORY_NOT_FOUND` |
+| A debt payment's transaction keeps its `amount`, `wallet_id`, `type`, `to_wallet_id`, `original_*` and `exchange_rate` (DEBT-8, D121) | `PAYMENT_TRANSACTION_LOCKED` |
+
+### Debt payments
+
+A payment on a debt through a wallet is an ordinary `expense` or `income` row and moves the balance by the rules above ([debts](debts.md)). Deleting it by any route (single, bulk, chat, MCP) also cancels the payment, in the same database transaction, and restores the debt's remaining amount (DEBT-8). Deleting a transaction that a debt was made from clears the debt's link and leaves the debt alone (DEBT-9).
 
 ### Audit
 
@@ -129,6 +134,8 @@ File bytes arrive as chunks through the SvelteKit server's `/vault/files` routes
 
 Line items move no money: only the transaction's own `amount` does. When the items do not add up to it the sheet raises a badge and nothing more, because a receipt with a service charge on it legitimately does not add up (TXN-12).
 
+**Debts** is an accordion section shown when the row is a debt payment or the source of a debt: each debt with its contact, type, remaining amount and status, opening the debt's detail sheet. A writer also sees Create debt, which opens the debt form with this transaction as its source (DEBT-12). Editing a payment transaction shows its amount, account, type, destination and foreign entry read-only, with a line naming the debt and a link to it (DEBT-8).
+
 Every confirmation on this screen is the design system's alert dialog rather than the browser's `confirm`. The native one blocks the renderer until it is dismissed, which freezes the page, and it cannot be translated (UI-1, UI-4).
 
 The history section answers "why is this number what it is" at the row the user is looking at (OPS-8, D46). Each entry names the actor, the surface (`web`, `chat`, `import`, `receipt`) and what changed:
@@ -164,7 +171,7 @@ Two paths, picked by what the file is. The rule behind the split: **deterministi
 
 Four steps, ported from the old wizard, with one change: step 2 arrives prefilled once the AI service can be reached. Until then it arrives empty, which is the same path a failed mapping call takes.
 
-1. **Select file.** Drop a CSV. Parsed in the browser. XLSX is not read; see [what is not built](#data-table-what-is-built-and-what-is-not).
+1. **Select file.** Drop a CSV or an `.xlsx`. A CSV is parsed in the browser. An `.xlsx` is read on the server (D111): the browser posts its bytes to the SvelteKit route `/transactions/import/xlsx`, which forwards them as base64 inside OWE1 to `POST /v1/transactions/import/xlsx`. The API reads the first worksheet with `calamine` and answers `{ columns, rows, dropped }`, the shape the CSV parser produces, so steps 2 to 4 do not know which kind of file they were given. See [spreadsheet files](#spreadsheet-files-xlsx).
 2. **Map fields.** The column names and two sample rows go to the AI service, which returns a proposed mapping ([column mapping](../ai/service.md#csv-column-mapping)). The user confirms or corrects it. A failed or slow mapping call leaves the step empty and the user maps by hand; the wizard never blocks on it.
 3. **Map values.** Match the file's category and wallet names to existing rows, or create new ones.
 4. **Review and commit.** Shows what will be created, what is a duplicate, and what will be skipped. Commits through `POST /v1/transactions/bulk`.
@@ -180,6 +187,15 @@ The proposal is model output, so `src/lib/column-mapping.ts` decides how much of
 - A column claimed twice keeps its first field. One column cannot be both the date and the amount.
 
 **Every way the call can fail goes the same way**, and that path is the one that matters: a refusal, a timeout at fifteen seconds, a route the API has not registered yet, and an answer that mapped nothing all leave step 2 as it was, say so in one line, and let the user map by hand. The model is the optional half of this step. A wizard that waits on it is a wizard that is sometimes broken.
+
+#### Spreadsheet files (XLSX)
+
+Read in `oewang_domain::spreadsheet`, never in the browser: the only npm build of SheetJS carries a prototype-pollution advisory and would run in the session's context (D111).
+
+- **Same shape as a CSV.** The first row with any text is the header; an unnamed header cell becomes `Column N`. Blank rows are skipped. A row with a value past the last named column is dropped and counted in `dropped`, as a CSV row with too many fields is. Cells are trimmed.
+- **Text, not numbers.** Every cell comes back as a string and is parsed by `csv_import` at commit, like a CSV cell. A number cell is printed as the shortest text that reads back as the same value, which for any figure of up to 15 significant digits is exactly the digits the file wrote (`87500.5`, never `87500.50000000001`). A date cell comes back as `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM:SS` when it carries a time; both are read by `parse_date`. A boolean is `TRUE` or `FALSE`; an error cell is empty.
+- **Bounded before it is read.** 512 KB on the wire (a vault chunk's size, which is what fits the 1 MB body limit after base64 and the seal), 32 MB unpacked as declared by the zip directory, a strings table of at most a million entries, 100 columns and the 5,000-row import cap. Anything over answers `SPREADSHEET_TOO_LARGE` (413); a file that is not a readable `.xlsx` answers `SPREADSHEET_UNREADABLE` (422). Over the row cap is refused rather than truncated, because a silently shortened statement imports wrong.
+- **Nothing is stored or written.** The bytes are not put in the vault and the response is the only copy. No audit row, because nothing changed; the commit in step 4 writes its own.
 
 #### Image and PDF statement (AI-4)
 
@@ -388,7 +404,13 @@ of them is obvious from the markup:
   out by the next one. One rowgroup around the whole body would let the first
   day's header ride over every other day. No scroll listener, no measurement.
   The group row carries `role="row"` and a single `role="cell"`, because a
-  rowgroup may hold nothing but rows (D65).
+  rowgroup may hold nothing but rows (D65). That cell is as wide as the
+  visible box (the scroller's `clientWidth`) and sticky at `left: 0`: spanning
+  the full column width put the day's totals past the right edge whenever the
+  columns are wider than the screen, as they are at 1280px.
+- **The first page renders on the server.** `pagedRows()` is seeded with the
+  load's page, so SSR and the first paint show the rows rather than "No
+  transactions yet"; the update effect only takes later pages.
 - **Three sticky things coexist, so there is a z ladder**: the column header at
   `z-40`, a day group header at `z-30`, the sticky cells at `z-20`. The order
   is the order they pass each other: a day header slides under the column
@@ -401,7 +423,6 @@ of them is obvious from the markup:
 | Loading state | `data-table-skeleton.tsx` renders skeleton rows per column type while a page loads. Ours renders nothing | Small |
 | Persisted table settings | `use-table-settings` keeps column order, visibility and widths per table and per user. Ours reset on reload | Small to medium |
 | Copy link to a row | `meta.onCopyUrl` on the old table. The detail sheet is already addressable as `?detail=`, so this is a button, not a feature | Small |
-| XLSX in the import wizard | The old wizard reads a spreadsheet as well as a CSV. SheetJS is no longer published to npm and the version that is carries a known prototype-pollution advisory, so the dependency is a decision to take rather than to assume. **Still open.** A dependency that runs in the browser shares a context with the session ([hardening](../security/hardening.md#dependencies)), which is why this one is the team's call and not a default | Small once the dependency is chosen |
 | A review list for a statement import | The counts are shown; the rows are not, because the job endpoint does not return any. See [image and PDF statement](#image-and-pdf-statement-ai-4) | Small, once the rows are on the response |
 
 Built since: the receipt confirmation sheet, in the [canvas](chat.md#canvas) rather than as a modal, and the assistant's column mapping in step 2 of the wizard.

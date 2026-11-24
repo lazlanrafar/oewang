@@ -1,0 +1,101 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, debt_id, transaction_id, amount, date, created_at, updated_at\n           FROM debt_payments\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "debt_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "debt_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "transaction_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "transaction_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "amount",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "amount"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "date",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "debt_payments",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b7de352fe8508e9210cdbf595b750e985b56855aad8bf02beb19810b52009d69"
+}

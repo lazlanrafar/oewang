@@ -20,11 +20,11 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 | Timestamps | `created_at` and `updated_at`, both `timestamptz` with `DEFAULT now()`. Every timestamp column is `timestamptz`: a naive timestamp means whatever the writer's clock meant, which is wrong for a product with a workspace timezone (changed at US-002, from the old app's `timestamp`). |
 | Money | `decimal(19,4)`. Read in Rust as `rust_decimal::Decimal`. Serialized as a string (D12). |
 | Naming | `snake_case` for tables and columns, plural table names. |
-| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. Later changes are numbered after them; the newest is `0010_vault_usage.sql` (D90 to D92). |
+| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. Later changes are numbered after them; the newest is `0020_debts.sql` (D120). |
 
 ## Tables in scope
 
-Thirty tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `passkeys` and `passkey_ceremonies` (D110), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103), `feedback` (D104), and `mcp_tokens`, `oauth_clients` and `oauth_codes` (D106). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
+Thirty-five tables. The sixteen carried from the old app's schema, plus `refresh_tokens` and `password_reset_tokens` (D38, AUTH-10), `passkeys` and `passkey_ceremonies` (D110), `exchange_rates` (D44), the three Telegram tables (D83), `ai_usage` (D92), `budgets` (D103), `feedback` (D104), `mcp_tokens`, `oauth_clients` and `oauth_codes` (D106), `device_tokens` and `budget_alerts` (D116), and `contacts`, `debts` and `debt_payments` (D120). Carried (see [legacy app](reference/legacy-app.md#schema-mapping)) with the billing, quota and integration columns stripped (D8).
 
 ```mermaid
 erDiagram
@@ -59,6 +59,14 @@ erDiagram
     users ||--o{ mcp_tokens : "holds"
     oauth_clients ||--o{ mcp_tokens : "granted"
     oauth_clients ||--o{ oauth_codes : "redeems"
+    users ||--o{ device_tokens : "is pushed at"
+    budgets ||--o{ budget_alerts : "announced in"
+    workspaces ||--o{ contacts : "has"
+    workspaces ||--o{ debts : "has"
+    contacts ||--o{ debts : "owes or is owed"
+    debts ||--o{ debt_payments : "has"
+    transactions ||--o| debt_payments : "settles"
+    transactions ||--o{ debts : "sources"
 ```
 
 ### Identity and tenancy
@@ -122,7 +130,7 @@ The second index matters: authentication resolves membership by `user_id` alone 
 | `expires_at` | timestamp | 30 days from issue |
 | `used_at` | timestamp | Set on rotation. A second use of the same row is a reuse |
 | `revoked_at` | timestamp | Set on logout, password change, or reuse detection |
-| `user_agent`, `ip` | text | For the user's session list. Truncated, never used for authorization |
+| `user_agent`, `ip` | text | For the user's session list: the browser's, as the app relays them ([auth](security/auth.md#the-session-cookies)). Truncated, never used for authorization |
 | `created_at` | timestamp | |
 
 ```sql
@@ -144,6 +152,22 @@ A WebAuthn credential a user signs in with (AUTH-14, D110). Belongs to a person,
 | `name` | text | Shown in the list; defaults to the device it was made on |
 | `created_at`, `last_used_at` | timestamptz | |
 | `deleted_at` | timestamptz | Soft delete |
+
+#### `device_tokens`
+
+Migration `0019`, D116, PUSH-1. A phone the API can push to through FCM. Belongs to a person, not a workspace, like `passkeys`: one device receives the pushes for every workspace its owner is in, so a workspace column would either duplicate the row per workspace or pick one arbitrarily. It is filtered by `user_id` and `deleted_at IS NULL`; the one read that starts from a workspace (a budget push to every member) joins through a live `user_workspaces` row. Registration and removal are audited in the session's workspace, as a passkey is; retiring a token FCM reports dead is housekeeping and is not.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `user_id` | text | FK users, cascade |
+| `platform` | text | `ios` or `android` |
+| `token` | text | The FCM registration token. A credential for pushing to the device: never logged, never in an audit row or a response |
+| `created_at`, `updated_at` | timestamptz | |
+| `last_seen_at` | timestamptz | Refreshed on every registration, which the app repeats at sign-in |
+| `deleted_at` | timestamptz | Soft delete: on sign-out, or when FCM answers `UNREGISTERED` or an `INVALID_ARGUMENT` naming the token |
+
+Indexes: `device_tokens_token_idx` unique on `(token) WHERE deleted_at IS NULL`, so a token registered again, by anyone, moves to that person instead of being pushed to two accounts; `device_tokens_user_idx (user_id) WHERE deleted_at IS NULL`.
 
 #### `passkey_ceremonies`
 
@@ -199,7 +223,7 @@ The server half of a passkey registration or sign-in in progress (D110). `user_i
 | `is_included_in_totals` | boolean | Default true |
 | `is_default` | boolean | Default false. At most one true per workspace (WAL-3) |
 | `sort_order` | integer | Default 0 |
-| `created_at`, `updated_at`, `deleted_at` | timestamp | |
+| `created_at`, `updated_at`, `deleted_at` | timestamp | `updated_at` moves when the wallet is edited, not when a transaction moves its balance: it is the version `If-Match` compares (D115) |
 
 ```sql
 CREATE INDEX wallets_workspace_idx ON wallets (workspace_id) WHERE deleted_at IS NULL;
@@ -239,6 +263,21 @@ Migration `0014`, D103. A monthly limit on one expense category, in the workspac
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | |
 
 Indexes: `budgets_workspace_idx (workspace_id) WHERE deleted_at IS NULL`, and `budgets_one_per_category_idx` unique on `(workspace_id, category_id) WHERE deleted_at IS NULL`, so a category has one live budget whatever two saves race. The old app's `period` column is not carried: it was never read.
+
+#### `budget_alerts`
+
+Migration `0019`, D116, PUSH-3. One row per budget, month and threshold that has been pushed. Append-only, like `audit_logs`: nothing updates or deletes a row, and nothing reads one back; the unique key is the whole point.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `workspace_id` | text | FK workspaces, cascade |
+| `budget_id` | text | FK budgets, cascade |
+| `month` | date | The month's first day (`CHECK` day = 1) |
+| `threshold` | smallint | `80` or `100` |
+| `created_at` | timestamptz | |
+
+Index: `budget_alerts_once_idx` unique on `(budget_id, month, threshold)`. After a transaction write commits, the API reads the month's budget status (the same figures the page shows, D27) and inserts a row for each threshold the budget has reached with `ON CONFLICT DO NOTHING`; only a row that was actually inserted is pushed, so two writes racing past 80% push once, and a new month starts with no rows. A jump past both inserts both and pushes only the 100% one.
 
 #### `feedback`
 
@@ -430,6 +469,64 @@ In the old app a Go worker owned the transition to a terminal status. Here a tok
 `review` is jsonb rather than a table because it is a report, not ledger data: nothing joins it, nothing updates it, and it is written once and read whole. A table would add a foreign key and an index to carry a list that is never read in parts.
 
 There is no `stale` column. A job that stopped reporting did so because its task died with the process, and nothing was left running to write that down; the API computes staleness from `created_at` when the modal polls.
+
+### Debts
+
+Migration `0020`, D120 and D121. A debt is money owed between the person and one contact; payments bring it to zero. The rules are in [features/debts.md](features/debts.md).
+
+#### `contacts`
+
+The person on the other side of a debt (CON-1). The old app's address, VAT, website and billing columns are not carried: they served invoices.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key. A client `id` is accepted on create (D114) |
+| `workspace_id` | text | FK workspaces, cascade |
+| `name` | text | Required, trimmed, 1 to 120 characters |
+| `email`, `phone`, `note` | text | Optional |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+Indexes: `contacts_workspace_idx (workspace_id) WHERE deleted_at IS NULL`, and `contacts_name_idx (workspace_id, lower(name)) WHERE deleted_at IS NULL` for the case-insensitive match that chat, MCP and split bill use. It is deliberately not unique: two people can share a name, and a typo is fixed by merging (CON-4).
+
+#### `debts`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key. A client `id` is accepted on create (D114) |
+| `workspace_id` | text | FK workspaces, cascade |
+| `contact_id` | text | FK contacts. Editable, also after payments; a merge moves it |
+| `source_transaction_id` | text | FK transactions, nullable. Set when `origin = from_transaction` |
+| `type` | text | `CHECK (type IN ('payable', 'receivable'))`. Fixed once a live payment exists |
+| `origin` | text | `CHECK (origin IN ('manual', 'from_transaction'))`. Kept when the source is deleted |
+| `currency_code` | text | ISO 4217. Defaults to the workspace currency, or the source wallet's. Fixed once a live payment exists |
+| `amount` | decimal(19,4) | `CHECK (amount > 0)`. Never below what is already paid (`AMOUNT_BELOW_PAID`) |
+| `remaining_amount` | decimal(19,4) | `CHECK (remaining_amount >= 0 AND remaining_amount <= amount)` |
+| `status` | text | `unpaid`, `partial` or `paid`. A `CHECK` ties it to `remaining_amount`: `paid` exactly when it is 0, `unpaid` exactly when it equals `amount` |
+| `description` | text | Optional |
+| `due_date` | date | Optional. A date, not an instant: overdue compares it with the person's local date |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+Indexes: `debts_workspace_idx (workspace_id) WHERE deleted_at IS NULL`, `debts_contact_id_idx (contact_id)`, `debts_source_transaction_id_idx (source_transaction_id)`.
+
+`remaining_amount` and `status` are stored rather than computed per read because the list filters and sorts on them. Only the debt service writes them, inside the same database transaction as the payment or cancellation that changes them, after locking the debt row.
+
+The foreign keys do not see soft deletes, so the services keep them true: soft-deleting a source transaction clears `source_transaction_id` in the same transaction (D121), and a contact with a live debt cannot be deleted (CON-3).
+
+Converting the workspace currency (D105) leaves debts alone. They store no base amount; `GET /v1/debts/summary` converts to the workspace currency at read time, as the wallet totals do (D117).
+
+#### `debt_payments`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key. A client `id` is accepted on create (D114), so a replayed payment never pays twice |
+| `workspace_id` | text | FK workspaces, cascade |
+| `debt_id` | text | FK debts |
+| `transaction_id` | text | FK transactions, nullable. Null when paid without a wallet |
+| `amount` | decimal(19,4) | `CHECK (amount > 0)`. In the debt's currency, whatever the wallet's |
+| `date` | timestamptz | The payment date, also the transaction's. Sent by the client, so an offline payment keeps its day |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+Indexes: `debt_payments_debt_id_idx (debt_id)`, and `debt_payments_transaction_idx` unique on `(transaction_id) WHERE transaction_id IS NOT NULL AND deleted_at IS NULL`: one payment per transaction, which is what lets deleting that transaction cancel exactly one payment (D121). Cancelling a payment soft-deletes the row and its transaction together.
 
 ### Files
 
@@ -646,6 +743,8 @@ Carried over unchanged from the old app. The implementation lives in the transac
 `amount` is in the source wallet's currency and `to_amount` in the destination wallet's currency, so a balance update is a plain addition and no conversion happens at write time. A transfer between two wallets of the same currency simply has `to_amount` equal to `amount`.
 
 **On soft delete** (TXN-5): reverse the original effect.
+
+**Debt payments**: a payment through a wallet is an ordinary `expense` or `income` transaction and moves the balance by the rules above. Its amount, wallet, type, destination and foreign-entry columns are locked (line items move no money, TXN-12, so they stay editable), and deleting it cancels the payment ([features/debts.md](features/debts.md), D121).
 
 **On update** (TXN-4): reverse the old effect, then apply the new one. All nine type transitions, plus a changed amount, a changed wallet or a changed destination wallet, follow the same two steps.
 

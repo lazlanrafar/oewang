@@ -1,0 +1,18 @@
+import 'package:oewang/core/result/app_error.dart';
+import 'package:oewang/core/result/result.dart';
+import 'package:oewang/data/repositories/feedback_repository.dart';
+
+class FeedbackRepositoryFake implements FeedbackRepository {
+  /// What was sent, newest last.
+  final sent = <({FeedbackType type, String message})>[];
+
+  @override
+  Future<Result<void, AppError>> submit({
+    required FeedbackType type,
+    required String message,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    sent.add((type: type, message: message));
+    return const Success(null);
+  }
+}

@@ -573,6 +573,7 @@ async fn should_store_the_words_either_side_of_a_tool_as_two_paragraphs(pool: Pg
     );
 }
 
+/// CHAT-18
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_send_and_store_the_artifact_a_tool_left(pool: PgPool) {
     fixture(&pool).await;

@@ -29,15 +29,19 @@ flowchart LR
     A["apps/app<br/>SvelteKit server"]
     R["apps/api<br/>Rust"]
     P["apps/ai<br/>Python"]
+    M["apps/native<br/>Flutter"]
 
     B -->|"hop 1: TLS. SSR HTML is plaintext.<br/>JSON under /api/* is OWE1 if tier 2 is on"| A
     A -->|"hop 2: TLS + OWE1 (tier 1)"| R
     R -->|"hop 3: TLS + OWE1 (tier 1)"| P
+    M -->|"hop 2m: TLS + OWE1, bearer token (D113)"| R
 ```
 
 ### Tier 1, specified and built: hops 2 and 3
 
 Every call from the SvelteKit server to the API, and from the API to the AI service, uses OWE1. Both ends are servers, so there is no browser version floor, no Web Crypto limitation, and no bundle cost. This tier is unconditional.
+
+The mobile app (D113) is a second client on hop 2: it runs the same handshake, pins the same key and seals every body the same way, from Dart (`apps/native/lib/data/services/api/owe1/`), tested against the shared `owe1-vectors.json`.
 
 ### Tier 2, decided against: hop 1
 

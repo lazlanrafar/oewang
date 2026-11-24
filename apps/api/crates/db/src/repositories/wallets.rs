@@ -51,6 +51,8 @@ pub struct WalletListRow {
     pub is_included_in_totals: bool,
     pub is_default: bool,
     pub sort_order: i32,
+    /// Any live transaction on either leg, so the form can lock the currency (WAL-6).
+    pub has_transactions: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -205,6 +207,12 @@ pub async fn list_wallets(
         WalletListRow,
         r#"SELECT w.id, w.group_id, g.name AS "group_name?", w.name, w.currency_code,
                   w.balance, w.is_included_in_totals, w.is_default, w.sort_order,
+                  EXISTS(
+                    SELECT 1 FROM transactions t
+                    WHERE t.workspace_id = w.workspace_id
+                      AND (t.wallet_id = w.id OR t.to_wallet_id = w.id)
+                      AND t.deleted_at IS NULL
+                  ) AS "has_transactions!",
                   w.created_at, w.updated_at
            FROM wallets w
            LEFT JOIN wallet_groups g
@@ -229,6 +237,26 @@ pub async fn find_wallet(
                   is_default, sort_order, created_at, updated_at
            FROM wallets
            WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL"#,
+        workspace_id,
+        id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
+/// The same read, deleted rows included. Only a repeated create reads this:
+/// it answers the row its id names even when deleted since (D114).
+pub async fn find_wallet_with_deleted(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    id: &str,
+) -> Result<Option<WalletRow>, sqlx::Error> {
+    sqlx::query_as!(
+        WalletRow,
+        r#"SELECT id, group_id, name, currency_code, balance, is_included_in_totals,
+                  is_default, sort_order, created_at, updated_at
+           FROM wallets
+           WHERE workspace_id = $1 AND id = $2"#,
         workspace_id,
         id
     )
@@ -280,15 +308,17 @@ pub async fn lock_wallets(
     .await
 }
 
+/// `None` when the id is already taken, by a row of any workspace (D114).
 pub async fn insert_wallet(
     executor: impl PgExecutor<'_>,
     wallet: NewWallet<'_>,
-) -> Result<WalletRow, sqlx::Error> {
+) -> Result<Option<WalletRow>, sqlx::Error> {
     sqlx::query_as!(
         WalletRow,
         r#"INSERT INTO wallets
              (id, workspace_id, group_id, name, currency_code, is_included_in_totals, sort_order)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (id) DO NOTHING
            RETURNING id, group_id, name, currency_code, balance, is_included_in_totals,
                      is_default, sort_order, created_at, updated_at"#,
         wallet.id,
@@ -299,7 +329,7 @@ pub async fn insert_wallet(
         wallet.is_included_in_totals,
         wallet.sort_order
     )
-    .fetch_one(executor)
+    .fetch_optional(executor)
     .await
 }
 

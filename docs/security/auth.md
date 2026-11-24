@@ -16,7 +16,7 @@ How a user proves who they are, how the system decides what they may do, and how
 - Email and password, and passkeys added once signed in (D21, D110). No OAuth providers.
 - Passwords hashed with Argon2id.
 - The session is a short-lived access JWT plus a rotating refresh token, both in `httpOnly` cookies set by the SvelteKit server (D6, D38).
-- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4). A session opened at sign-up has neither until the user creates or joins a workspace (D109).
+- The API derives the workspace and the role from JWT claims and from nothing else (AUTH-4), and refuses a request that names one in its body or query with `WORKSPACE_ID_NOT_ALLOWED`. Only switching workspace and the AI service's internal tool call name one, and both are checked against the membership row ([conventions](../api/conventions.md#resources-and-urls)). A session opened at sign-up has neither until the user creates or joins a workspace (D109).
 - Three roles per workspace: `owner`, `admin`, `member`.
 - The AI service authenticates with a shared service key, never with a user token (D4).
 
@@ -72,6 +72,8 @@ When the API answers 401 to a call that carried the access token, the SvelteKit 
 
 The refresh token is opaque, not a JWT. It carries no claims, so it proves nothing on its own: the server looks it up. Only its SHA-256 is stored (AUTH-8), so a database leak does not yield usable tokens.
 
+Each refresh token row also records the browser's user agent and address, for the session list in Account (`GET /v1/auth/sessions`). The API never sees the browser, so the SvelteKit server relays both on every call as `x-client-user-agent` and `x-client-ip` (`clientHeaders` in `src/lib/server/api.ts`), and the API prefers them over the request's own `user-agent`, which is the app server's fetch. An address that does not parse as an IP is dropped, and `x-forwarded-for` is not read for this. The address is believed only when the same request carries `x-relay-key` matching `APP_RELAY_KEY`, compared in constant time (D112): the API's domain is routed from the internet and the OWE1 handshake is open to anyone, so neither D5 nor D22 proves the app sent the header. Without the key the session row records no address. Neither value is used for authorization; the address is what the [rate limits](#rate-limits) count against. Behind a proxy the app needs `ADDRESS_HEADER` and `XFF_DEPTH` set ([deployment](../deployment.md#app)), or every address is the proxy's.
+
 ### Rotation and reuse detection
 
 Every refresh issues a new refresh token and marks the old row `used_at` (AUTH-9). The old token stops working immediately.
@@ -121,6 +123,7 @@ A second way in, beside the password (AUTH-14, D110). WebAuthn through `webauthn
 - **User handle.** The first 16 bytes of SHA-256 of the user ID. Nothing on the authenticator names the account, and the same handle for every registration means a second passkey on the same device replaces the first.
 - **Removing.** Soft delete, audited `passkey.removed`. The copy on the device stays until the person deletes it there; the server no longer accepts it.
 - Passkeys do not end with a password change: they are separate credentials, each removable on its own.
+- **The mobile apps.** iOS signs with the site's own origin, which `webcredentials` in `/.well-known/apple-app-site-association` lets the app claim (D113). Android's Credential Manager reports `android:apk-key-hash:` and the base64url, without padding, of the SHA-256 of the app's signing certificate instead. The API admits one such origin per fingerprint in `ANDROID_CERT_SHA256`, matched exactly, and the app serves the same fingerprints in `/.well-known/assetlinks.json` under `delegate_permission/common.get_login_creds` (D119). Without the setting, Android passkeys are refused and the Android app does not offer them.
 
 ## Password reset
 
@@ -130,7 +133,7 @@ Email and password are the only way in (D21), so a forgotten password with no re
 2. If the user exists, generate 32 random bytes, store the SHA-256 with a 1 hour expiry (AUTH-10), and send the raw token in a link by email (D40).
 3. `POST /v1/auth/reset-password` with the token and a new password. The token must exist, be unexpired and unused.
 4. On success: set the new hash, mark the token used, and revoke every refresh token for that user.
-5. Rate limited with the rest of `/v1/auth/*`: 10 requests per 15 minutes per IP (AUTH-6).
+5. Rate limited like the other credential routes: 10 requests per 15 minutes per browser address, and 10 per 15 minutes per email address (AUTH-6, D112).
 
 A reset link is a bearer credential in an email. It is single use, short lived, and never logged.
 
@@ -252,11 +255,19 @@ Internal routes are bound to the internal network in deployment and additionally
 
 | Scope | Limit |
 |---|---|
-| `/v1/auth/*` | 10 requests per 15 minutes per IP (AUTH-6) |
-| Authenticated routes | 300 per minute per IP |
-| Unauthenticated routes | 30 per minute per IP |
+| Credential routes | 10 requests per 15 minutes per browser address (AUTH-6) |
+| `login`, `register`, `forgot-password` | Also 10 per 15 minutes per email address, each route on its own (D112) |
+| Credential routes, all callers | 1,000 per 15 minutes per source, the backstop (D112) |
+| Authenticated routes | 300 per minute per browser address |
+| Unauthenticated routes | 30 per minute per browser address |
 
-Limits are per IP address. A shared office address can exhaust the auth bucket; that is accepted at this scale and is visible in the logs when it happens.
+The API's only intended caller is the SvelteKit server, so the connecting address is the same for every user. The limits therefore count against the browser's address as the app relays it in `x-client-ip`, and only when the request also carries the relay key (D112). A request without the key, which is anything that reaches the API's public domain directly, is counted against its own address and its `x-client-ip` is ignored, so a caller cannot pick its own bucket.
+
+The per-address budget alone would let one account be guessed at from as many addresses as an attacker has, so `login`, `register` and `forgot-password` also count against the normalised email, after decryption (the email is inside the OWE1 body). The route is part of that key: a flood of wrong passwords against an account does not also block its owner's password reset. The cost, accepted: anyone can hold one account's password sign-in at its limit by guessing at it. Passkey sign-in names no email and is not affected.
+
+The ceiling counts every credential call from one source, which in production is the app. It is the backstop against many addresses at once, and it is a lever too: an attacker with a hundred addresses can fill it and stop everyone signing in or refreshing until the window slides. It is set high for that reason, and `RATE_LIMIT_CREDENTIAL_CEILING` moves it.
+
+A shared office address can still exhaust its own credential budget; that is accepted at this scale and is visible in the logs when it happens.
 
 ## Logging rules
 

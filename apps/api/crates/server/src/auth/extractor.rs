@@ -256,7 +256,7 @@ impl FromRequestParts<AppState> for ServiceCaller {
 ///
 /// The length is not secret and is compared first; the bytes are folded so
 /// the loop runs the same way whatever they hold.
-fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+pub(crate) fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
     if left.len() != right.len() || left.is_empty() {
         return false;
     }

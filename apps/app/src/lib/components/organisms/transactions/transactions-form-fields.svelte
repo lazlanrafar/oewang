@@ -72,6 +72,8 @@
 	import type { ComboboxItem } from '../../molecules/combobox/index.js';
 	import { NativeSelect } from '../../atoms/native-select/index.js';
 
+	import { t } from '$lib/i18n';
+
 	let {
 		draft = $bindable(),
 		accounts,
@@ -85,7 +87,8 @@
 		fieldErrors,
 		createLabel,
 		onCreateAccount,
-		onCreateCategory
+		onCreateCategory,
+		paidDebt = null
 	}: {
 		draft: TransactionDraft;
 		accounts: ComboboxItem[];
@@ -106,7 +109,16 @@
 		 */
 		onCreateAccount?: (name: string) => void;
 		onCreateCategory?: (name: string) => void;
+		/**
+		 * The debt this transaction pays, when it pays one. Its amount,
+		 * account, type, destination and foreign entry then show read-only:
+		 * the API refuses a change to any of them (DEBT-8, D121), and they
+		 * change from the debt instead.
+		 */
+		paidDebt?: { id: string; contact_name: string } | null;
 	} = $props();
+
+	const locked = $derived(!!paidDebt);
 
 	const transfer = $derived(draft.type === 'transfer');
 	/** The user typed in a currency the wallet does not hold (TXN-20). */
@@ -202,6 +214,11 @@
 	<input type="hidden" name="wallet_id" value={draft.accountId} />
 	<input type="hidden" name="to_wallet_id" value={transfer ? draft.toAccountId : ''} />
 	<input type="hidden" name="category_id" value={transfer ? '' : draft.categoryId} />
+{:else if locked}
+	<!-- The plain form's locked selects are disabled and submit nothing. -->
+	<input type="hidden" name="type" value={draft.type} />
+	<input type="hidden" name="wallet_id" value={draft.accountId} />
+	<input type="hidden" name="to_wallet_id" value={transfer ? draft.toAccountId : ''} />
 {/if}
 
 <!--
@@ -227,10 +244,24 @@
 <input type="hidden" name="base_rate" value={foreignWallet ? draft.baseRate : ''} />
 
 <div class="space-y-6">
+	{#if paidDebt}
+		<p class="text-subtle border-border bg-muted/5 border p-3 text-xs">
+			{t('txn.payment_locked', { name: paidDebt.contact_name })}
+			<a href="/debts?debt={encodeURIComponent(paidDebt.id)}" class="text-foreground underline">
+				{t('txn.open_debt')}
+			</a>
+		</p>
+	{/if}
+
 	{#if plain}
 		<div class="grid gap-2">
 			<Label for="form-type" class={labelClass}>Type</Label>
-			<NativeSelect id="form-type" name="type" bind:value={draft.type}>
+			<NativeSelect
+				id="form-type"
+				name={locked ? undefined : 'type'}
+				bind:value={draft.type}
+				disabled={locked}
+			>
 				<option value="expense">Expense</option>
 				<option value="income">Income</option>
 				<option value="transfer">Transfer</option>
@@ -242,9 +273,9 @@
 			onValueChange={(type) => (draft = { ...draft, type: type as TransactionDraft['type'] })}
 		>
 			<Tabs.List variant="segmented" class="w-full">
-				<Tabs.Trigger value="expense" variant="segmented" class="flex-1">Expense</Tabs.Trigger>
-				<Tabs.Trigger value="income" variant="segmented" class="flex-1">Income</Tabs.Trigger>
-				<Tabs.Trigger value="transfer" variant="segmented" class="flex-1">Transfer</Tabs.Trigger>
+				<Tabs.Trigger value="expense" variant="segmented" class="flex-1" disabled={locked}>Expense</Tabs.Trigger>
+				<Tabs.Trigger value="income" variant="segmented" class="flex-1" disabled={locked}>Income</Tabs.Trigger>
+				<Tabs.Trigger value="transfer" variant="segmented" class="flex-1" disabled={locked}>Transfer</Tabs.Trigger>
 			</Tabs.List>
 		</Tabs.Root>
 	{/if}
@@ -264,11 +295,17 @@
 					required
 					bind:value={draft.amount}
 					inputmode="decimal"
+					readonly={locked}
 				/>
 			{:else}
 				<!-- The hidden input is what submits: the currency input groups
 				     its display and the grouped text is not a number. -->
-				<CurrencyInput id="form-amount" bind:value={draft.amount} symbol={draft.currency} />
+				<CurrencyInput
+					id="form-amount"
+					bind:value={draft.amount}
+					symbol={draft.currency}
+					disabled={locked}
+				/>
 				{#if !foreignEntry}
 					<input type="hidden" name="amount" value={draft.amount} />
 				{/if}
@@ -281,13 +318,13 @@
 		<div class="grid gap-2">
 			<Label for="form-currency" class={labelClass}>Currency</Label>
 			{#if plain}
-				<NativeSelect id="form-currency" bind:value={draft.currency}>
+				<NativeSelect id="form-currency" bind:value={draft.currency} disabled={locked}>
 					{#each currencyCodes as code (code)}<option value={code}>{code}</option>{/each}
 				</NativeSelect>
 			{:else}
 				<!-- A currency is not an account: its own picker, so a code does
 				     not render behind a bank icon (D79). -->
-				<SelectCurrency id="form-currency" bind:value={draft.currency} />
+				<SelectCurrency id="form-currency" bind:value={draft.currency} disabled={locked} />
 			{/if}
 		</div>
 	</div>
@@ -297,7 +334,13 @@
 			<Label for="form-rate" class={labelClass}>
 				Rate, 1 {draft.currency} to {walletCurrency}
 			</Label>
-			<Input id="form-rate" bind:value={draft.exchangeRate} class="font-mono" inputmode="decimal" />
+			<Input
+				id="form-rate"
+				bind:value={draft.exchangeRate}
+				class="font-mono"
+				inputmode="decimal"
+				disabled={locked}
+			/>
 			{#if convertedAmount}
 				<p class="text-body font-mono">
 					{formatMoney(draft.amount, draft.currency)} =
@@ -339,7 +382,13 @@
 				{transfer ? 'From account' : 'Account'}
 			</Label>
 			{#if plain}
-				<NativeSelect id="form-account" name="wallet_id" bind:value={draft.accountId}>
+				<!-- A disabled select submits nothing, so a locked one leaves the hidden copy to post. -->
+				<NativeSelect
+					id="form-account"
+					name={locked ? undefined : 'wallet_id'}
+					bind:value={draft.accountId}
+					disabled={locked}
+				>
 					{#each accounts as account (account.id)}
 						<option value={account.id}>{account.label}</option>
 					{/each}
@@ -349,6 +398,7 @@
 					id="form-account"
 					{accounts}
 					bind:value={draft.accountId}
+					disabled={locked}
 					creatable
 					onCreate={onCreateAccount}
 					{createLabel}
@@ -362,8 +412,9 @@
 				{#if plain}
 					<NativeSelect
 						id="form-to-account"
-						name="to_wallet_id"
+						name={locked ? undefined : 'to_wallet_id'}
 						bind:value={draft.toAccountId}
+						disabled={locked}
 					>
 						<option value="">Select</option>
 						{#each accounts as account (account.id)}
@@ -375,6 +426,7 @@
 						id="form-to-account"
 						{accounts}
 						bind:value={draft.toAccountId}
+						disabled={locked}
 						creatable
 						onCreate={onCreateAccount}
 						{createLabel}
@@ -425,6 +477,7 @@
 				bind:value={draft.toAmount}
 				inputmode="decimal"
 				placeholder={draft.amount}
+				readonly={locked}
 			/>
 			<p class="text-subtle text-xs">
 				What arrives in the destination wallet, in its own currency. Leave it the same for a

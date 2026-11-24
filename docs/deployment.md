@@ -114,7 +114,7 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `APP_URL` | yes | Public URL of the web app. Used in invite and password reset links |
 | `AI_SERVICE_URL` | yes | Internal URL of `ai` |
 | `AI_SERVICE_API_KEY` | yes, **secret** | Minimum 32 characters when `APP_ENV=production`. Compared in constant time |
-| `AI_REQUEST_TIMEOUT_SECS`, `CHAT_STREAM_TIMEOUT_SECS` | no | Budgets on the `api` to `ai` hop |
+| `AI_REQUEST_TIMEOUT_SECS`, `CHAT_STREAM_TIMEOUT_SECS` | no | Budgets on the `api` to `ai` hop. The first also bounds the routes that wait on the AI service, plus 5 seconds, in place of `REQUEST_TIMEOUT_SECS` (D118) |
 | `CHAT_MAX_TOOL_AMOUNT` | no | Blast-radius cap on one chat tool write (SEC-24, D25) |
 | `CRYPTO_SIGNING_KEY_FILE` | yes | Path to the mounted PEM. See [Signing keys](#owe1-signing-keys) |
 | `AI_SIGNING_PUBLIC_KEYS` | yes | The AI service's pinned public keys, `kid:base64url` pairs, comma separated. A production client with none refuses to start |
@@ -127,7 +127,9 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `EMAIL_FROM` | yes | Sender identity on reset and invite mail |
 | `FX_API_URL` | no | Defaults to `https://api.apilayer.net/exchangerate` (D96) |
 | `FX_ACCESS_KEY` | yes, **secret** | APILayer Exchange Rate key. Without it no rates are fetched; writes still work from the cache or a typed rate (TXN-22). The free plan is 100 calls a month and the job spends about 30, so one key covers production and one local machine, not more |
-| `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, `x-forwarded-for` is read, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
+| `FCM_SERVICE_ACCOUNT_JSON` | no, **secret** | Push to the mobile app (D116). The whole JSON key file of a Firebase service account with the Cloud Messaging role (Firebase console, Project settings, Service accounts, Generate new private key), on one line. Unset turns push off and the API logs `push off` at startup; nothing else changes. Set but unreadable stops the start |
+| `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, the last `x-forwarded-for` entry is read, the one the proxy appended, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
+| `APP_RELAY_KEY` | yes | At least 32 random characters, the same value as on `app`. The API refuses to start in production without it. It is what makes the app's `x-client-ip` believable, so the rate limits count each browser rather than the app's one address ([hardening](security/hardening.md#whose-address-is-counted), D112) |
 | `RATE_LIMIT_*`, `UPLOADS_PER_WORKSPACE_PER_DAY`, `REQUEST_TIMEOUT_SECS`, `BODY_LIMIT_BYTES` | no | Limits, documented in [hardening](security/hardening.md#rate-limits-and-resource-limits) |
 | `RUST_LOG` | no | Production wants something quieter than the development default, for example `oewang_api=info,warn`. The binary is `oewang-api`, so its log target is `oewang_api`; a filter naming `oewang_server` silences every line |
 
@@ -168,6 +170,8 @@ The SvelteKit server reads these from the process environment.
 | `API_URL` | yes | Internal URL of `api` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` | yes | The API's pinned public keys. `apps/app/src/lib/server/api.ts` throws at startup when `APP_ENV=production` and this is empty |
 | `OWE1_ENABLED` | no | Anything other than the string `false` is on |
+| `ADDRESS_HEADER`, `XFF_DEPTH` | yes behind a proxy | adapter-node's own. `X-Forwarded-For`, and the depth is the number of proxies in front: `2` behind Cloudflare and Coolify's Traefik once Traefik trusts Cloudflare's ranges ([reverse proxy](#reverse-proxy)), `1` behind Traefik alone. Wrong, and every browser is the proxy's address: the session list shows it and the API's per-address rate limits collapse into one |
+| `APP_RELAY_KEY` | yes | The same value as on `api`. Sent with `x-client-ip`; without it the API ignores the address (D112) |
 
 `OWE1_VECTORS_PATH` is a test-only variable. It does not belong in a deployed environment.
 
@@ -282,7 +286,8 @@ Coolify's proxy terminates TLS and is the only thing that may reach a container 
 Three further proxy requirements:
 
 - **Do not buffer responses.** Chat streams server-sent events through `app` from `api`. A buffering proxy turns a streamed answer into a long pause and then a wall of text.
-- **Set `x-forwarded-for` honestly**, and set `TRUST_PROXY_HEADERS=true` on the API so the rate limiter reads it. The header is only trustworthy because nothing else can reach the port; if that ever stops being true, this setting has to come back off.
+- **Set `x-forwarded-for` honestly**, and set `TRUST_PROXY_HEADERS=true` on the API so the rate limiter reads it. The API reads only the last entry, the one the proxy appended. The header is only trustworthy because nothing else can reach the port; if that ever stops being true, this setting has to come back off.
+- **Cloudflare is in front of Traefik.** Both domains are proxied by Cloudflare, so Traefik's peer is a Cloudflare edge. Traefik discards forwarded headers from a peer it does not trust and writes its own, which makes every browser's address a Cloudflare edge's. Trust Cloudflare's published ranges on Traefik's entry points (`--entrypoints.http.forwardedHeaders.trustedIPs=...` and the same for `https`, from cloudflare.com/ips) and set `XFF_DEPTH=2` on `app`: Cloudflare's entry is then second from the right, and anything a browser sent sits to its left, unread. `CF-Connecting-IP` is not used, because anyone who finds the origin's address can send it straight to Traefik; a request that skips Cloudflare has one entry, so adapter-node finds no address at depth 2 and the API counts it against the app's own (D112).
 - **Leave the security headers to the application.** The CSP is issued by SvelteKit with a per-request nonce (`apps/app/vite.config.ts`, SEC-15). A proxy that adds its own `Content-Security-Policy` will fight it and break hydration quietly.
 
 ## Deploy order
@@ -295,6 +300,66 @@ Three further proxy requirements:
 
 `api` before `ai` because the AI service's client pins the API's signing key and reads nothing from it at startup, but every call it makes needs the API up. `app` last because it is the only thing the user sees, so it should be the last to change.
 
+## Mobile
+
+`apps/native` ships through `.github/workflows/mobile-release.yml`: Android to the Play internal track, iOS to TestFlight, identity `com.oewang.app`, Apple team `P9VXA8S55P`. It runs only by hand, like `ci.yml`:
+
+```bash
+gh workflow run mobile-release.yml --ref development -f platform=both   # or android, ios
+```
+
+Without `--ref` it builds the default branch. A `check` job on Linux runs first: `env/prod.json` must point at `https://api.oewang.com` and `https://app.oewang.com` and must hold every key `GET https://api.oewang.com/.well-known/oewang-keys` publishes, then `flutter analyze` and `flutter test`. Only then do the two build jobs start. The Flutter version comes from `apps/native/.fvmrc`.
+
+**Release configuration** is `apps/native/env/prod.json`, committed, public values only. After an [OWE1 key rotation](#owe1-signing-keys) update its `OWE1_SIGNING_KEYS` and ship a new build before the old key is retired: an installed app pinned only to the old key refuses every handshake. `SENTRY_DSN` stays empty in the file and is filled in at build time from the `NATIVE_SENTRY_DSN` secret, if set.
+
+**Build number** = the `+N` of `version:` in `apps/native/pubspec.yaml` plus the workflow's run number (so `2.0.0+7` and run 1 upload build 8). Both stores reject a number they have seen, and the run number only goes up, so uploads never collide. Raise the version name for a release users should see as new; never lower `+N`. Re-running a finished run reuses its number, so dispatch a new run instead of re-running one whose upload succeeded.
+
+**Closed testing and production are manual.** CI stops at the internal track. Play Console, the track, Create release, Add from library picks the bundle CI uploaded.
+
+### GitHub secrets
+
+Set with `gh secret set NAME` on `lazlanrafar/oewang`. The source of every value is the Boekti vault (project `OEW`); never the repository, a commit or a log. On 2026-11-23 none of these existed on the repository.
+
+| Secret | Job | Value |
+|---|---|---|
+| `ANDROID_KEYSTORE_BASE64` | android | `base64 -i upload-keystore.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | android | keystore password |
+| `ANDROID_KEY_ALIAS` | android | key alias, usually `upload` |
+| `ANDROID_KEY_PASSWORD` | android | key password |
+| `PLAY_SERVICE_ACCOUNT_JSON` | android | the service account's whole JSON key file |
+| `IOS_CERT_P12_BASE64` | ios | `base64 -i dist_cert.p12`, the Apple Distribution certificate with its private key |
+| `IOS_CERT_PASSWORD` | ios | the `.p12` export password |
+| `IOS_PROVISIONING_PROFILE_BASE64` | ios | `base64 -i profile.mobileprovision`, App Store profile for `com.oewang.app` |
+| `PROVISIONING_PROFILE_NAME` | ios | that profile's name as the Developer portal shows it |
+| `ASC_KEY_ID` | ios | App Store Connect API key ID |
+| `ASC_ISSUER_ID` | ios | App Store Connect issuer ID |
+| `ASC_API_KEY_P8` | ios | the `.p8` file's text |
+| `NATIVE_SENTRY_DSN` | both, optional | the Flutter project's DSN; blank ships without Sentry |
+
+A missing required secret fails its job before anything is built, naming the secret. The keychain password is generated per run and needs no secret.
+
+### Manual steps for the owner
+
+1. **Android upload key.** It is not on the development laptop. Look for the old app's `upload-keystore.jks` and its passwords in the password manager or the Boekti vault. If it is lost, and the app is enrolled in Play App Signing, request an upload key reset in Play Console (Setup, App integrity, App signing, Request upload key reset) with a new keystore from `keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`; Google takes a day or two. Store the file and both passwords in the vault before setting the secrets.
+2. **Play service account.** Play Console, Setup, API access: link a Google Cloud service account, grant it Release manager on the app, download its JSON key.
+3. **App Store Connect API key.** Users and Access, Integrations, App Store Connect API: create a key with the App Manager role. The `.p8` downloads once; store it in the vault at once, with the key ID and issuer ID.
+4. **iOS signing.** In the Developer portal for team `P9VXA8S55P`: an Apple Distribution certificate exported as `.p12` with a password, and an App Store provisioning profile for `com.oewang.app` with Push Notifications and Sign in with Apple, which `Runner.entitlements` asks for.
+5. Put every value in the Boekti vault, then set the secrets above from it.
+6. Dispatch the workflow against `development`, then check both jobs: `gh run view <id> --json jobs -q '.jobs[] | "\(.name): \(.conclusion)"'`.
+
+Locally, without `android/key.properties`, `flutter build appbundle --release` signs with the debug key (`android/app/build.gradle.kts`). Such a build installs on a device but Play refuses it.
+
+### Android passkeys and app links
+
+Off until the signing fingerprint is known (D119). When it is:
+
+1. **The fingerprint.** Play Console, Test and release, App integrity, App signing: copy the **App signing key certificate** SHA-256 (`AB:CD:...`, 32 pairs). That is the key the installed app carries. Optionally add the upload key's SHA-256 from the same page (for a locally signed release build) and a debug key's (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`) for testing on an emulator.
+2. **`ANDROID_CERT_SHA256` on both `api` and `app`** in Coolify, the same value on each: the fingerprints comma-separated. The API accepts passkeys from those certificates; the app answers `/.well-known/assetlinks.json` with them. Redeploy both. A malformed value stops the API at startup, naming the variable.
+3. **Check** `curl -s https://app.oewang.com/.well-known/assetlinks.json` lists `com.oewang.app` with both relations, and Google's checker agrees: `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://app.oewang.com&relation=delegate_permission/common.get_login_creds`.
+4. **`"PASSKEYS_ANDROID": true` in `apps/native/env/prod.json`**, then cut an Android release. Earlier builds keep the buttons hidden.
+
+Invitation links on Android become verified app links at step 2 as well; until then they open in the browser.
+
 ## Open questions
 
 Each of these needs the repository owner's decision. None of them is a value this document should guess.
@@ -303,7 +368,7 @@ Each of these needs the repository owner's decision. None of them is a value thi
 - **A second copy of the signing keys.** The only copy outside Coolify is on the owner's laptop. A password manager entry would survive losing it.
 - **Database backup and restore.** Nothing in the repository covers backup schedule, retention or a tested restore. A finance app without a tested restore is an open risk, not a detail.
 - **`bun audit` is gated at `--audit-level=high` in CI**, not at any advisory. [Hardening](security/hardening.md#dependencies) says a known vulnerability fails the build. Today the tree carries one low-severity advisory, `GHSA-gcqx-w48m-w2h4` in `deepmerge`, reached through `@sveltejs/vite-plugin-svelte`, a build-time dependency. Either the threshold stays and hardening is amended to say so, or the threshold comes off and that advisory gets resolved first.
-- **`cargo audit` ignores RUSTSEC-2023-0071** (Marvin attack, `rsa` 0.9.10, medium, no fixed upgrade available). The crate reaches `Cargo.lock` only through `sqlx-mysql`, which `sqlx-macros-core` lists unconditionally; `cargo tree -i rsa` finds nothing, so it is never compiled and no MySQL driver runs. The ignore is written into `.github/workflows/ci.yml` with its reason. It should come off when sqlx drops the dependency or upstream ships a fix.
+- **`cargo audit` ignores RUSTSEC-2023-0071** (Marvin attack, `rsa`, medium). Since sqlx 0.9 the only path left is `rsa` 0.10.0-rc.19 through `webauthn-rs` -> `crypto-glue`, which is compiled and used to verify passkey RS256 signatures with public keys. The attack needs an RSA private key to time, and the API holds none. The fix is `rsa` 0.10.0, which `crypto-glue` 0.2.2 cannot resolve to; the ignore is written into `.github/workflows/ci.yml` with its reason and should come off when webauthn-rs moves to `rsa` 0.10.0. (`libsqlite3-sys`, RUSTSEC-2026-0459, was fixed by the same sqlx upgrade: it is 0.40 in `Cargo.lock` and never compiled, since sqlx 0.9 no longer pulls the SQLite or MySQL drivers into a PostgreSQL-only build.)
 - **Log destination and retention.** The API emits structured JSON in production. Nothing says where it goes or how long it is kept, and [hardening](security/hardening.md#logging) sets rules about what must never appear in it.
 
 ## Related docs

@@ -16,6 +16,18 @@ describe('pagedRows', () => {
 		expect(held.lastPage).toBe(0);
 	});
 
+	it('holds the first page before any update, as the server render needs', () => {
+		const held = pagedRows<Row>({ rows: [row('a'), row('b')], page: 1, key: 'q=' });
+
+		expect(ids(held.rows)).toEqual(['a', 'b']);
+		expect(held.lastPage).toBe(1);
+
+		// The effect's first run repeats the seed: same rows, not doubled.
+		held.update({ rows: [row('a'), row('b')], page: 1, key: 'q=' });
+		held.update({ rows: [row('c')], page: 2, key: 'q=' });
+		expect(ids(held.rows)).toEqual(['a', 'b', 'c']);
+	});
+
 	it('appends the next page onto the rows it holds', () => {
 		const held = pagedRows<Row>();
 

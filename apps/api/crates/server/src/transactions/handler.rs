@@ -10,6 +10,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use oewang_db::repositories::{
     audit::AuditRow,
@@ -23,6 +24,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::extractor::{Auth, AuthWrite},
+    offline::{self, IfMatch},
     response::{ApiError, RequestId},
     state::AppState,
     transactions::{
@@ -73,6 +75,8 @@ pub struct TransactionView {
     pub is_exported: bool,
     pub source: String,
     pub created_at: String,
+    /// The row's version: send it back verbatim as `If-Match` (D115).
+    pub updated_at: String,
 }
 
 impl From<TransactionListRow> for TransactionView {
@@ -109,6 +113,7 @@ impl From<TransactionListRow> for TransactionView {
             is_exported: row.is_exported,
             source: row.source,
             created_at: row.created_at.to_rfc3339(),
+            updated_at: row.updated_at.to_rfc3339(),
         }
     }
 }
@@ -447,6 +452,9 @@ impl ListQuery {
 
 #[derive(Debug, Deserialize)]
 pub struct TransactionBody {
+    /// A client-made CUID2, so a repeated create is answered rather than
+    /// booked twice (D114). Only `POST /v1/transactions` reads it.
+    pub id: Option<String>,
     pub r#type: TransactionType,
     pub wallet_id: String,
     pub to_wallet_id: Option<String>,
@@ -517,6 +525,13 @@ pub struct BulkUpdateBody {
     /// The category to set; `null` or absent clears it. The only field a
     /// bulk edit changes since the ready flag went (D107).
     pub category_id: Option<String>,
+}
+
+/// An `.xlsx` to read, as standard base64: the vault chunk's encoding, so
+/// the bytes travel inside the OWE1 envelope like any file's (D111).
+#[derive(Debug, Deserialize)]
+pub struct SpreadsheetBody {
+    pub data: String,
 }
 
 /// A file's rows, as they came out of it, plus what each column holds.
@@ -812,21 +827,25 @@ pub async fn create(
             .map(ItemBody::input)
             .collect::<Result<Vec<_>>>()?;
 
-        let row = service::create_with_items(
+        service::create_with_id(
             &state.db,
             auth.actor()
                 .with_source(client_source(auth.source, body.source.as_deref())?),
+            body.id.as_deref(),
             input,
             &items,
         )
-        .await?;
-        service::find(&state.db, &auth.workspace_id, &row.id).await
+        .await
     }
     .await;
 
     match result {
-        Ok(row) => Ok((
-            StatusCode::CREATED,
+        Ok((row, created)) => Ok((
+            if created {
+                StatusCode::CREATED
+            } else {
+                StatusCode::OK
+            },
             Json(Envelope::data(TransactionView::from(row), id)),
         )),
         Err(error) => Err(ApiError::new(error, id)),
@@ -838,13 +857,21 @@ pub async fn update(
     auth: AuthWrite,
     Path(transaction_id): Path<String>,
     request_id: RequestId,
+    if_match: IfMatch,
     Json(body): Json<TransactionBody>,
 ) -> std::result::Result<Json<Envelope<TransactionView>>, ApiError> {
     let id = request_id.0;
 
     let result = async {
         let input = body.input()?;
-        service::update(&state.db, auth.actor(), &transaction_id, input).await?;
+        let updated =
+            service::update(&state.db, auth.actor(), &transaction_id, input, if_match.0).await;
+        offline::with_current(updated, async {
+            service::find(&state.db, &auth.workspace_id, &transaction_id)
+                .await
+                .map(TransactionView::from)
+        })
+        .await?;
         service::find(&state.db, &auth.workspace_id, &transaction_id).await
     }
     .await;
@@ -937,6 +964,31 @@ pub async fn import_csv(
 
     match result {
         Ok(outcome) => Ok(Json(Envelope::data(bulk_view(outcome), id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// Step one of the wizard for a spreadsheet: the file in, its columns and
+/// rows of text out, the shape the browser makes of a CSV (D111). The same
+/// role as the import it leads to, though nothing is written here.
+pub async fn import_xlsx(
+    State(state): State<AppState>,
+    _auth: AuthWrite,
+    request_id: RequestId,
+    Json(body): Json<SpreadsheetBody>,
+) -> std::result::Result<Json<Envelope<oewang_domain::spreadsheet::Sheet>>, ApiError> {
+    let id = request_id.0;
+
+    let result = async {
+        let bytes = STANDARD
+            .decode(body.data.as_bytes())
+            .map_err(|_| AppError::validation([("data", "The file is not valid base64.")]))?;
+        service::read_spreadsheet(bytes, state.config.import_row_limit).await
+    }
+    .await;
+
+    match result {
+        Ok(sheet) => Ok(Json(Envelope::data(sheet, id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }
@@ -1252,6 +1304,7 @@ mod tests {
         assert!(parse_day(Some("last tuesday"), DayEdge::Start).is_err());
     }
 
+    /// SEC-10
     #[test]
     fn should_map_an_unknown_sort_to_the_default_rather_than_an_error() {
         let query = ListQuery {

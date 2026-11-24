@@ -34,6 +34,10 @@ pub struct Config {
     pub refresh_token_ttl: Duration,
 
     pub app_url: String,
+    /// The Android app's passkey origins, from `ANDROID_CERT_SHA256` (D119).
+    /// Empty until the signing fingerprint is known: the web app's origin
+    /// is then the only one a ceremony may come from.
+    pub android_origins: Vec<String>,
     pub resend_api_key: Option<Secret>,
     pub email_from: String,
     pub ai_service_url: String,
@@ -42,6 +46,8 @@ pub struct Config {
     /// client with none refuses to start; in development the client
     /// reads what the service publishes (D22).
     pub ai_signing_public_keys: Vec<(String, [u8; 32])>,
+    /// One AI service call, and with a margin the routes that wait on one
+    /// (D118).
     pub ai_request_timeout: Duration,
 
     /// The daily rate source (D44, D96). Without a key no call is made and
@@ -53,6 +59,11 @@ pub struct Config {
     /// The Telegram bot (D84). Absent turns the whole feature off: no
     /// poller starts and the Apps page says the bot is not configured.
     pub telegram: Option<TelegramConfig>,
+
+    /// The Firebase service account key file's JSON, for push (D116).
+    /// Optional everywhere: without it no push is sent and nothing else
+    /// changes.
+    pub fcm_service_account_json: Option<Secret>,
 
     /// `local` or `s3` (D19).
     pub storage_backend: String,
@@ -71,6 +82,7 @@ pub struct Config {
     /// point stops there rather than in the ledger.
     pub chat_max_tool_amount: Decimal,
 
+    /// Every route but the ones that wait on the AI service (D118).
     pub request_timeout: Duration,
     /// The chat stream outlives the ordinary timeout by design: a turn with
     /// a tool loop in it is slower than any deadline worth setting on a
@@ -95,6 +107,10 @@ pub struct Config {
     /// puts a proxy in front: anyone can send that header, and a limiter
     /// that believes it is one anyone can step around.
     pub trust_proxy_headers: bool,
+    /// The key the app presents with `x-client-ip`, so the API believes
+    /// the address it names (D112). Required in production: without it
+    /// every browser counts as the app's one address.
+    pub app_relay_key: Option<Secret>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,6 +128,10 @@ pub struct TelegramConfig {
     /// `https://api.telegram.org` unless a test points it at a stub.
     pub api_url: String,
 }
+
+/// The session's two lifetimes when nothing overrides them (AUTH-7, D38).
+pub(crate) const ACCESS_TOKEN_TTL: &str = "15m";
+pub(crate) const REFRESH_TOKEN_TTL: &str = "30d";
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
@@ -131,6 +151,9 @@ impl Config {
             // Per address. Guessing a password, a refresh token or a reset
             // token (AUTH-6).
             credential: Limit::new(10, 900),
+            // Per source, before the relayed address is believed: the
+            // backstop on every credential call the app makes (D112).
+            credential_ceiling: Limit::new(1000, 900),
             handshake: Limit::new(30, 60),
             authenticated: Limit::new(300, 60),
             anonymous: Limit::new(30, 60),
@@ -220,6 +243,17 @@ impl Config {
             });
         }
 
+        // The app's word for the browser's address is what the limiter
+        // counts against; without the key every user shares one budget.
+        let app_relay_key = optional("APP_RELAY_KEY");
+        if app_env == AppEnv::Production && app_relay_key.as_ref().is_none_or(|key| key.len() < 32)
+        {
+            return Err(ConfigError::Invalid {
+                name: "APP_RELAY_KEY",
+                reason: "must be at least 32 characters in production".into(),
+            });
+        }
+
         Ok(Self {
             app_env,
             port: parse_or("API_PORT", 3002)?,
@@ -231,10 +265,17 @@ impl Config {
             db_statement_timeout: Duration::from_secs(parse_or("DB_STATEMENT_TIMEOUT_SECS", 10)?),
 
             jwt_secret: Secret::new(jwt_secret),
-            access_token_ttl: parse_duration("ACCESS_TOKEN_TTL", "15m")?,
-            refresh_token_ttl: parse_duration("REFRESH_TOKEN_TTL", "30d")?,
+            access_token_ttl: parse_duration("ACCESS_TOKEN_TTL", ACCESS_TOKEN_TTL)?,
+            refresh_token_ttl: parse_duration("REFRESH_TOKEN_TTL", REFRESH_TOKEN_TTL)?,
 
             app_url: optional("APP_URL").unwrap_or_else(|| "http://localhost:3000".into()),
+            android_origins: oewang_domain::passkeys::android_origins(
+                &optional("ANDROID_CERT_SHA256").unwrap_or_default(),
+            )
+            .map_err(|reason| ConfigError::Invalid {
+                name: "ANDROID_CERT_SHA256",
+                reason,
+            })?,
             resend_api_key: resend_api_key.map(Secret::new),
             email_from: optional("EMAIL_FROM")
                 .unwrap_or_else(|| "oewang <no-reply@localhost>".into()),
@@ -250,6 +291,7 @@ impl Config {
             fx_access_key: optional("FX_ACCESS_KEY").map(Secret::new),
 
             telegram: telegram_config()?,
+            fcm_service_account_json: optional("FCM_SERVICE_ACCOUNT_JSON").map(Secret::new),
 
             storage_backend: storage_backend.clone(),
             storage_local_path: optional("STORAGE_LOCAL_PATH")
@@ -289,6 +331,13 @@ impl Config {
                             defaults.credential.window_secs,
                         )?,
                     ),
+                    credential_ceiling: crate::limits::Limit::new(
+                        parse_or(
+                            "RATE_LIMIT_CREDENTIAL_CEILING",
+                            defaults.credential_ceiling.max,
+                        )?,
+                        defaults.credential_ceiling.window_secs,
+                    ),
                     handshake: crate::limits::Limit::new(
                         parse_or("RATE_LIMIT_HANDSHAKE", defaults.handshake.max)?,
                         defaults.handshake.window_secs,
@@ -316,6 +365,7 @@ impl Config {
             trust_proxy_headers: optional("TRUST_PROXY_HEADERS")
                 .map(|value| value == "true")
                 .unwrap_or(false),
+            app_relay_key: app_relay_key.map(Secret::new),
         })
     }
 }
@@ -390,7 +440,7 @@ where
 }
 
 /// Accepts `15m`, `30d`, `90s`, `12h`, or a bare number of seconds.
-fn parse_duration(name: &'static str, default: &str) -> Result<Duration, ConfigError> {
+pub(crate) fn parse_duration(name: &'static str, default: &str) -> Result<Duration, ConfigError> {
     let raw = optional(name).unwrap_or_else(|| default.to_string());
     let raw = raw.trim();
 
@@ -432,6 +482,15 @@ mod tests {
             Duration::from_secs(90)
         );
         std::env::remove_var("TEST_TTL");
+    }
+
+    /// AUTH-7
+    #[test]
+    fn should_default_to_a_fifteen_minute_and_a_thirty_day_token() {
+        let access = parse_duration("OEWANG_TEST_UNSET_ACCESS_TTL", ACCESS_TOKEN_TTL).unwrap();
+        let refresh = parse_duration("OEWANG_TEST_UNSET_REFRESH_TTL", REFRESH_TOKEN_TTL).unwrap();
+        assert_eq!(access, Duration::from_secs(15 * 60));
+        assert_eq!(refresh, Duration::from_secs(30 * 24 * 60 * 60));
     }
 
     #[test]

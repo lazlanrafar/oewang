@@ -30,3 +30,6 @@ apps/ai/.pytest_cache/
 # OWE1 signing keys, created on first start in development. Each service
 # holds its own: the API signs its handshake, the AI service signs its own.
 .secrets/
+
+# Agent worktrees
+.claude/worktrees/

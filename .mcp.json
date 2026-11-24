@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "boekti": {
+      "headersHelper": "boekti mcp-headers",
+      "type": "http",
+      "url": "https://boekti.lazlanrafar.com/mcp"
+    }
+  }
+}

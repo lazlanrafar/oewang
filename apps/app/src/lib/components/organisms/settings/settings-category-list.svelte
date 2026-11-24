@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="Row extends { id: string; name: string }">
 	/**
 	 * One category type's rows, as the old app's `CategoryForm` renders them:
 	 * a plain two-column table, each row with a drag handle before its name
@@ -19,6 +19,9 @@
 	 * It holds the order only while it is being changed. `onReorder` reports
 	 * the finished order, the page posts it, and the reloaded rows replace
 	 * this copy, so a failed save puts the old order back on its own.
+	 *
+	 * Any named rows will do, so the accounts screen's groups sheet uses it
+	 * too, with its own delete label.
 	 */
 	import GripVertical from '@lucide/svelte/icons/grip-vertical';
 	import { tick } from 'svelte';
@@ -29,7 +32,6 @@
 	import { Button } from '$lib/components/atoms/button';
 	import * as Table from '$lib/components/atoms/table';
 	import { t } from '$lib/i18n';
-	import type { Category } from '$lib/server/ledger';
 
 	let {
 		categories,
@@ -38,9 +40,10 @@
 		empty,
 		onReorder,
 		onEditRow,
-		onDeleteRow
+		onDeleteRow,
+		deleteLabel = t('settings.delete_category')
 	}: {
-		categories: Category[];
+		categories: Row[];
 		/** The table's accessible name. */
 		label: string;
 		canEdit?: boolean;
@@ -48,8 +51,10 @@
 		empty: string;
 		/** The whole order, top first, once a drag or a key press has moved a row. */
 		onReorder?: (ids: string[]) => void;
-		onEditRow?: (category: Category) => void;
-		onDeleteRow?: (category: Category) => void;
+		onEditRow?: (category: Row) => void;
+		onDeleteRow?: (category: Row) => void;
+		/** The trash button's accessible name. */
+		deleteLabel?: string;
 	} = $props();
 
 	/** How long a row takes to slide, matching dnd-kit's default. */
@@ -61,7 +66,7 @@
 	 * first render and snaps back to the server's order whenever a reload
 	 * brings one, which is also how a failed save undoes itself.
 	 */
-	let rows = $derived<Category[]>([...categories]);
+	let rows = $derived<Row[]>([...categories]);
 	let dragging = $state<string | null>(null);
 	/** The grabbed row's offset from its slot, in pixels, while it moves. */
 	let offset = $state(0);
@@ -70,7 +75,7 @@
 	let announcement = $state('');
 	let body = $state<HTMLElement | null>(null);
 
-	const ids = (list: Category[]) => list.map((row) => row.id);
+	const ids = (list: Row[]) => list.map((row) => row.id);
 
 	function move(from: number, to: number) {
 		if (from === to || to < 0 || to >= rows.length) return false;
@@ -81,7 +86,7 @@
 		return true;
 	}
 
-	function announce(row: Category) {
+	function announce(row: Row) {
 		announcement = t('settings.reorder_moved', {
 			name: row.name,
 			position: rows.indexOf(row) + 1,
@@ -101,7 +106,7 @@
 	 * render, and a pointer-up that lands during that wait is how a row gets
 	 * left hanging where the pointer was.
 	 */
-	function startDrag(event: PointerEvent, row: Category) {
+	function startDrag(event: PointerEvent, row: Row) {
 		if (event.button !== 0 || settling) return;
 		// No text selection while dragging. That also cancels the focus a
 		// press would give, so it is given back: a press on the handle then
@@ -169,7 +174,7 @@
 		window.addEventListener('pointercancel', onUp);
 	}
 
-	async function onHandleKey(event: KeyboardEvent, row: Category) {
+	async function onHandleKey(event: KeyboardEvent, row: Row) {
 		const step = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
 		if (step === 0) return;
 		event.preventDefault();
@@ -241,7 +246,7 @@
 								variant="ghost-destructive"
 								size="icon"
 								class="size-7"
-								aria-label={t('settings.delete_category')}
+								aria-label={deleteLabel}
 								onclick={() => onDeleteRow?.(row)}
 							>
 								<Trash2 class="size-4" />

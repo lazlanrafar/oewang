@@ -180,6 +180,11 @@ async fn run(state: &AppState, job: &ReceiptJobRow) -> Result<()> {
         }
     }
 
+    let saved = match &next {
+        Next::Done(transaction_id) => Some(transaction_id.as_str()),
+        _ => None,
+    };
+    crate::push::service::receipt_finished(&state.db, job, saved).await;
     tell(state, job, &read).await;
     Ok(())
 }

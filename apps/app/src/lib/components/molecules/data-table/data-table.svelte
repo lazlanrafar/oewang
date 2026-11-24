@@ -23,7 +23,10 @@
 	 */
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
-	import type { Snippet } from 'svelte';
+	import GripVertical from '@lucide/svelte/icons/grip-vertical';
+	import { untrack, type Snippet } from 'svelte';
+	import { flip } from 'svelte/animate';
+	import { t } from '$lib/i18n';
 
 	import { Button } from '../../atoms/button/index.js';
 	import { Spinner } from '../../atoms/spinner/index.js';
@@ -54,9 +57,14 @@
 		onLoadMore,
 		loading = false,
 		skeletonRows = 40,
-		resizeLabel = (column) => `Resize ${column.label}`,
+		resizeLabel = (column) => t('common.resize_column', { name: column.label }),
 		scrollLeftLabel = 'Scroll columns left',
 		scrollRightLabel = 'Scroll columns right',
+		onReorder,
+		reorderScope,
+		reorderLabel,
+		reorderHint,
+		reorderMoved,
 		head,
 		cell,
 		groupRow,
@@ -102,13 +110,31 @@
 		scrollLeftLabel?: string;
 		scrollRightLabel?: string;
 		/**
+		 * Rows can be dragged into a new order, and `cell` is handed a drag
+		 * handle to place. Called once per drop (or arrow press on the handle)
+		 * with the moved row's scope, top first. Absent, nothing here changes.
+		 */
+		onReorder?: (ids: string[], row: Row) => void;
+		/** Rows move only among neighbours with the same scope, such as one group. */
+		reorderScope?: (row: Row) => string;
+		/** The handle's accessible name. */
+		reorderLabel?: (row: Row) => string;
+		/** How the handle works, for a screen reader. */
+		reorderHint?: string;
+		/** What a screen reader hears after a move. */
+		reorderMoved?: (row: Row, position: number, count: number) => string;
+		/**
 		 * One header's contents. The cell around it is this component's, and
 		 * `arrows` is rendered only on the column where the scrolling ones
 		 * start, so a caller that ignores it loses nothing.
 		 */
 		head: Snippet<[ColumnSpec, Snippet | undefined]>;
-		/** One cell's contents, for a column and a row. */
-		cell: Snippet<[ColumnSpec, Row]>;
+		/**
+		 * One cell's contents, for a column and a row. `handle` is the drag
+		 * handle when `onReorder` is set, for the caller to render in the cell
+		 * it belongs in; a caller that ignores it loses nothing.
+		 */
+		cell: Snippet<[ColumnSpec, Row, Snippet<[Row]> | undefined]>;
 		/** A group's heading row: the label and whatever it totals. */
 		groupRow?: Snippet<[{ key: string; rows: Row[]; collapsed: boolean; toggle: () => void }]>;
 		empty?: Snippet;
@@ -199,6 +225,8 @@
 	 * always lands on a column boundary instead of halfway through one.
 	 */
 	let scroller = $state<HTMLDivElement | null>(null);
+	/** The visible width, which a group heading spans instead of the whole table. */
+	let viewWidth = $state<number | undefined>(undefined);
 	let canScrollLeft = $state(false);
 	let canScrollRight = $state(false);
 	let isScrollable = $state(false);
@@ -279,6 +307,122 @@
 	function toggleGroup(key: string) {
 		collapsed = { ...collapsed, [key]: !collapsed[key] };
 	}
+
+	// ------------------------------------------------------ reordering
+
+	/** How long a row takes to slide out of the way. */
+	const SLIDE_MS = 200;
+
+	/*
+	 * The order shown while a row is being moved, and after the drop until
+	 * the reload brings the server's order: whichever comes back, saved or
+	 * refused, replaces it, so a failed save undoes itself.
+	 */
+	let moving = $state<{ block: string; ids: string[] } | null>(null);
+	let dragging = $state<string | null>(null);
+	/** The grabbed row's distance from its slot while it follows the pointer. */
+	let offset = $state(0);
+	let settling = $state(false);
+	let announcement = $state('');
+
+	$effect(() => {
+		blocks;
+		untrack(() => {
+			if (!dragging) moving = null;
+		});
+	});
+
+	const shown = (block: RowGroup<Row>): Row[] => {
+		if (moving?.block !== block.key) return block.rows;
+		const byId = new Map(block.rows.map((row) => [row.id, row]));
+		return moving.ids.flatMap((id) => byId.get(id) ?? []);
+	};
+
+	/** The slots a row may land in: the run of neighbours sharing its scope. */
+	function bounds(rows: Row[], index: number): [number, number] {
+		const scope = reorderScope?.(rows[index]);
+		let low = index;
+		let high = index;
+		while (low > 0 && reorderScope?.(rows[low - 1]) === scope) low--;
+		while (high < rows.length - 1 && reorderScope?.(rows[high + 1]) === scope) high++;
+		return [low, high];
+	}
+
+	function place(block: RowGroup<Row>, row: Row, to: number) {
+		const ids = shown(block).map((each) => each.id);
+		ids.splice(ids.indexOf(row.id), 1);
+		ids.splice(to, 0, row.id);
+		moving = { block: block.key, ids };
+	}
+
+	function report(block: RowGroup<Row>, row: Row) {
+		const rows = shown(block);
+		const index = rows.findIndex((each) => each.id === row.id);
+		const [low, high] = bounds(rows, index);
+		onReorder?.(rows.slice(low, high + 1).map((each) => each.id), row);
+		announcement = reorderMoved?.(row, index - low + 1, high - low + 1) ?? '';
+	}
+
+	/**
+	 * Rows share one height, so the slot under the pointer is arithmetic
+	 * rather than a measurement. The pointer is captured on the handle, so
+	 * the drag survives leaving it.
+	 */
+	function startDrag(event: PointerEvent, block: RowGroup<Row>, row: Row) {
+		if (event.button !== 0) return;
+		event.preventDefault();
+		event.stopPropagation();
+		const handle = event.currentTarget as HTMLElement;
+		const rows = shown(block);
+		const start = rows.findIndex((each) => each.id === row.id);
+		const [low, high] = bounds(rows, start);
+		const startY = event.clientY;
+		let current = start;
+
+		dragging = row.id;
+		offset = 0;
+		handle.setPointerCapture(event.pointerId);
+
+		const move = (moved: PointerEvent) => {
+			const delta = moved.clientY - startY;
+			const target = Math.min(high, Math.max(low, start + Math.round(delta / rowHeight)));
+			if (target !== current) {
+				place(block, row, target);
+				current = target;
+			}
+			offset = delta - (current - start) * rowHeight;
+		};
+		const stop = () => {
+			handle.releasePointerCapture(event.pointerId);
+			handle.removeEventListener('pointermove', move);
+			handle.removeEventListener('pointerup', stop);
+			handle.removeEventListener('pointercancel', stop);
+			settling = true;
+			offset = 0;
+			setTimeout(() => {
+				dragging = null;
+				settling = false;
+			}, SLIDE_MS);
+			if (current !== start) report(block, row);
+		};
+
+		handle.addEventListener('pointermove', move);
+		handle.addEventListener('pointerup', stop);
+		handle.addEventListener('pointercancel', stop);
+	}
+
+	/** The keyboard's drag: one slot per arrow press, within the row's scope. */
+	function nudgeRow(event: KeyboardEvent, block: RowGroup<Row>, row: Row) {
+		if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+		event.preventDefault();
+		const rows = shown(block);
+		const index = rows.findIndex((each) => each.id === row.id);
+		const [low, high] = bounds(rows, index);
+		const to = index + (event.key === 'ArrowUp' ? -1 : 1);
+		if (to < low || to > high) return;
+		place(block, row, to);
+		report(block, row);
+	}
 </script>
 
 <svelte:window onresize={readScroll} />
@@ -309,6 +453,10 @@
 {/snippet}
 
 <div class={cn('flex h-full min-h-0 flex-col', className)}>
+	{#if onReorder}
+		<p id="data-table-reorder-hint" class="sr-only">{reorderHint}</p>
+		<p class="sr-only" aria-live="assertive">{announcement}</p>
+	{/if}
 	<!-- The outer rule on the left, right and bottom edges, as the old app's
 	     scroller draws it (`border-l border-r border-b`). The cells draw the
 	     grid between columns and the rows draw it between rows, but the
@@ -321,6 +469,7 @@
 	     move it sideways, and a bar along a ruled box reads as a column. -->
 	<div
 		bind:this={scroller}
+		bind:clientWidth={viewWidth}
 		onscroll={readScroll}
 		class="border-border scrollbar-hide min-h-0 w-full flex-1 overflow-auto border-x border-b"
 	>
@@ -429,19 +578,42 @@
 			-->
 			{#each loading ? [] : blocks as block (block.key)}
 				<div role="rowgroup" class="block w-full">
+					<!-- The drag handle, declared here so it knows its block. -->
+					{#snippet handle(row: Row)}
+						<button
+							type="button"
+							class="text-subtle hover:text-foreground flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm active:cursor-grabbing"
+							aria-label={reorderLabel?.(row)}
+							aria-describedby="data-table-reorder-hint"
+							onpointerdown={(event) => startDrag(event, block, row)}
+							onkeydown={(event) => nudgeRow(event, block, row)}
+							onclick={(event) => event.stopPropagation()}
+						>
+							<GripVertical class="size-3.5" />
+						</button>
+					{/snippet}
+
 					{#if block.key && groupRow}
 						<!--
 							`z-30` puts the heading under the column header's `z-40`
 							and over the sticky cells' `z-20`. It carries a `row` and a
 							`cell` role because a rowgroup may hold nothing else.
+							The cell is as wide as the visible box and sticks to its
+							left edge: spanning the whole table put anything pushed
+							right (a day's totals) past the edge of a table wider than
+							the screen.
 						-->
 						<div
 							data-group-row
 							role="row"
-							class="border-border bg-row-group sticky z-30 flex w-full min-w-full items-center gap-2 border-b px-4"
+							class="border-border bg-row-group sticky z-30 flex w-full min-w-full items-center border-b"
 							style="top: {GROUP_STICK_TOP}px; height: {GROUP_ROW_HEIGHT}px"
 						>
-							<div role="cell" class="flex h-full w-full items-center gap-2">
+							<div
+								role="cell"
+								class="sticky left-0 flex h-full w-full min-w-0 items-center gap-2 overflow-hidden px-4"
+								style:width={viewWidth ? `${viewWidth}px` : undefined}
+							>
 								{@render groupRow({
 									key: block.key,
 									rows: block.rows,
@@ -453,19 +625,25 @@
 					{/if}
 
 					{#if !collapsed[block.key]}
-						{#each block.rows as row (row.id)}
+						{#each shown(block) as row (row.id)}
 							<!-- The row answers a click as a pointer convenience. It is
 							     not a widget: a named, keyboard-reachable way in belongs
 							     in a cell, so the row stays out of the tab order. -->
 							<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_interactive_supports_focus -->
 							<div
 								role="row"
+								animate:flip={{ duration: onReorder && dragging !== row.id ? SLIDE_MS : 0 }}
 								class={cn(
 									'group flex w-full min-w-full items-center border-0 select-text',
 									onRowClick && 'hover:bg-row-hover cursor-pointer',
+									dragging === row.id && 'bg-row-hover relative z-30',
 									rowClass?.(row)
 								)}
 								style="height: {rowHeight}px"
+								style:transform={dragging === row.id ? `translateY(${offset}px)` : undefined}
+								style:transition={dragging === row.id && settling
+									? `transform ${SLIDE_MS}ms ease`
+									: undefined}
 								onclick={() => onRowClick?.(row)}
 							>
 								{#each columns as column (column.key)}
@@ -480,7 +658,7 @@
 										style={layout.cellStyle(column.key)}
 										role="cell"
 									>
-										{@render cell(column, row)}
+										{@render cell(column, row, onReorder ? handle : undefined)}
 									</div>
 								{/each}
 							</div>

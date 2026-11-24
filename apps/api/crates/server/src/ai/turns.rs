@@ -331,6 +331,7 @@ mod tests {
         store.reserve("turn_2", Tool::CreateWallet, 0).unwrap();
     }
 
+    /// SEC-25
     #[test]
     fn should_answer_a_challenge_only_for_the_row_it_was_issued_for() {
         let store = store();
@@ -347,6 +348,7 @@ mod tests {
         );
     }
 
+    /// SEC-25
     #[test]
     fn should_expire_a_challenge() {
         let store = store();

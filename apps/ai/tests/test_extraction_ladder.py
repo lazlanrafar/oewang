@@ -160,6 +160,7 @@ async def test_a_deliberately_wrong_total_is_surfaced_as_printed(
 # ------------------------------------------------------------- pass 2
 
 
+# AI-10
 async def test_a_poor_result_escalates_and_merges(ladder_config: Settings) -> None:
     """Pass 1 read only the total, which scores 30. Below half the
     threshold, so pass 2 goes to the tertiary model rather than the
@@ -268,6 +269,7 @@ async def test_an_unparsable_answer_counts_as_a_failed_pass(ladder_config: Setti
     assert len(client.calls) == 2
 
 
+# AI-10
 async def test_pass_three_targets_only_the_fields_still_missing(
     ladder_config: Settings,
 ) -> None:
@@ -309,6 +311,7 @@ async def test_a_targeted_answer_that_does_not_help_is_discarded(
 # -------------------------------------------------------- caps and budget
 
 
+# AI-10
 async def test_the_call_cap_stops_the_ladder_and_returns_a_marked_result(
     ladder_config: Settings,
 ) -> None:
@@ -335,6 +338,7 @@ async def test_the_targeted_pass_is_capped_at_four_calls(ladder_config: Settings
     assert len(client.calls) - ladder.FULL_PASSES == ladder.MAX_TARGETED_CALLS
 
 
+# AI-10
 async def test_the_wall_clock_budget_stops_the_ladder(
     ladder_config: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -677,6 +681,7 @@ async def test_every_call_on_every_branch_passes_an_empty_tool_list(
     assert all("tool_choice" not in call for call in client.calls)
 
 
+# SEC-22
 async def test_an_injection_in_the_fixture_changes_nothing(ladder_config: Settings) -> None:
     """A receipt whose text tells the model to delete everything.
 

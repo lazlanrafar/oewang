@@ -145,7 +145,7 @@
 					id="new-password"
 					name="new_password"
 					autocomplete="new-password"
-					minlength={8}
+					minlength={10}
 					class="max-w-md"
 					required
 				/>

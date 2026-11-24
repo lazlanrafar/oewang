@@ -19,6 +19,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::{
     accounts::service::{self, Actor, NewWalletInput, WalletPatchInput},
     auth::extractor::{Auth, AuthWrite},
+    offline::{self, IfMatch},
     response::{ApiError, RequestId},
     state::AppState,
 };
@@ -50,6 +51,9 @@ pub struct WalletView {
     pub is_included_in_totals: bool,
     pub is_default: bool,
     pub sort_order: i32,
+    /// Locks the currency field (WAL-6). Null on a single-wallet read, like
+    /// `group_name`; the API still refuses a locked change either way.
+    pub has_transactions: Option<bool>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -88,6 +92,7 @@ impl From<WalletListRow> for WalletView {
             is_included_in_totals: row.is_included_in_totals,
             is_default: row.is_default,
             sort_order: row.sort_order,
+            has_transactions: Some(row.has_transactions),
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
         }
@@ -106,6 +111,7 @@ impl From<WalletRow> for WalletView {
             is_included_in_totals: row.is_included_in_totals,
             is_default: row.is_default,
             sort_order: row.sort_order,
+            has_transactions: None,
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
         }
@@ -141,6 +147,8 @@ pub struct WalletGroupPatchBody {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateWalletBody {
+    /// A client-made CUID2; a repeat answers the wallet it names (D114).
+    pub id: Option<String>,
     pub name: String,
     pub group_id: Option<String>,
     /// Absent means the workspace currency (WAL-5).
@@ -176,6 +184,8 @@ pub struct AdjustWalletBody {
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCategoryBody {
+    /// A client-made CUID2; a repeat answers the category it names (D114).
+    pub id: Option<String>,
     pub name: String,
     pub r#type: String,
     pub sort_order: Option<i32>,
@@ -285,6 +295,17 @@ pub async fn list_wallets(
     )))
 }
 
+pub async fn wallet_totals(
+    State(state): State<AppState>,
+    auth: Auth,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<service::WalletTotalsView>>, ApiError> {
+    match service::wallet_totals(&state.db, &auth.workspace_id).await {
+        Ok(view) => Ok(Json(Envelope::data(view, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
 pub async fn get_wallet(
     State(state): State<AppState>,
     auth: Auth,
@@ -303,10 +324,11 @@ pub async fn create_wallet(
     request_id: RequestId,
     Json(body): Json<CreateWalletBody>,
 ) -> std::result::Result<(StatusCode, Json<Envelope<WalletView>>), ApiError> {
-    created(
-        service::create_wallet(
+    created_once(
+        service::create_wallet_with_id(
             &state.db,
             actor(&auth),
+            body.id.as_deref(),
             NewWalletInput {
                 name: &body.name,
                 group_id: body.group_id.as_deref(),
@@ -325,24 +347,29 @@ pub async fn update_wallet(
     auth: AuthWrite,
     Path(id): Path<String>,
     request_id: RequestId,
+    if_match: IfMatch,
     Json(body): Json<UpdateWalletBody>,
 ) -> std::result::Result<Json<Envelope<WalletView>>, ApiError> {
-    ok(
-        service::update_wallet(
-            &state.db,
-            actor(&auth),
-            &id,
-            WalletPatchInput {
-                name: body.name.as_deref(),
-                group_id: body.group_id.as_ref().map(|inner| inner.as_deref()),
-                currency_code: body.currency_code.as_deref(),
-                is_included_in_totals: body.is_included_in_totals,
-                sort_order: body.sort_order,
-            },
-        )
-        .await,
-        request_id,
+    let updated = service::update_wallet(
+        &state.db,
+        actor(&auth),
+        &id,
+        WalletPatchInput {
+            name: body.name.as_deref(),
+            group_id: body.group_id.as_ref().map(|inner| inner.as_deref()),
+            currency_code: body.currency_code.as_deref(),
+            is_included_in_totals: body.is_included_in_totals,
+            sort_order: body.sort_order,
+        },
+        if_match.0,
     )
+    .await;
+    let current = async {
+        service::find_wallet(&state.db, &auth.workspace_id, &id)
+            .await
+            .map(WalletView::from)
+    };
+    ok(offline::with_current(updated, current).await, request_id)
 }
 
 pub async fn set_default_wallet(
@@ -420,10 +447,11 @@ pub async fn create_category(
     request_id: RequestId,
     Json(body): Json<CreateCategoryBody>,
 ) -> std::result::Result<(StatusCode, Json<Envelope<CategoryView>>), ApiError> {
-    created(
-        service::create_category(
+    created_once(
+        service::create_category_with_id(
             &state.db,
             actor(&auth),
+            body.id.as_deref(),
             &body.name,
             &body.r#type,
             body.sort_order,
@@ -438,20 +466,25 @@ pub async fn update_category(
     auth: AuthWrite,
     Path(id): Path<String>,
     request_id: RequestId,
+    if_match: IfMatch,
     Json(body): Json<UpdateCategoryBody>,
 ) -> std::result::Result<Json<Envelope<CategoryView>>, ApiError> {
-    ok(
-        service::update_category(
-            &state.db,
-            actor(&auth),
-            &id,
-            body.name.as_deref(),
-            body.r#type.as_deref(),
-            body.sort_order,
-        )
-        .await,
-        request_id,
+    let updated = service::update_category(
+        &state.db,
+        actor(&auth),
+        &id,
+        body.name.as_deref(),
+        body.r#type.as_deref(),
+        body.sort_order,
+        if_match.0,
     )
+    .await;
+    let current = async {
+        service::find_category(&state.db, &auth.workspace_id, &id)
+            .await
+            .map(CategoryView::from)
+    };
+    ok(offline::with_current(updated, current).await, request_id)
 }
 
 pub async fn delete_category(
@@ -502,6 +535,26 @@ fn created<R, V: From<R>>(
     }
 }
 
+/// A create that may be a repeat: 201 when this call made the row, 200 when
+/// its client id already named one (D114).
+fn created_once<R, V: From<R>>(
+    result: Result<(R, bool)>,
+    request_id: RequestId,
+) -> std::result::Result<(StatusCode, Json<Envelope<V>>), ApiError> {
+    let id = request_id.0;
+    match result {
+        Ok((row, made)) => Ok((
+            if made {
+                StatusCode::CREATED
+            } else {
+                StatusCode::OK
+            },
+            Json(Envelope::data(V::from(row), id)),
+        )),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
 fn no_content(
     result: Result<()>,
     request_id: RequestId,
@@ -541,6 +594,7 @@ mod tests {
         assert_eq!(body.name.as_deref(), Some("Cash"));
     }
 
+    /// WAL-2
     #[test]
     fn should_serialize_a_balance_as_a_string() {
         let view = WalletView {
@@ -553,6 +607,7 @@ mod tests {
             is_included_in_totals: true,
             is_default: true,
             sort_order: 0,
+            has_transactions: None,
             created_at: "2026-11-02T00:00:00+00:00".into(),
             updated_at: "2026-11-02T00:00:00+00:00".into(),
         };

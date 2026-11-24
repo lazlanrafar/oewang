@@ -11,7 +11,9 @@
 	 * disabled and the list afterwards is what the server holds rather than
 	 * what the browser guessed.
 	 */
+	import FolderCog from '@lucide/svelte/icons/folder-cog';
 	import Plus from '@lucide/svelte/icons/plus';
+	import { tick } from 'svelte';
 
 	import { applyAction, deserialize, enhance, type SubmitFunction } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
@@ -25,6 +27,7 @@
 	import {
 		AccountDetailSheet,
 		AccountFormSheet,
+		AccountGroupsSheet,
 		AccountSummaryCards,
 		AccountsDataTable
 	} from '$lib/components/organisms/accounts';
@@ -131,6 +134,55 @@
 	 * and means a sheet rendered without a page still posts natively.
 	 */
 	const formAction = (node: HTMLFormElement) => enhance(node, closeOnSuccess);
+
+	// ------------------------------------------------------------ groups
+
+	let groupsOpen = $state(false);
+
+	/** Every groups-sheet form: toast, let the sheet close its dialog, reload. */
+	const groupsAction = (node: HTMLFormElement, done?: () => void) =>
+		enhance(node, ({ action }) => async ({ result, update }) => {
+			if (result.type === 'success') {
+				done?.();
+				toast.success(
+					action.search.includes('deleteGroup')
+						? t('accounts.group_deleted')
+						: action.search.includes('createGroup')
+							? t('accounts.group_created')
+							: t('accounts.group_updated')
+				);
+			}
+			await update({ navigate: false });
+		});
+
+	// ----------------------------------------------------------- reorder
+
+	/*
+	 * A wallet's place in its group, saved once the rows stop moving: five
+	 * arrow presses are one request, not five racing ones. Only on the full
+	 * list, because a filtered view's order would push the hidden wallets
+	 * to the end of their group.
+	 */
+	let reorderIds = $state<string[]>([]);
+	let reorderGroup = $state('');
+	let reorderForm = $state<HTMLFormElement | null>(null);
+	let reorderTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function reorderWallets(ids: string[], account: Wallet) {
+		clearTimeout(reorderTimer);
+		reorderTimer = setTimeout(async () => {
+			reorderIds = ids;
+			reorderGroup = account.group_id ?? '';
+			await tick();
+			reorderForm?.requestSubmit();
+		}, 400);
+	}
+
+	const reorderAction = (node: HTMLFormElement) =>
+		enhance(node, () => async ({ result, update }) => {
+			if (result.type === 'success') toast.success(t('accounts.order_saved'));
+			await update({ navigate: false });
+		});
 	const detailAction = (node: HTMLFormElement) => enhance(node, toastOnSuccess);
 </script>
 
@@ -173,10 +225,22 @@
 		</div>
 
 		{#if canEdit}
-			<Button onclick={openNew}>
-				<Plus />
-				{t('accounts.add')}
-			</Button>
+			<div class="flex shrink-0 items-center gap-2">
+				<!-- Icons alone below `sm`, as on the transactions header, so the
+				     search keeps its room at phone width (UI-6). -->
+				<Button
+					variant="outline"
+					aria-label={t('accounts.manage_groups')}
+					onclick={() => (groupsOpen = true)}
+				>
+					<FolderCog />
+					<span class="hidden sm:inline-block">{t('accounts.manage_groups')}</span>
+				</Button>
+				<Button aria-label={t('accounts.add')} onclick={openNew}>
+					<Plus />
+					<span class="hidden sm:inline-block">{t('accounts.add')}</span>
+				</Button>
+			</div>
 		{/if}
 	</div>
 
@@ -200,6 +264,7 @@
 		onDeleteRow={askDelete}
 		onSetDefault={(account) =>
 			post('?/setDefaultWallet', { id: account.id }, t('accounts.default_set'))}
+		onReorder={canEdit && !data.filtered ? reorderWallets : undefined}
 		onGroupChange={(account, groupId) =>
 			post('?/setGroup', { id: account.id, group_id: groupId }, t('accounts.group_updated'))}
 		createLabel={(typed) => t('common.create_named', { name: typed })}
@@ -222,9 +287,20 @@
 	<input type="hidden" name="id" value={deleting?.id ?? ''} />
 </form>
 
+<AccountGroupsSheet bind:open={groupsOpen} groups={data.groups} {canEdit} enhance={groupsAction} />
+
+<!-- The order a drag or an arrow key settled on, top first, for one group. -->
+<form bind:this={reorderForm} method="POST" action="?/reorderWallets" class="hidden" use:reorderAction>
+	<input type="hidden" name="group_id" value={reorderGroup} />
+	{#each reorderIds as id (id)}
+		<input type="hidden" name="ids" value={id} />
+	{/each}
+</form>
+
 <AccountFormSheet
 	bind:open={formOpen}
 	account={editing}
+	currencyLocked={editing?.has_transactions ?? false}
 	groups={data.groups}
 	baseCurrency={data.baseCurrency}
 	{saving}

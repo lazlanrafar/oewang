@@ -1,5 +1,6 @@
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { currentMonth } from '$lib/month-range';
+import * as debtsApi from '$lib/server/debts';
 import * as ledger from '$lib/server/ledger';
 import * as reports from '$lib/server/reports';
 import { readText } from '$lib/url-state';
@@ -45,7 +46,18 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		return { totals, currency: base };
 	});
 
+	/*
+	 * The debt balance card (DEBT-13): the net position the debts page shows
+	 * and how many debts are open, both from the summary. It counts no
+	 * overdue, so the API's own date is fine here. Streamed like the balance, and null when
+	 * the read fails, so the overview never waits on it or breaks for it.
+	 */
+	const debts = debtsApi.debtSummary(new URLSearchParams(), token).then(
+		(summary) => summary.data,
+		() => null
+	);
+
 	const overview = await reports.overview(range.start, range.end, token);
 
-	return { range, overview: overview.data!, balance };
+	return { range, overview: overview.data!, balance, debts };
 };

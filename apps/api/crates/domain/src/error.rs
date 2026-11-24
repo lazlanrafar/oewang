@@ -36,6 +36,9 @@ pub enum AppError {
     ResetTokenInvalid,
     #[error("mcp token is invalid")]
     McpTokenInvalid,
+    /// A body or query named a workspace. It comes from the token (AUTH-4).
+    #[error("workspace_id is taken from the token, never from the request")]
+    WorkspaceIdNotAllowed,
 
     // -- validation and general
     #[error("validation failed")]
@@ -74,10 +77,42 @@ pub enum AppError {
     TransferAmountRequired,
     #[error("amount must be greater than zero")]
     AmountNotPositive,
+    /// A create's client `id` names a row the caller cannot have: another
+    /// workspace's, or another kind's. Never says which (D114).
+    #[error("id already taken")]
+    IdTaken,
+    /// `If-Match` no longer matches, or the row is deleted. Carries the row
+    /// as it is now, or `None` when it is deleted (D115).
+    #[error("row changed since it was read")]
+    Stale(Option<serde_json::Value>),
     #[error("import job not found")]
     ImportJobNotFound,
     #[error("no exchange rate could be resolved")]
     FxRateUnavailable,
+
+    // -- debts and contacts (D120, D121)
+    #[error("contact not found")]
+    ContactNotFound,
+    #[error("contact has debts")]
+    ContactHasDebts,
+    #[error("a contact cannot be merged into itself")]
+    ContactMergeSelf,
+    #[error("debt not found")]
+    DebtNotFound,
+    #[error("payment not found")]
+    PaymentNotFound,
+    #[error("debt has payments")]
+    DebtHasPayments,
+    #[error("amount is below what is already paid")]
+    AmountBelowPaid,
+    #[error("payment exceeds the remaining amount")]
+    PaymentExceedsRemaining,
+    #[error("every debt must be in the wallet's currency")]
+    BulkPayCurrencyMismatch,
+    #[error("split source is not an expense")]
+    SplitSourceNotExpense,
+    #[error("this transaction is a debt payment")]
+    PaymentTransactionLocked,
 
     // -- files
     #[error("file too large")]
@@ -89,6 +124,13 @@ pub enum AppError {
     /// The file is there, but no preview can be made from it (D91).
     #[error("thumbnail unavailable")]
     ThumbnailUnavailable,
+    /// Not an `.xlsx`, or one calamine cannot read (D111).
+    #[error("spreadsheet unreadable")]
+    SpreadsheetUnreadable,
+    /// Over a bound of the spreadsheet import: bytes, unpacked size, rows or
+    /// columns (D111).
+    #[error("spreadsheet too large")]
+    SpreadsheetTooLarge,
 
     // -- transport (OWE1). Answered in plaintext; the caller may hold no key.
     #[error("crypto session unknown")]
@@ -157,6 +199,7 @@ impl AppError {
             LastOwner => "LAST_OWNER",
             InviteInvalid => "INVITE_INVALID",
             McpTokenInvalid => "MCP_TOKEN_INVALID",
+            WorkspaceIdNotAllowed => "WORKSPACE_ID_NOT_ALLOWED",
             ResetTokenInvalid => "RESET_TOKEN_INVALID",
             Validation(_) => "VALIDATION_FAILED",
             MalformedRequest => "MALFORMED_REQUEST",
@@ -174,12 +217,27 @@ impl AppError {
             DestinationNotAllowed => "DESTINATION_NOT_ALLOWED",
             TransferAmountRequired => "TRANSFER_AMOUNT_REQUIRED",
             AmountNotPositive => "AMOUNT_NOT_POSITIVE",
+            IdTaken => "ID_TAKEN",
+            Stale(_) => "STALE",
             ImportJobNotFound => "IMPORT_JOB_NOT_FOUND",
             FxRateUnavailable => "FX_RATE_UNAVAILABLE",
+            ContactNotFound => "CONTACT_NOT_FOUND",
+            ContactHasDebts => "CONTACT_HAS_DEBTS",
+            ContactMergeSelf => "CONTACT_MERGE_SELF",
+            DebtNotFound => "DEBT_NOT_FOUND",
+            PaymentNotFound => "PAYMENT_NOT_FOUND",
+            DebtHasPayments => "DEBT_HAS_PAYMENTS",
+            AmountBelowPaid => "AMOUNT_BELOW_PAID",
+            PaymentExceedsRemaining => "PAYMENT_EXCEEDS_REMAINING",
+            BulkPayCurrencyMismatch => "BULK_PAY_CURRENCY_MISMATCH",
+            SplitSourceNotExpense => "SPLIT_SOURCE_NOT_EXPENSE",
+            PaymentTransactionLocked => "PAYMENT_TRANSACTION_LOCKED",
             FileTooLarge => "FILE_TOO_LARGE",
             UnsupportedFileType => "UNSUPPORTED_FILE_TYPE",
             FileNotFound => "FILE_NOT_FOUND",
             ThumbnailUnavailable => "THUMBNAIL_UNAVAILABLE",
+            SpreadsheetUnreadable => "SPREADSHEET_UNREADABLE",
+            SpreadsheetTooLarge => "SPREADSHEET_TOO_LARGE",
             CryptoSessionUnknown => "CRYPTO_SESSION_UNKNOWN",
             CryptoDecryptFailed => "CRYPTO_DECRYPT_FAILED",
             CryptoReplayDetected => "CRYPTO_REPLAY_DETECTED",
@@ -214,10 +272,15 @@ impl AppError {
             | WorkspaceCurrencyLocked
             | WorkspaceCurrencyChanged
             | ConfirmationRequired(_)
-            | ToolCapExceeded => 409,
+            | ToolCapExceeded
+            | IdTaken
+            | Stale(_)
+            | ContactHasDebts
+            | DebtHasPayments
+            | PaymentTransactionLocked => 409,
             InviteInvalid | ResetTokenInvalid | NotFound | WalletNotFound | CategoryNotFound
             | TransactionNotFound | ImportJobNotFound | FileNotFound | ThumbnailUnavailable
-            | SessionNotFound => 404,
+            | SessionNotFound | ContactNotFound | DebtNotFound | PaymentNotFound => 404,
             Validation(_)
             | TransferRequiresDestination
             | TransferSameWallet
@@ -226,8 +289,15 @@ impl AppError {
             | AmountNotPositive
             | ReceiptUnreadable
             | StatementUnreadable
-            | ToolArgsInvalid(_) => 422,
+            | SpreadsheetUnreadable
+            | ToolArgsInvalid(_)
+            | ContactMergeSelf
+            | AmountBelowPaid
+            | PaymentExceedsRemaining
+            | BulkPayCurrencyMismatch
+            | SplitSourceNotExpense => 422,
             MalformedRequest
+            | WorkspaceIdNotAllowed
             | CryptoDecryptFailed
             | CryptoReplayDetected
             | CryptoClockSkew { .. }
@@ -235,7 +305,7 @@ impl AppError {
             | CryptoVersionUnsupported
             | ToolNotFound => 400,
             RateLimited { .. } => 429,
-            FileTooLarge => 413,
+            FileTooLarge | SpreadsheetTooLarge => 413,
             UnsupportedFileType => 415,
             FxRateUnavailable | AiUnavailable | ExtractionNoAnswer | TelegramDisabled => 503,
             Internal(_) => 500,
@@ -254,6 +324,7 @@ impl AppError {
             LastOwner => "Promote another member to owner first.",
             NoWorkspace => "Create a workspace or accept an invitation, then switch into it.",
             McpTokenInvalid => "Create a new token in Account, MCP, or connect again.",
+            WorkspaceIdNotAllowed => "Drop workspace_id; switch workspace to act in another one.",
             Validation(_) | ToolArgsInvalid(_) => "Fix the listed fields and try again.",
             WalletNotFound => "Reload your wallets and pick one that still exists.",
             WalletHasTransactions => "Move or delete its transactions first.",
@@ -267,9 +338,23 @@ impl AppError {
                 "A transfer needs a destination wallet and a destination amount."
             }
             TransferSameWallet => "Pick a different destination wallet.",
+            IdTaken => "Create it again with a new id, or without one.",
+            Stale(_) => {
+                "Compare with details.current, then discard the change or send it again without If-Match."
+            }
             FxRateUnavailable => "Enter the exchange rate by hand.",
+            ContactHasDebts => "Delete its debts, or merge it into another contact.",
+            DebtHasPayments => "Cancel its payments first.",
+            AmountBelowPaid => "Enter at least the amount already paid.",
+            PaymentExceedsRemaining => "Pay at most the remaining amount.",
+            BulkPayCurrencyMismatch => "Pay debts in another currency separately.",
+            PaymentTransactionLocked => "Change the payment from its debt instead.",
             FileTooLarge => "The limit is 10 MB.",
             UnsupportedFileType => "Accepted: JPEG, PNG, WebP and PDF.",
+            SpreadsheetUnreadable => "Save it as .xlsx again, or export it as CSV.",
+            SpreadsheetTooLarge => {
+                "Up to 512 KB, 5,000 rows and 100 columns. Split the file, or export it as CSV."
+            }
             CryptoSessionUnknown => "Run the handshake again and retry once.",
             CryptoClockSkew { .. } => "Correct the clock offset and retry once.",
             ConfirmationRequired(_) => "Ask the user to confirm, then call again.",
@@ -327,6 +412,9 @@ pub struct ErrorBody {
     pub hint: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<FieldErrors>,
+    /// Structured detail beyond `fields`. Only `STALE` carries any (D115).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<serde_json::Value>,
     pub request_id: String,
 }
 
@@ -342,6 +430,10 @@ impl AppError {
             },
             hint: self.hint(),
             fields: self.fields().cloned(),
+            details: match self {
+                AppError::Stale(current) => Some(serde_json::json!({ "current": current })),
+                _ => None,
+            },
             request_id: request_id.into(),
         }
     }
@@ -354,6 +446,7 @@ mod tests {
     /// Every variant this test can name must have a code and a status. The
     /// catalog in docs/api/conventions.md is the specification; this keeps the
     /// enum honest about the two columns that matter.
+    /// OPS-4
     #[test]
     fn should_map_every_variant_to_a_code_and_a_status() {
         let samples = [
@@ -367,6 +460,7 @@ mod tests {
             AppError::InviteInvalid,
             AppError::ResetTokenInvalid,
             AppError::McpTokenInvalid,
+            AppError::WorkspaceIdNotAllowed,
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,
@@ -385,12 +479,16 @@ mod tests {
             AppError::DestinationNotAllowed,
             AppError::TransferAmountRequired,
             AppError::AmountNotPositive,
+            AppError::IdTaken,
+            AppError::Stale(None),
             AppError::ImportJobNotFound,
             AppError::FxRateUnavailable,
             AppError::FileTooLarge,
             AppError::UnsupportedFileType,
             AppError::FileNotFound,
             AppError::ThumbnailUnavailable,
+            AppError::SpreadsheetUnreadable,
+            AppError::SpreadsheetTooLarge,
             AppError::CryptoSessionUnknown,
             AppError::CryptoDecryptFailed,
             AppError::CryptoReplayDetected,
@@ -408,12 +506,23 @@ mod tests {
             AppError::ConfirmationRequired(FieldErrors::new()),
             AppError::ToolCapExceeded,
             AppError::TelegramDisabled,
+            AppError::ContactNotFound,
+            AppError::ContactHasDebts,
+            AppError::ContactMergeSelf,
+            AppError::DebtNotFound,
+            AppError::PaymentNotFound,
+            AppError::DebtHasPayments,
+            AppError::AmountBelowPaid,
+            AppError::PaymentExceedsRemaining,
+            AppError::BulkPayCurrencyMismatch,
+            AppError::SplitSourceNotExpense,
+            AppError::PaymentTransactionLocked,
             AppError::Internal(anyhow::anyhow!("boom")),
         ];
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 50);
+        assert_eq!(samples.len(), 66);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {
@@ -433,6 +542,17 @@ mod tests {
         assert_eq!(body.code, "INTERNAL_ERROR");
         assert!(!body.message.contains("secret"));
         assert!(body.fields.is_none());
+    }
+
+    /// MOB-7: the current row travels in `details.current`, null when deleted.
+    #[test]
+    fn should_carry_the_current_row_in_details_when_stale() {
+        let body = AppError::Stale(None).to_body("req-1");
+        assert_eq!(body.details, Some(serde_json::json!({ "current": null })));
+
+        let body = AppError::Stale(Some(serde_json::json!({ "id": "a" }))).to_body("req-1");
+        assert_eq!(body.details.unwrap()["current"]["id"], "a");
+        assert!(AppError::IdTaken.to_body("req-1").details.is_none());
     }
 
     #[test]

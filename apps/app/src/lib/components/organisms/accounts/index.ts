@@ -4,3 +4,4 @@ export { default as AccountFormSheet } from './accounts-form-sheet.svelte';
 export { default as AccountSummaryCards } from './accounts-summary-cards.svelte';
 export { default as AccountsDataTable } from './accounts-data-table.svelte';
 export { ACCOUNT_COLUMNS } from './accounts-data-table-column.js';
+export { default as AccountGroupsSheet } from './accounts-groups-sheet.svelte';

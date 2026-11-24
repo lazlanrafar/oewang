@@ -18,6 +18,8 @@ sha2 = { workspace = true }
 hmac = { workspace = true }
 base64 = { workspace = true }
 thiserror = { workspace = true }
+# FCM HTTP v1 (D116): the RS256 assertion traded for an access token.
+jsonwebtoken = { workspace = true }
 
 [dev-dependencies]
 # A real server for the OWE1 client's tests: the protocol is the thing under

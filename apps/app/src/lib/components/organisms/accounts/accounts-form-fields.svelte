@@ -18,6 +18,8 @@
 	 * figure is a transaction rather than a column write (TXN-3): the detail
 	 * sheet records it as an adjustment.
 	 */
+	import { untrack } from 'svelte';
+
 	import { Checkbox } from '$lib/components/atoms/checkbox';
 	import { Input } from '$lib/components/atoms/input';
 	import { Label } from '$lib/components/atoms/label';
@@ -64,9 +66,16 @@
 	let currencyValue = $state('');
 
 	/* The sheet is reused for the next account, so the fields follow it. */
+	// Keyed on the id, not the object: creating a group reloads the page
+	// data, and a new `account` object for the same row must not reset the picks.
+	const accountId = $derived(account?.id ?? null);
+
 	$effect(() => {
-		groupValue = account?.group_id ?? UNGROUPED;
-		currencyValue = account?.currency_code ?? baseCurrency;
+		void accountId;
+		untrack(() => {
+			groupValue = account?.group_id ?? UNGROUPED;
+			currencyValue = account?.currency_code ?? baseCurrency;
+		});
 	});
 
 	const labelClass = 'text-subtle text-xs font-normal';
@@ -82,7 +91,7 @@
 			required
 			autofocus
 			value={account?.name ?? ''}
-			placeholder="Cash"
+			placeholder={t('accounts.name_placeholder')}
 		/>
 		<FieldError message={fieldErrors?.name} />
 	</div>

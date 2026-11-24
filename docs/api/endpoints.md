@@ -12,7 +12,7 @@ The full route catalog, grouped by module. This doc is the source of truth for r
 ## Conventions recap
 
 - Base path `/v1`. Envelope, errors, pagination and encoding are in [conventions](conventions.md).
-- The workspace is never in the path. It comes from the JWT (AUTH-4).
+- The workspace is never in the path. It comes from the JWT (AUTH-4). A `workspace_id` at the top level of a body, or in the query string, is refused with `WORKSPACE_ID_NOT_ALLOWED`, except on `POST /v1/auth/switch-workspace` and `POST /v1/internal/tools/execute`, whose job is to name one ([conventions](conventions.md#resources-and-urls)).
 - Role column values: `public` (no token), `any` (any member), `admin+` (`owner` or `admin`), `owner`, `service` (service key only).
 - Role rules are in [auth](../security/auth.md#permission-matrix).
 
@@ -53,6 +53,8 @@ These four are the only plaintext routes ([exceptions](encryption.md#plaintext-e
 | DELETE | `/v1/auth/passkeys/{id}` | any | Soft-delete one of your own passkeys. Audited `passkey.removed` |
 | POST | `/v1/auth/passkey/sign-in/start` | public | `{ceremony_id, options}`: request options for any passkey the browser holds for the site |
 | POST | `/v1/auth/passkey/sign-in/finish` | public | `{ceremony_id, credential}`. A session, as login answers. Any failure is `INVALID_CREDENTIALS` |
+| POST | `/v1/device-tokens` | any | `{token, platform}`, platform `ios` or `android` (PUSH-1, D116). Registers the caller's device for push; a token already live, for anyone, moves to the caller and its `last_seen_at` is refreshed. 201 with `{id, platform, created_at, last_seen_at}`, never the token. Audited `device_token.registered` |
+| DELETE | `/v1/device-tokens` | any | `{token}` in the body, not the path: it is long and a path reaches access logs. Soft-deletes the caller's own device, on sign-out. 204 also when the token is unknown, someone else's or already retired. Audited `device_token.removed` when a row was removed |
 
 `POST /v1/auth/register`
 
@@ -122,10 +124,11 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/wallets` | any | List with balances in each wallet's own currency. Ordered so a group's wallets are contiguous, with `group_name` joined; ungrouped wallets come last |
+| GET | `/v1/wallets` | any | List with balances in each wallet's own currency. Ordered so a group's wallets are contiguous, with `group_name` joined and `has_transactions` (any live transaction on either leg, which locks the currency, WAL-6); ungrouped wallets come last. Both are null on a single-wallet read |
+| GET | `/v1/wallets/totals` | any | What the wallets add up to in the workspace currency (D117): `currency_code`, `total`, `assets`, `liabilities` (a positive figure; `total = assets - liabilities`), each with a `_formatted` twin; `count`, `counted` (`is_included_in_totals`), `left_out` (counted wallets with no rate in the newest snapshot) and `missing_currencies`; `groups`, every live group in list order and then the ungrouped wallets (`id` and `name` null) when there are any, each `{ id, name, subtotal, subtotal_formatted, left_out }`. Only counted wallets move any figure |
 | GET | `/v1/wallets/{id}` | any | One wallet |
-| POST | `/v1/wallets` | admin+ | Create. `currency_code` optional, defaults to the workspace currency (WAL-5) |
-| PATCH | `/v1/wallets/{id}` | admin+ | Update name, group, sort order, totals flag. Currency only while the wallet has no live transaction, otherwise `WALLET_CURRENCY_LOCKED` (WAL-6) |
+| POST | `/v1/wallets` | admin+ | Create. `currency_code` optional, defaults to the workspace currency (WAL-5). Optional client `id` (D114, [below](#client-ids-and-if-match)) |
+| PATCH | `/v1/wallets/{id}` | admin+ | Update name, group, sort order, totals flag. Currency only while the wallet has no live transaction, otherwise `WALLET_CURRENCY_LOCKED` (WAL-6). Optional `If-Match`, otherwise `STALE` (D115) |
 | POST | `/v1/wallets/{id}/set-default` | admin+ | Make default, clearing the previous default in the same transaction (WAL-3) |
 | POST | `/v1/wallets/{id}/adjust` | admin+ | Correct a balance to a stated figure. Body `{ "balance": "100000" }` as a decimal string. Answers with the updated wallet |
 | DELETE | `/v1/wallets/{id}` | admin+ | Soft delete. `WALLET_HAS_TRANSACTIONS` if any live transaction references it (WAL-4) |
@@ -149,8 +152,8 @@ The response is a suggestion. The rate the user confirms is sent back on the tra
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/categories` | any | List. Query: `type=income\|expense` |
-| POST | `/v1/categories` | admin+ | Create |
-| PATCH | `/v1/categories/{id}` | admin+ | Update name, type or sort order |
+| POST | `/v1/categories` | admin+ | Create. Optional client `id` (D114, [below](#client-ids-and-if-match)) |
+| PATCH | `/v1/categories/{id}` | admin+ | Update name, type or sort order. Optional `If-Match`, otherwise `STALE` (D115) |
 | DELETE | `/v1/categories/{id}` | admin+ | Soft delete. Sets `category_id` to null on its transactions (CAT-2) and deletes its budget (BUD-4) |
 
 ## Budgets
@@ -166,6 +169,81 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 
 `GET /v1/budgets` answers `{ month, from, to, currency_code, budgeted, spent, remaining, percent, state, count, over_count, summary, budgets: [{ id, category_id, category_name, amount, spent, remaining, percent, state }] }`, each money field with its `_formatted` twin. The totals cover every budget whatever the search. `state` is `safe`, `warning` (80% or more) or `over` (past 100%). The same object is the `budget` canvas payload.
 
+## Contacts
+
+D120, CON-1 to CON-4. Rules in [features/debts.md](../features/debts.md).
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/v1/contacts` | any | Paginated list. Query: `search` (name, email, phone, contains), `sort=name\|created_at` (default `name`), `order=asc\|desc`, `page`, `per_page` (default 25, at most 100; this list reads `per_page`, not the convention's `limit`) |
+| POST | `/v1/contacts` | admin+ | Create. Body: `{ "id"?, "name", "email"?, "phone"?, "note"? }`. Optional client `id` (D114) |
+| GET | `/v1/contacts/{id}` | any | One contact with its live debt counts (`debt_count`, `open_debt_count`) |
+| PATCH | `/v1/contacts/{id}` | admin+ | Update name, email, phone, note. Optional `If-Match` (D115) |
+| DELETE | `/v1/contacts/{id}` | admin+ | Soft delete. `409 CONTACT_HAS_DEBTS` while any live debt names it, paid or not (CON-3) |
+| POST | `/v1/contacts/{id}/merge` | admin+ | Body: `{ "into_id" }`. Moves this contact's live debts to `into_id` and soft-deletes this one, in one transaction, with an audit row for each. `into_id` equal to `{id}` is `CONTACT_MERGE_SELF` (CON-4) |
+
+## Debts
+
+D120 and D121, DEBT-1 to DEBT-10. Rules in [features/debts.md](../features/debts.md). Money is a string (D12); every figure the API computes has a `_formatted` twin (D27).
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| GET | `/v1/debts` | any | Paginated list with the contact's name. Query: `search` (contact name, description), `status=unpaid\|partial\|paid` (several as one comma-separated value, `status=unpaid,partial`), `type=payable\|receivable`, `contact_id`, `today=YYYY-MM-DD` (marks `overdue`; default the UTC date), `sort=due_date\|amount\|remaining\|created_at\|contact` (default `due_date`), `order`, `page`, `per_page` (default 25, at most 100; not `limit`) |
+| GET | `/v1/debts/summary` | any | The page's cards. Query: `today=YYYY-MM-DD`. See below |
+| POST | `/v1/debts` | admin+ | Create. Optional client `id` (D114). See below |
+| GET | `/v1/debts/{id}` | any | One debt with its live payments (each with its transaction id and wallet) and its source transaction, if any |
+| PATCH | `/v1/debts/{id}` | admin+ | Update `contact_id`, `amount`, `description`, `due_date`; `type` and `currency_code` only while no live payment exists (`DEBT_HAS_PAYMENTS`). An amount below what is paid is `AMOUNT_BELOW_PAID`. Optional `If-Match` (D115) |
+| DELETE | `/v1/debts/{id}` | admin+ | Soft delete. `409 DEBT_HAS_PAYMENTS` while a live payment exists (DEBT-3) |
+| POST | `/v1/debts/{id}/payments` | admin+ | Pay. See below |
+| DELETE | `/v1/debts/{id}/payments/{payment_id}` | admin+ | Cancel a payment: soft-deletes it and its transaction, reverses the balance, restores the remaining amount and status (DEBT-7) |
+| POST | `/v1/debts/bulk-pay` | admin+ | Pay several debts at once, all or nothing, one payment and one transaction per debt (DEBT-6). See below |
+| POST | `/v1/debts/split` | admin+ | Split an expense equally and record a receivable per contact (DEBT-10). See below |
+
+### `POST /v1/debts` body
+
+```json
+{
+  "id": "clx…",
+  "type": "receivable",
+  "contact_id": "clx…",
+  "amount": "250000.0000",
+  "currency_code": "IDR",
+  "due_date": "2026-12-15",
+  "description": "Concert tickets",
+  "source_transaction_id": null
+}
+```
+
+`id`, `currency_code`, `due_date`, `description` and `source_transaction_id` are optional. `currency_code` defaults to the workspace currency, or to the source wallet's when `source_transaction_id` is set; then `origin` is `from_transaction` (DEBT-9). `remaining_amount` and `status` are never accepted.
+
+### `GET /v1/debts/summary` response
+
+`{ currency_code, owed_to_you, you_owe, net, open_count, overdue_count, left_out }`, each money field with its `_formatted` twin (`net_formatted` signed). `owed_to_you` sums the remaining amount of live receivables, `you_owe` of live payables, each converted to the workspace currency as `GET /v1/wallets/totals` does (D117); `net` is the first minus the second. `open_count` counts unpaid and partial debts, `overdue_count` those whose `due_date` is before `today`, and `left_out` the currencies with no stored rate to the workspace currency, whose debts are not in the sums. The cards cover every debt, whatever the list's filters.
+
+A debt answers with `paid_amount` and `overdue` beside its stored figures, each money field with a `_formatted` twin. `GET /v1/debts/{id}` adds `payments` and `source_transaction`. `GET /v1/transactions/{id}/debts` answers `{ debts, payment }`: the debts made from the transaction, and `{ payment, debt }` when the transaction is a payment, otherwise null.
+
+### `POST /v1/debts/{id}/payments` body
+
+```json
+{
+  "id": "clx…",
+  "amount": "100.0000",
+  "wallet_id": "clx…",
+  "date": "2026-11-24T10:00:00+08:00",
+  "exchange_rate": "16250.00000000"
+}
+```
+
+`amount` is in the debt's currency, above zero and at most the remaining amount (`PAYMENT_EXCEEDS_REMAINING`). `id`, `wallet_id`, `date` (default: now) and `exchange_rate` are optional. With `wallet_id` the API writes one transaction (`expense` for a payable, `income` for a receivable); when the wallet's currency differs from the debt's, the payment is its `original_amount`, and `exchange_rate`, when absent, resolves as any transaction's does ([rate resolution](../data-model.md#rate-resolution-at-write-time)). Answers `201 { payment, debt, transaction }`, `transaction` null without a wallet; a repeated client `id` answers `200` with the first call's payment (D114). A debt whose type or currency changed between the read and the lock answers `409 STALE`; send it again.
+
+### `POST /v1/debts/bulk-pay` body
+
+`{ "wallet_id"?, "date"?, "payments": [{ "id"?, "debt_id", "amount" }] }`, 1 to 50 payments. Answers a list of `{ payment, debt, transaction }`. When every payment carries a client `id` already taken by this workspace, the call is a replay and answers `200` with what the first call wrote; some but not all is `ID_TAKEN`. Each follows the single payment's rules. With a wallet, every debt must be in its currency, otherwise `BULK_PAY_CURRENCY_MISMATCH`. Any refusal refuses the whole call.
+
+### `POST /v1/debts/split` body
+
+Either `{ "transaction_id" }`, a live `expense` (otherwise `SPLIT_SOURCE_NOT_EXPENSE`), or `{ "wallet_id", "amount", "name", "category_id"?, "date" }` for a new expense written in the same transaction. Plus `contact_names` and/or `contact_ids`, 1 to 20 people after dropping duplicates. Names match live contacts case-insensitively after trimming; an unknown name creates a contact. Each receivable is `floor(amount / (N + 1))` to the currency's minor unit; the remainder stays with the person. Answers `201 { transaction, debts }`.
+
 ## Transactions
 
 | Method | Path | Role | Description |
@@ -174,18 +252,20 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 | GET | `/v1/transactions/summary` | any | Totals by category, wallet and type for a date range |
 | GET | `/v1/overview` | any | The overview's figures for `?from&to` (both required, days, at most 60 months): income, expense and net with the previous equal-length period, zero-filled months, monthly averages, top categories per type. Built by the same report module as the analysis canvases (D87, D88) |
 | GET | `/v1/transactions/export` | any | CSV download honouring the active filters (TXN-10) |
-| POST | `/v1/transactions` | admin+ | Create. Adjusts wallet balances (TXN-3) |
+| POST | `/v1/transactions` | admin+ | Create. Adjusts wallet balances (TXN-3). Optional client `id` (D114); `/bulk` ignores it |
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
 | POST | `/v1/transactions/bulk-update` | admin+ | Set the category of many; `category_id: null` clears it (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
 | POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4) |
 | POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
+| POST | `/v1/transactions/import/xlsx` | admin+ | An `.xlsx` as base64 in, its first sheet out as column names and rows of text, the shape a parsed CSV has. Writes nothing (TXN-11, D111) |
 | POST | `/v1/transactions/import/map-columns` | admin+ | Column names plus two sample rows in, a proposed mapping out (AI-9). Proxies the AI service, because the browser never calls it directly (PLT-4) |
 | GET | `/v1/transactions/import/{job_id}` | any | Poll an import job: status plus imported, skipped and duplicate counts, and whether it has gone stale (AI-6) |
 | GET | `/v1/transactions/{id}` | any | One transaction with items and attachments |
+| GET | `/v1/transactions/{id}/debts` | any | Debts sourced from this transaction and the debt payment it settles, if any (DEBT-12) |
 | GET | `/v1/transactions/{id}/history` | any | Audit history for this transaction: actor, surface, before and after, newest first (OPS-8) |
-| PATCH | `/v1/transactions/{id}` | admin+ | Update. Re-applies the balance delta (TXN-4) |
-| DELETE | `/v1/transactions/{id}` | admin+ | Soft delete. Reverses the balance (TXN-5) |
+| PATCH | `/v1/transactions/{id}` | admin+ | Update. Re-applies the balance delta (TXN-4). Optional `If-Match`, otherwise `STALE` (D115). On a debt payment's transaction, a change to amount, wallet, type, destination, original amount or rate is `PAYMENT_TRANSACTION_LOCKED` (DEBT-8) |
+| DELETE | `/v1/transactions/{id}` | admin+ | Soft delete. Reverses the balance (TXN-5). Deleting a debt payment's transaction cancels the payment; deleting a debt's source clears the link (D121). The same holds for `bulk-delete` |
 
 ### `GET /v1/transactions` query parameters
 
@@ -225,6 +305,26 @@ D103, BUD-1 to BUD-3. Every figure is computed by the API, with a `_formatted` t
 `items` and `attachment_ids` are optional. Both are written inside the same database transaction as the transaction insert, so confirming a receipt is one act that either happens or does not: a create followed by six item calls is six acts that can each half-fail, and a crash after the third leaves a transaction whose items do not add up with nothing saying why. Items move no money; only the transaction's own `amount` does (TXN-12). `PATCH` ignores `items`, because editing one needs to address it, which the item routes do.
 
 `source` is optional and is `web` or `receipt`. It names the surface for the audit row (OPS-8) and it is a claim, deliberately a narrow one: `chat` and `import` are written by the API's own paths, so a client naming either is refused. Without it a write is `web`.
+
+### Client ids and If-Match
+
+The offline queue's two tools (MOB-6, MOB-7, MOB-10), on transactions, wallets, categories, contacts, debts and debt payments alike.
+
+**Client `id` on create (D114).** `POST /v1/transactions`, `/v1/wallets`, `/v1/categories`, `/v1/contacts`, `/v1/debts` and `/v1/debts/{id}/payments` take an optional top-level `id` (on bulk pay, one per payment): a CUID2 of 24 to 32 lowercase letters and digits, starting with a letter, otherwise `VALIDATION_FAILED` on `id`. Without it the API makes the id, as before.
+
+| The id… | Answer |
+|---|---|
+| is free | `201`, the row created under that id |
+| names a row of the same kind in this workspace, live or deleted | `200`, that row as it is now, and nothing written: no balance moves, no audit row. Checked before the body, so a repeat still answers after the wallet it names is gone |
+| names a row in another workspace, or a row of another kind | `409 ID_TAKEN`, without the row |
+
+A repeat of a deleted row answers the row as it was when deleted, and does not bring it back; a `GET` of it then answers 404, which is how the client learns. The primary key settles two concurrent creates with one id: one row, the other call answers it with 200. The kind check across tables is a read before the write, so two creates of different kinds racing on one id are not stopped; a client that makes its ids with CUID2 never produces that.
+
+**`If-Match` on `PATCH` (D115).** The header carries the row's `updated_at`, sent back exactly as the API gave it, for example `If-Match: 2026-11-23T04:05:06.123456+00:00` (quotes around it are allowed). It is compared as an instant, so `Z` and `+00:00` agree, at the microsecond the API emits; a value re-serialized through a millisecond clock no longer matches and is answered `STALE`. A value that is not RFC 3339 is `VALIDATION_FAILED` on `If-Match`.
+
+When the row's `updated_at` differs, or the row is deleted, the answer is `409 STALE` with `error.details.current`: the row as it reads now, in the shape a successful `PATCH` answers with, or `null` when it is deleted. Nothing changes and nothing is audited. The check runs under the row lock the update takes, so no write lands between it and the update. A row that never existed, or is another workspace's, stays a 404. Without the header `PATCH` is last-write-wins, as before.
+
+Every edit of one of these rows moves its `updated_at`. A wallet's balance moving under a transaction does not: the balance is derived, never edited through `PATCH`, and counting it would make every queued wallet edit stale the moment a transaction landed on that wallet.
 
 ### `POST /v1/transactions/import` body
 
@@ -266,6 +366,22 @@ Answers `202 {"data": {"job_id": "clx…"}}` and the work continues in a task: t
 ```
 
 At most two sample rows travel, and every cell is clamped to 80 characters before the API forwards them (D28, [column mapping](../ai/service.md#csv-column-mapping)). A failure is relayed as it comes: step two of the wizard works by hand, and an empty step is a better answer than a guessed mapping.
+
+### `POST /v1/transactions/import/xlsx` body
+
+```json
+{ "data": "<standard base64 of the .xlsx, at most 512 KB>" }
+```
+
+Answers the shape the wizard's CSV parser produces, every cell a string:
+
+```json
+{ "data": { "columns": ["Tanggal", "Keterangan", "Debet"],
+            "rows": [ { "Tanggal": "2026-11-02", "Keterangan": "WARUNG TEKKO", "Debet": "87500.5" } ],
+            "dropped": 0 } }
+```
+
+First worksheet only. A number cell keeps the digits the file wrote; a date cell is `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM:SS` with a time. Nothing is stored and nothing is written: the rows go back to the wizard, which commits them through `/import/csv`. Over 512 KB, 32 MB unpacked, a million shared strings, 100 columns or the 5,000-row cap answers `SPREADSHEET_TOO_LARGE`; anything that is not a readable `.xlsx` answers `SPREADSHEET_UNREADABLE` (D111, [spreadsheet files](../features/transactions.md#spreadsheet-files-xlsx)).
 
 ## Transaction line items
 

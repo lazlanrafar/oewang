@@ -255,3 +255,25 @@ def test_rows_that_are_not_objects_are_skipped() -> None:
     result = parse_statement({"rows": ["2026-11-02 WARUNG TEKKO 87500", 3, None]})
 
     assert result.rows == ()
+
+
+@pytest.mark.parametrize(
+    ("line", "description", "amount"),
+    [
+        # A digit that ends a word is the word's, not the figure's.
+        ("2026-11-02 WARUNG MWT00KT3 87500", "2026-11-02 WARUNG MWT00KT3", "87500"),
+        # A quantity before the figure is not a thousands group of it.
+        ("2026-11-05 KOPI x 2 87500", "2026-11-05 KOPI x 2", "87500"),
+        # Space-grouped thousands still read whole.
+        ("2026-11-09 SEWA 1 234 567", "2026-11-09 SEWA", "1234567"),
+        ("2026-11-09 TOKO 12.500", "2026-11-09 TOKO", "12500"),
+    ],
+)
+def test_a_statement_line_keeps_its_words_out_of_the_amount(
+    line: str, description: str, amount: str
+) -> None:
+    """Found in a browser run: "MWT00KT3 87500" was read as 387500."""
+    row = parse_statement_text(line).rows[0]
+
+    assert row.description == description
+    assert row.amount == Decimal(amount)

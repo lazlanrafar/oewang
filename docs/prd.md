@@ -32,21 +32,21 @@ The result: a small change touches several apps, and deleting a feature is harde
 Each of these exists in the old app and is deliberately left out. Adding any of them needs its own PRD.
 
 - Invoices: creation, sending, the public invoice page, payment tracking.
-- Debts and receivables, including the related chat tools.
-- ~~Budgets.~~ Budgets came back with D103 (BUD-1 to BUD-4, section 6.15), with their chat canvas. Still out: budget-exceeded notifications, with every other notification.
-- Contacts and bill splitting.
+- ~~Debts and receivables, including the related chat tools.~~ Debts came back with D120 (section 6.20), with their chat tools. The debt canvas stays out.
+- ~~Budgets.~~ Budgets came back with D103 (BUD-1 to BUD-4, section 6.15), with their chat canvas. Budget alerts at 80% and 100% came back as push notifications with D116 (PUSH-3); every other kind of notification stays out.
+- ~~Contacts and bill splitting.~~ Contacts and bill splitting came back with D120 (sections 6.20 and 6.21).
 - ~~Vault as a browsable feature: `vault_files` exists only to back attachments and receipts.~~ The vault page came back with D90 (VLT-6 to VLT-13). Still out: document RAG and a `search_documents` tool.
 - Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow. Usage is recorded and shown (section 6.13, D92), never limited.
 - Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11, and MCP until D106 (section 6.17); nothing else on the old Apps page came with them (Gmail, Outlook).
 - The admin dashboard and the marketing website.
-- The Flutter mobile app and offline sync.
+- ~~The Flutter mobile app and offline sync.~~ The mobile app came back with D113 (MOB-1 to MOB-9, section 6.18), with offline writes for transactions, wallets and categories (D114, D115).
 - The Go background worker (D10).
 - ~~The MCP server and its OAuth client registration.~~ The MCP server came back with D106 (MCP-1 to MCP-9, section 6.17).
 - OAuth login. Email and password, and passkeys (D21, D110).
 - Application-layer payload encryption (D9).
 - Web search in chat. Canvas artifacts and chat charts were on this list until D88 brought the analysis canvas back for spending, income and burn rate, and D103 added the budget canvas; the debt canvas stays out with its feature.
 - Anomaly detection and transaction classification.
-- Notifications: in-app centre, push, email alerts.
+- Notifications: in-app centre and email alerts. Push to the mobile app came back with D116 (PUSH-1 to PUSH-5, section 6.19), for four events only.
 - A second UI locale. The i18n layer ships, `en.json` is the only dictionary (D15).
 - Realtime multi-client sync. A client refetches after its own mutation.
 - Application-layer encryption of the browser-to-web-app hop, for v1 (D26). The two service hops are encrypted (D22); see [which hops are protected](api/encryption.md#which-hops-are-protected) for why the browser hop is different, and [Q8](#10-open-questions).
@@ -83,7 +83,7 @@ Confirmed by the owner on 2026-11-02, and recorded in the [decision log](archite
 
 ### 5.1 Interpretation of the data model decision
 
-"Full data model" means full for the transaction and chat domain, not the old 42 tables. The sixteen tables in scope are listed in [data model](data-model.md#tables-in-scope). Out of scope: invoices, debts, contacts, notifications, billing, orders, pricing, plan features, workspace addons, integrations, MCP tables, articles, FAQs, device tokens, push subscriptions, privacy requests, webhook events, system settings, knowledge chunks.
+"Full data model" means full for the transaction and chat domain, not the old 42 tables. The sixteen tables in scope are listed in [data model](data-model.md#tables-in-scope). Debts and contacts came back later with D120 (`contacts`, `debts`, `debt_payments`). Out of scope: invoices, notifications, billing, orders, pricing, plan features, workspace addons, integrations, MCP tables, articles, FAQs, device tokens, push subscriptions, privacy requests, webhook events, system settings, knowledge chunks.
 
 ### 5.2 Assumptions
 
@@ -120,7 +120,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | AUTH-3 | The token is stored in an `httpOnly` cookie set by the SvelteKit server. Client-side JavaScript never reads it. |
 | AUTH-4 | The API derives `workspace_id` only from JWT claims, and rejects any `workspace_id` supplied in a body or query string. |
 | AUTH-5 | An unknown email and a wrong password return the same error and take comparable time. |
-| AUTH-6 | Authentication endpoints are rate limited to 10 requests per 15 minutes per IP address. |
+| AUTH-6 | Authentication endpoints are rate limited to 10 requests per 15 minutes per browser address, and sign-in, sign-up and password reset also per email address (D112). |
 | AUTH-7 | A session is a 15 minute access JWT plus a 30 day refresh token, both in `httpOnly` cookies (D38). |
 | AUTH-8 | Refresh and password reset tokens are stored as SHA-256 hashes. The raw token is never persisted. |
 | AUTH-9 | A refresh rotates the token. Reusing a rotated token revokes every token descended from that login. |
@@ -397,6 +397,69 @@ Added by D106. Specified in [features/mcp.md](features/mcp.md).
 | MCP-7 | Every write made through MCP is audited with source `mcp` (imports keep `import`). |
 | MCP-8 | A refused token gets 401 with `WWW-Authenticate` pointing at the protected-resource metadata. It never affects the browser session of whoever relays it. |
 | MCP-9 | OAuth 2.1 for connector apps (claude.ai, ChatGPT): discovery metadata, dynamic client registration, PKCE S256 only, exact redirect URIs, a consent page with the workspace choice, single-use codes, rotating refresh tokens. Connected apps are listed and disconnectable in Account → MCP. |
+
+### 6.18 Mobile (MOB)
+
+Added by D113, from the old Flutter app. Specified in [features/mobile.md](features/mobile.md).
+
+| ID | Requirement |
+|---|---|
+| MOB-1 | A Flutter app in `apps/native` for iOS and Android, under the old app's store identity (`com.oewang.app`). Each screen ported from the old Flutter app keeps its look; screens the old app never had (chat, receipt scan, vault, passkeys, Telegram) are adapted from the web app with the old app's components and tokens. |
+| MOB-2 | The app calls the API directly, never through the web app (D113). Every body is OWE1, with the API's signing key pinned in the build; the access and refresh tokens live only in the platform's secure storage and are never logged. |
+| MOB-3 | Sign-in, sign-up, the `/sync` workspace check (D109), workspace creation and switching, sign-out, as on the web. |
+| MOB-4 | Transactions (daily, calendar, monthly, summary, search, form), accounts and groups, categories, budgets, stats and settings, on the same routes as the web. Every figure comes from the API (D27); no amount is ever a `double` (D12). |
+| MOB-5 | A viewer sees no control that writes. The API still refuses the write. |
+| MOB-6 | Creating, editing and deleting transactions, wallets and categories work offline. Writes queue on the device and replay in order when the connection returns. A balance shown offline is a local estimate, replaced by the API's figure after the queue drains. |
+| MOB-7 | A queued edit whose row changed or was deleted elsewhere is refused by the API (`409 STALE`, D115). The app shows the conflict and the person chooses to discard their change or apply it over the current row. Nothing is overwritten silently. |
+| MOB-8 | Chat with streaming answers, receipt scanning from the camera or gallery, and the vault, on the web's routes. |
+| MOB-9 | Passkey sign-in, Telegram linking through its deep link, and invitation links (`/accept-invite?token=`) that open the app: a signed-out person registers or signs in, then the invitation is accepted. The address is not filled in: the API does not tell whoever holds a link which address it was sent to. |
+| MOB-10 | Creating, editing and deleting debts and contacts, paying, cancelling a payment and merging contacts work offline like transactions. Each create carries a client `id` (D114) and each edit `If-Match` (D115). A queued payment's wallet delta joins the balance estimate; a replay the API refuses is shown in the sync banner (D120). |
+
+### 6.19 Push notifications (PUSH)
+
+Added by D116. Specified in [features/mobile.md](features/mobile.md#push).
+
+| ID | Requirement |
+|---|---|
+| PUSH-1 | The app registers its FCM token after sign-in and removes it on sign-out. A token FCM reports invalid is soft-deleted. |
+| PUSH-2 | A receipt queued for later reading, or an import job, that ends (done or failed) pushes to the person who started it. |
+| PUSH-3 | A budget whose month's spending first reaches 80%, and then 100%, of its limit pushes once per threshold per month to every member with a registered device. A transaction that jumps past both sends only the 100% push. |
+| PUSH-4 | An invitation to a workspace pushes to the invited address when it belongs to an account with a registered device. The email is sent either way. |
+| PUSH-5 | A push is sent after the transaction that caused it commits and never delays or fails it. A push carries a title, a body and the screen to open; never an amount the API did not format, a token or file contents. |
+
+### 6.20 Debts (DEBT)
+
+Added by D120 and D121, from the old app's debts page. Specified in [features/debts.md](features/debts.md).
+
+| ID | Requirement |
+|---|---|
+| DEBT-1 | A debt is money owed between the person and one contact: `payable` when they owe it, `receivable` when it is owed to them. It carries an amount, a currency (the workspace currency by default), a description and a due date (a `date`). Admins and owners write; every member reads. |
+| DEBT-2 | A debt keeps a remaining amount, and its status is derived from it: `unpaid`, `partial` or `paid`. An edit may change the contact, amount, description and due date. An amount below what is already paid is refused (`AMOUNT_BELOW_PAID`). Type and currency are fixed once a live payment exists. |
+| DEBT-3 | Deleting a debt with a live payment is refused (`DEBT_HAS_PAYMENTS`). |
+| DEBT-4 | A payment is above zero and at most the remaining amount. With a wallet it writes one transaction: `expense` for a payable, `income` for a receivable, no category, on the payment's date. Without a wallet it writes none. Wallet rows are locked first, then debt rows, each in ascending id order (D13). |
+| DEBT-5 | A payment through a wallet in another currency is a foreign-currency entry (TXN-20): the payment amount and the debt's currency are the transaction's `original_amount` and `original_currency_code`, and the rate prefills and stays editable (D39). The remaining amount drops in the debt's currency. |
+| DEBT-6 | Bulk pay writes one payment and one transaction per debt, all or nothing. With a wallet, every debt must be in the wallet's currency (`BULK_PAY_CURRENCY_MISMATCH`). |
+| DEBT-7 | Cancelling a payment soft-deletes it and its transaction, reverses the balance, and restores the remaining amount and status. |
+| DEBT-8 | Deleting a payment's transaction by any route cancels the payment. Its amount, wallet, type, destination wallet, original amount and currency, and rate are locked (`PAYMENT_TRANSACTION_LOCKED`); items, name, description, category, date and attachments stay editable, because line items move no money (TXN-12). |
+| DEBT-9 | A debt can be made from a transaction (`origin` = `from_transaction`). Deleting that transaction clears the link and leaves the debt as it is. |
+| DEBT-10 | Split bill divides an expense equally between the person and 1 to 20 contacts and records a `receivable` per contact. Each share is floored to the currency's minor unit and the remainder stays with the person. Contacts are matched by name, case-insensitively, or created. The source is a live expense or a new one written in the same transaction. It is reached through chat, MCP and the API only, as in the old app. |
+| DEBT-11 | The `/debts` page is the old one: four cards (owed to you, you owe, net position, overdue), the filter bar with Status and Type facets, the table with bulk selection, the form, detail, payment and bulk pay sheets, and the two empty states. Filters, sort and page live in the URL. Overdue means a due date before the person's local date. |
+| DEBT-12 | The transaction detail lists the debts and payments tied to the transaction and offers Create debt with the transaction as its source. |
+| DEBT-13 | The overview shows the old Debt balance card, the net position from the debts summary with the open count in its footer, and its prompt chip. Every figure on it comes from the API (D27). |
+| DEBT-14 | Chat has `get_outstanding_debts`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt` and `split_bill`, both behind a confirming turn (D122). A contact named in a tool call is matched or created. The tool amount cap applies to the wallet amount of a payment. |
+| DEBT-15 | MCP has the six chat tools plus `list_contacts`, `create_contact`, `update_contact`, `delete_contact` and `merge_contacts`. Deletes, merges and `split_bill` need `confirmed` (D122). |
+| DEBT-16 | The mobile app has the debts and contacts screens of the old Flutter app. |
+
+### 6.21 Contacts (CON)
+
+Added by D120. Specified in [features/debts.md](features/debts.md#the-contacts-page).
+
+| ID | Requirement |
+|---|---|
+| CON-1 | A contact has a name (required), an email, a phone and a note. Admins and owners write; every member reads. |
+| CON-2 | The `/contacts` page has four cards (total, added this month, with email, with phone), the table, the form sheet, and a detail sheet that lists the contact's debts. |
+| CON-3 | Deleting a contact with any live debt, paid or not, is refused (`CONTACT_HAS_DEBTS`). |
+| CON-4 | Merging contact A into contact B moves A's live debts to B and soft-deletes A, in one database transaction with its audit rows. |
 
 ## 7. Success metrics
 

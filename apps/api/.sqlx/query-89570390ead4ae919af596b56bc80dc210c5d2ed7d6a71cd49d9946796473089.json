@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "state",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "passkey_ceremonies",
+            "name": "state"
+          }
+        }
       }
     ],
     "parameters": {

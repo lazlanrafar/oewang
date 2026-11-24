@@ -25,8 +25,14 @@ function resolve(key: string): string | undefined {
 	return typeof current === 'string' ? current : undefined;
 }
 
+const plurals = new Intl.PluralRules('en');
+
 /**
  * Look up a string, with optional `{placeholder}` substitution.
+ *
+ * `{count|file|files}` picks the singular or plural word by the value of
+ * `count`, so "{count} {count|file|files}" reads "1 file" and "2 files". A
+ * formatted value such as "1,234" counts by its digits.
  *
  * A missing key returns the key itself rather than throwing: a broken string
  * should not take a page down, and the typecheck already caught it.
@@ -35,9 +41,17 @@ export function t(key: TranslationKey, values?: Record<string, string | number>)
 	const template = resolve(key) ?? key;
 	if (!values) return template;
 
-	return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-		name in values ? String(values[name]) : match
-	);
+	return template
+		.replace(/\{(\w+)\|([^|}]*)\|([^}]*)\}/g, (match, name: string, one: string, other: string) =>
+			name in values
+				? plurals.select(Number(String(values[name]).replace(/[^\d.-]/g, ''))) === 'one'
+					? one
+					: other
+				: match
+		)
+		.replace(/\{(\w+)\}/g, (match, name: string) =>
+			name in values ? String(values[name]) : match
+		);
 }
 
 export type { TranslationKey };

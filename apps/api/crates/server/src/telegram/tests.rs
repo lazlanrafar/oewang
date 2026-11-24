@@ -82,6 +82,7 @@ async fn should_mint_a_start_value_telegram_accepts(pool: PgPool) {
         .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-'));
 }
 
+/// TG-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_link_the_chat_to_the_member_the_token_was_minted_for(pool: PgPool) {
     fixture(&pool).await;
@@ -105,6 +106,7 @@ async fn should_link_the_chat_to_the_member_the_token_was_minted_for(pool: PgPoo
     assert_eq!(status.telegram_username.as_deref(), Some("budi"));
 }
 
+/// TG-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_a_token_used_twice(pool: PgPool) {
     fixture(&pool).await;
@@ -120,6 +122,7 @@ async fn should_refuse_a_token_used_twice(pool: PgPool) {
         .is_none());
 }
 
+/// TG-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_an_expired_token(pool: PgPool) {
     fixture(&pool).await;
@@ -154,6 +157,7 @@ async fn should_refuse_a_bot_account(pool: PgPool) {
     assert!(matches!(started, Started::Refused));
 }
 
+/// TG-3
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_keep_one_live_link_per_member_and_per_chat(pool: PgPool) {
     fixture(&pool).await;
@@ -183,6 +187,7 @@ async fn should_keep_one_live_link_per_member_and_per_chat(pool: PgPool) {
     assert_eq!(live, 1);
 }
 
+/// TG-3
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_end_the_link_from_the_apps_page_and_audit_it(pool: PgPool) {
     fixture(&pool).await;
@@ -212,6 +217,7 @@ async fn should_end_the_link_from_the_apps_page_and_audit_it(pool: PgPool) {
     assert_eq!(actions, ["telegram.linked", "telegram.unlinked"]);
 }
 
+/// TG-3
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_end_every_link_when_the_user_signs_out_everywhere(pool: PgPool) {
     fixture(&pool).await;
@@ -241,6 +247,7 @@ async fn should_refuse_a_token_whose_member_left(pool: PgPool) {
     assert!(matches!(started, Started::Refused));
 }
 
+/// TG-9
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_claim_an_update_once(pool: PgPool) {
     assert!(repo::claim_update(&pool, 101).await.unwrap());

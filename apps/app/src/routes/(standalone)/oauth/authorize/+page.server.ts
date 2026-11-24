@@ -49,15 +49,33 @@ async function trusted(request: Params, token?: string): Promise<OAuthClient | n
 	}
 }
 
-/** Back to the app, with the code or the error, and its own `state`. */
-function back(request: Params, values: Record<string, string>): never {
+/**
+ * The app's redirect URI with the code or the error, and its own `state`.
+ * Only ever built after `trusted` matched the URI exactly against the ones
+ * the app registered.
+ */
+function backUrl(request: Params, values: Record<string, string>): string {
 	const target = new URL(request.redirect_uri);
 	for (const [key, value] of Object.entries(values)) target.searchParams.set(key, value);
 	if (request.state) target.searchParams.set('state', request.state);
-	// External by design: the app's own redirect URI, which `trusted` has
-	// already matched exactly against the ones it registered. SvelteKit
-	// refuses another origin unless told, and still refuses `javascript:`.
-	redirect(303, target.toString(), { external: true });
+	return target.toString();
+}
+
+/** Back to the app from a GET: a plain redirect. */
+function back(request: Params, values: Record<string, string>): never {
+	// External by design (see backUrl). SvelteKit refuses another origin
+	// unless told, and still refuses `javascript:`.
+	redirect(303, backUrl(request, values), { external: true });
+}
+
+/**
+ * Back to the app from the consent form. Not a redirect: a browser applies
+ * the page's `form-action 'self'` to where a form submission is redirected,
+ * so a 303 to the app's origin is blocked. The page navigates there instead
+ * (a meta refresh plus a link), which `form-action` does not govern.
+ */
+function backFromForm(request: Params, values: Record<string, string>) {
+	return { redirect_to: backUrl(request, values) };
 }
 
 export const load: PageServerLoad = async ({ url, locals, setHeaders }) => {
@@ -109,12 +127,12 @@ export const actions: Actions = {
 			}
 			throw error;
 		}
-		back(request, { code });
+		return backFromForm(request, { code });
 	},
 
 	deny: async ({ request: http, locals }) => {
 		const request = params(await http.formData());
 		if (!(await trusted(request, locals.accessToken))) return fail(400, { code: 'VALIDATION_FAILED', fields: {} as Record<string, string> });
-		back(request, { error: 'access_denied' });
+		return backFromForm(request, { error: 'access_denied' });
 	}
 };

@@ -36,6 +36,10 @@ step() {
 }
 
 in_container() { "${COMPOSE[@]}" run --rm --no-deps "$@"; }
+# The dev api's `cargo watch` builds in /cargo-target. Checks built there too
+# held its lock, so its rebuild after `sqlx prepare` touched the sources
+# finished minutes later, mid-journeys, and restarted the api under them.
+API_TARGET=(-e CARGO_TARGET_DIR=/cargo-target/ci)
 
 # -- secret scan: the commits this branch adds over main, as ci.yml did on a PR.
 step "secret scan" docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.24.3 \
@@ -45,13 +49,37 @@ step "secret scan" docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks
 step "docs: env vars" python3 scripts/env-vars.py --check
 step "docs: coverage" python3 scripts/coverage.py
 
+if $E2E; then
+	# A retry, reported as flaky rather than hidden: `cargo watch` also
+	# restarts the api for a moment on file events that change no code.
+	# Before the api steps, not after: `cargo sqlx prepare` touches the
+	# sources, the dev api's `cargo watch` rebuilds and restarts minutes
+	# later, and journeys running then die on ECONNREFUSED.
+	step "e2e: api settled" bash -c '
+		# Settled means the last thing `cargo watch` did was start the api:
+		# a quiet log is not enough, one crate can compile for minutes silently.
+		for _ in $(seq 1 120); do
+			last=$(docker compose -f infra/docker-compose.yml logs --since 30m api 2>&1 \
+				| sed -E "s/\x1b\[[0-9;]*m//g" | grep -E "\[Running|listening addr" | tail -1)
+			if [[ "$last" == *"listening addr"* ]] && curl -sf -o /dev/null http://localhost:3002/health; then
+				exit 0
+			fi
+			sleep 5
+		done
+		exit 1'
+	step "e2e: journeys and axe" bash -c \
+		'cd apps/app && E2E_BASE_URL=http://localhost:3000 E2E_CHAT=0 bun run test:e2e -- --workers=2 --retries=1'
+fi
+
 # -- api: one container, the same order as the CI job.
-step "api: fmt" in_container api cargo fmt --all --check
+step "api: fmt" in_container "${API_TARGET[@]}" api cargo fmt --all --check
 step "api: migrate" in_container api sqlx migrate run --source migrations
-step "api: sqlx cache current" in_container -e SQLX_OFFLINE=false api \
-	cargo sqlx prepare --workspace --check -- --all-targets
-step "api: clippy" in_container api cargo clippy --all-targets -- -D warnings
-step "api: test" in_container api cargo test
+# On a copy of the sources: `sqlx prepare` touches them to force the macros
+# to rerun, and on the mounted tree that restarts the dev api's `cargo watch`.
+step "api: sqlx cache current" in_container "${API_TARGET[@]}" -e SQLX_OFFLINE=false api \
+	sh -c 'cp -a /app /tmp/src && cd /tmp/src && cargo sqlx prepare --workspace --check -- --all-targets'
+step "api: clippy" in_container "${API_TARGET[@]}" api cargo clippy --all-targets -- -D warnings
+step "api: test" in_container "${API_TARGET[@]}" api cargo test
 
 # -- ai
 step "ai: ruff" in_container ai uv run ruff check .
@@ -61,10 +89,10 @@ step "ai: pytest" in_container ai uv run pytest -q
 step "app: check" in_container app bun run check
 step "app: test" in_container app bun run test
 
-if $E2E; then
-	step "e2e: journeys and axe" bash -c \
-		'cd apps/app && E2E_BASE_URL=http://localhost:3000 E2E_CHAT=0 bun run test:e2e'
-fi
+# -- native: on the host, not in a container (iOS needs Xcode, D113).
+step "native: analyze" bash -c 'cd apps/native && flutter pub get >/dev/null && flutter analyze'
+step "native: test" bash -c 'cd apps/native && flutter test'
+
 
 printf '\n\033[1m== Summary\033[0m\n'
 for name in "${passed[@]}"; do printf '  \033[32mpass\033[0m  %s\n' "$name"; done

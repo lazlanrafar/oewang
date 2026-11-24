@@ -114,7 +114,8 @@
 	}
 
 	async function rename() {
-		if (!file) return;
+		// Submit closes the input, whose blur calls this again: only the first call saves.
+		if (!file || !renaming) return;
 		const name = nameInput.trim();
 		renaming = false;
 		if (!name || name === file.name) return;

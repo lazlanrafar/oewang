@@ -2,7 +2,7 @@
  * The workspace's own lists, loaded once for the shell and read by the
  * pickers.
  *
- * A picker over accounts, groups or categories is always picking from the
+ * A picker over accounts, groups, categories or contacts is always picking from the
  * same three lists, and passing them down from every page meant the same
  * three `$derived` maps written at each call site. They live here instead:
  * the dashboard layout loads them with the session's token and publishes
@@ -26,6 +26,8 @@ import { invalidateAll } from '$app/navigation';
 export type WorkspaceWallet = { id: string; name: string; currency_code: string };
 export type WorkspaceGroup = { id: string; name: string };
 export type WorkspaceCategory = { id: string; name: string; type: 'income' | 'expense' };
+/** The people a debt can name (CON-1, D120). */
+export type WorkspaceContact = { id: string; name: string };
 /**
  * A currency the pickers offer, from the newest daily snapshot (FX-2,
  * D96). `rate` is one unit of it in the workspace currency, a decimal
@@ -37,6 +39,7 @@ export type WorkspaceLists = {
 	wallets: WorkspaceWallet[];
 	groups: WorkspaceGroup[];
 	categories: WorkspaceCategory[];
+	contacts: WorkspaceContact[];
 	currencies: WorkspaceCurrency[];
 };
 
@@ -59,7 +62,27 @@ export function setWorkspaceLists(lists: () => WorkspaceLists) {
  */
 export function workspaceLists(): WorkspaceLists {
 	const read = getContext<(() => WorkspaceLists) | undefined>(KEY);
-	return read?.() ?? { wallets: [], groups: [], categories: [], currencies: [] };
+	if (!read) return { wallets: [], groups: [], categories: [], contacts: [], currencies: [] };
+	// Each property calls the getter when read, so a `$derived` over it reruns
+	// after `invalidateAll`; calling it once here kept the first load forever,
+	// and a row made from a picker never appeared in that picker.
+	return {
+		get wallets() {
+			return read().wallets;
+		},
+		get groups() {
+			return read().groups;
+		},
+		get categories() {
+			return read().categories;
+		},
+		get contacts() {
+			return read().contacts;
+		},
+		get currencies() {
+			return read().currencies;
+		}
+	};
 }
 
 type Created = { id: string; name: string };
@@ -83,5 +106,6 @@ export const createInWorkspace = {
 	wallet: (name: string) => create({ kind: 'wallet', name }),
 	group: (name: string) => create({ kind: 'group', name }),
 	category: (name: string, type: 'income' | 'expense') =>
-		create({ kind: 'category', name, type })
+		create({ kind: 'category', name, type }),
+	contact: (name: string) => create({ kind: 'contact', name })
 };

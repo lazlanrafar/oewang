@@ -74,6 +74,8 @@
 	import { t } from '$lib/i18n';
 	import * as Sheet from '../../atoms/sheet/index.js';
 	import { cn } from '$lib/utils.js';
+	import { formatMoney } from '$lib/money';
+	import type { Debt, TransactionDebts } from '$lib/server/debts';
 
 	let {
 		open = $bindable(false),
@@ -86,7 +88,10 @@
 		onEditItem,
 		onDeleteItem,
 		onOpenFile,
-		onAttachmentsChange
+		onAttachmentsChange,
+		debts = null,
+		debtHref,
+		onCreateDebt
 	}: {
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -101,7 +106,21 @@
 		onOpenFile?: (file: UploadedFile) => void;
 		/** The whole new set, saved as soon as it changes (TXN-13). */
 		onAttachmentsChange?: (files: UploadedFile[]) => void;
+		/** The debts this row made, and the one it pays (DEBT-12). */
+		debts?: TransactionDebts | null;
+		/** Where one of those debts opens. */
+		debtHref?: (debtId: string) => string;
+		/** Make a debt from this row: the page opens the debt form with it as the source. */
+		onCreateDebt?: () => void;
 	} = $props();
+
+	/* The payment first, then the debts made from the row, each with the figure the row moved. */
+	const related = $derived<Array<{ key: string; debt: Debt; amount: string }>>([
+		...(debts?.payment
+			? [{ key: debts.payment.payment.id, debt: debts.payment.debt, amount: debts.payment.payment.amount }]
+			: []),
+		...(debts?.debts ?? []).map((debt) => ({ key: debt.id, debt, amount: debt.amount }))
+	]);
 
 	let pickerOpen = $state(false);
 	const tile = fileTile();
@@ -360,6 +379,56 @@
 						</Accordion.Content>
 					</Accordion.Item>
 				</Accordion.Root>
+
+				<!--
+					The old app's related debts: each debt this row made, or the
+					payment it is, with the contact and the figure, opening the
+					debt (DEBT-12). A writer may make a debt from the row.
+				-->
+				{#if related.length > 0 || (canEdit && onCreateDebt)}
+					<Accordion.Root type="multiple" value={['debts']}>
+						<Accordion.Item value="debts" class="border-none">
+							<Accordion.Trigger>{t('txn.related_debts')}</Accordion.Trigger>
+							<Accordion.Content class="space-y-3 pt-1">
+								{#if related.length > 0}
+									<div class="mb-2 grid grid-cols-1 gap-2">
+										{#each related as item (item.key)}
+											<a
+												href={debtHref?.(item.debt.id)}
+												class="border-muted/20 bg-muted/5 flex flex-col gap-1 rounded-md border px-3 py-2.5 text-sm"
+											>
+												<div class="flex items-center justify-between">
+													<span class="max-w-[200px] truncate font-medium">
+														{item.debt.contact_name || t('txn.unknown_contact')}
+													</span>
+													<span
+														class={cn(
+															'font-serif tracking-tight',
+															item.debt.type === 'payable' ? 'text-red' : 'text-green'
+														)}
+													>
+														{formatMoney(item.amount, item.debt.currency_code)}
+													</span>
+												</div>
+												{#if item.debt.description}
+													<span class="text-muted-foreground line-clamp-1 text-[11px]">
+														{item.debt.description}
+													</span>
+												{/if}
+											</a>
+										{/each}
+									</div>
+								{/if}
+								{#if canEdit && onCreateDebt}
+									<Button variant="outline" size="caps" class="w-full" onclick={onCreateDebt}>
+										<Plus class="h-3.5 w-3.5" />
+										{t('txn.create_debt')}
+									</Button>
+								{/if}
+							</Accordion.Content>
+						</Accordion.Item>
+					</Accordion.Root>
+				{/if}
 
 				<!--
 					Why this number is what it is, at the row the user is looking at

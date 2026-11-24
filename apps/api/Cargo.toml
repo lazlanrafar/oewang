@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.89"
+rust-version = "1.94"
 license = "UNLICENSED"
 
 [workspace.dependencies]
@@ -23,7 +23,7 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "timeout", "limit", "catch-panic", "request-id", "compression-gzip"] }
 
 # Data
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "chrono", "rust_decimal", "uuid", "json"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "chrono", "rust_decimal", "uuid", "json"] }
 rust_decimal = { version = "1", features = ["serde-with-str"] }
 chrono = { version = "0.4", features = ["serde"] }
 cuid2 = "0.1"
@@ -61,6 +61,16 @@ webauthn-rs = { version = "0.6", features = ["danger-allow-state-serialisation",
 # Vault previews (D91). Decoders for the accepted image types only, plus the
 # JPEG encoder the preview is written with; nothing that parses PDF or SVG.
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+
+# XLSX import (D111). Read on the server, never in the browser: the only npm
+# build of SheetJS carries a prototype-pollution advisory and would run in the
+# session's context. `chrono` turns a date cell into a date.
+calamine = { version = "0.38", default-features = false, features = ["chrono"] }
+# Already in the tree under calamine; named so the package can be measured
+# before calamine opens it (a zip bomb is checked, not discovered).
+zip = { version = "9", default-features = false }
+# Tests only: writes the .xlsx fixtures the reader is tested against.
+rust_xlsxwriter = { version = "0.104", default-features = false }
 
 # Clients
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }

@@ -6,37 +6,79 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "refresh_tokens",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "user_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "refresh_tokens",
+            "name": "user_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "workspace_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "refresh_tokens",
+            "name": "workspace_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "family_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "refresh_tokens",
+            "name": "family_id"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "expires_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_tokens",
+            "name": "expires_at"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "used_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_tokens",
+            "name": "used_at"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "revoked_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "refresh_tokens",
+            "name": "revoked_at"
+          }
+        }
       }
     ],
     "parameters": {

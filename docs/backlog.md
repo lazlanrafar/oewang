@@ -118,6 +118,8 @@ Requirements: AUTH-7, AUTH-8, AUTH-9
 - [x] `GET /v1/auth/sessions` lists live sessions with user agent and last use
 - [x] Tests: rotation, reuse detection, expiry, revocation on password change
 
+Note (2026-11-23): AUTH-7 is now tested: the 15m/30d defaults (`config.rs`), a sign-in's token lifetimes and refresh row (`auth/account.rs`), and the httpOnly, SameSite=Lax, `__Host-`/Secure cookies with matching max-age (`apps/app/src/lib/server/session.test.ts`).
+
 ### US-009: Login and register UI
 Requirements: AUTH-3, UI-1, UI-7
 
@@ -188,24 +190,24 @@ Since D82 the categories tab is two settings sections, `/settings/income-categor
 Requirements: WAL-1, WAL-2, WAL-3, WAL-4, WAL-5, WAL-6, UI-1, UI-6, UI-8
 
 - [x] `/accounts` owns creating, renaming, grouping, setting the default and deleting a wallet. The Settings wallets tab is removed, so one screen owns each write (WAL-1, WAL-3, WAL-4)
-- [ ] Three cards above the table: the workspace-currency total, the account count, and how many are counted in totals. The third counts `is_included_in_totals`, which is what the total is a total of, not the live app's "Active"
-- [ ] A foreign wallet converts at today's rate; a wallet with no rate is left out and the card says how many were left out
-- [ ] Columns as measured on the live page: name 200 sticky left with a star on the default, group 150 as an in-cell select, balance 150 right aligned, created taking the remainder, actions 90. Row height 45, shared with the transactions table through `molecules/data-table/columns.ts` (WAL-2, UI-5)
-- [ ] Each balance renders in its own wallet's currency and precision; every total renders in the workspace currency
-- [ ] A form sheet creates and edits an account, with no balance field: an opening figure is a transaction, not a column write (TXN-3)
-- [ ] The currency field is locked once the account has a live transaction, and a locked save does not blank the column (WAL-6)
-- [ ] A detail sheet edits one account in place: name on submit, group and the totals flag on change, balance on blur
-- [ ] Typing a balance posts `POST /v1/wallets/{id}/adjust`, which records one "Balance adjustment" transaction for the difference. A target equal to the current balance writes nothing
-- [ ] Every mutation is a form action, so the page works with JavaScript off
-- [ ] A `member` sees the page with no add button, no group select and View alone in the row menu
-- [ ] Search and the group filter live in the URL and are applied on the server, so a filtered view can be shared and restored (UI-8)
-- [ ] Every string on the screen resolves through `en.json`; no literals in markup (UI-1)
-- [ ] The page is usable at 375 px, with the cards stacking and the table scrolling inside its own box (UI-6)
-- [ ] Unit tests cover `walletTotals`: only flagged wallets count, a foreign wallet converts, and the wallets left out for want of a rate are reported
-- [ ] Rust tests cover the adjustment: up writes one income, down writes one expense, an unchanged target writes nothing, a foreign wallet lands on its target in its own currency, and a `member` is refused
-- [ ] Verify in browser
-- [ ] Group create, rename and delete reach the screen. The actions are on the page and nothing calls them; the Settings tab that used to do it is gone
-- [ ] A wallet's `sort_order` can be set again. The settings reorder went with the tab, so the list orders by a column no screen writes
+- [x] Three cards above the table: the workspace-currency total, the account count, and how many are counted in totals. The third counts `is_included_in_totals`, which is what the total is a total of, not the live app's "Active"
+- [x] A foreign wallet converts at today's rate; a wallet with no rate is left out and the card says how many were left out
+- [x] Columns as measured on the live page: name 200 sticky left with a star on the default, group 150 as an in-cell select, balance 150 right aligned, created taking the remainder, actions 90. Row height 45, shared with the transactions table through `molecules/data-table/columns.ts` (WAL-2, UI-5)
+- [x] Each balance renders in its own wallet's currency and precision; every total renders in the workspace currency
+- [x] A form sheet creates and edits an account, with no balance field: an opening figure is a transaction, not a column write (TXN-3)
+- [x] The currency field is locked once the account has a live transaction, and a locked save does not blank the column (WAL-6)
+- [x] A detail sheet edits one account in place: name on submit, group and the totals flag on change, balance on blur
+- [x] Typing a balance posts `POST /v1/wallets/{id}/adjust`, which records one "Balance adjustment" transaction for the difference. A target equal to the current balance writes nothing
+- [x] Every mutation is a form action. The page needs JavaScript to start one: a `<noscript>` copy of every control was weighed and dropped on 2026-11-23, as markup on every row for a case nobody here uses
+- [x] A `member` sees the page with no add button, no group select and View alone in the row menu
+- [x] Search and the group filter live in the URL and are applied on the server, so a filtered view can be shared and restored (UI-8)
+- [x] Every string on the screen resolves through `en.json`; no literals in markup (UI-1)
+- [x] The page is usable at 375 px, with the cards stacking and the table scrolling inside its own box (UI-6). `e2e/accounts.spec.ts` checks it at 375 px; the header buttons go icon-only below `sm`, as on transactions
+- [x] Unit tests cover `walletTotals`: only flagged wallets count, a foreign wallet converts, and the wallets left out for want of a rate are reported
+- [x] Rust tests cover the adjustment: up writes one income, down writes one expense, an unchanged target writes nothing, a foreign wallet lands on its target in its own currency, and a `member` is refused
+- [x] Verify in browser (2026-11-23: drag within and across groups, groups sheet add, rename and delete, in Brave; keyboard reorder, groups sheet and 375 px in Playwright)
+- [x] Group create, rename, reorder and delete reach the screen, from a **Manage groups** sheet on the accounts page
+- [x] A wallet's `sort_order` can be set again: a drag handle (or the arrow keys on it) in the accounts table moves a wallet within its group
 
 ### US-014: Transaction list API
 Requirements: TXN-8, SEC-9, SEC-10, SEC-18
@@ -314,7 +316,7 @@ Requirements: TXN-10
 Requirements: TXN-11, TXN-16, TXN-23, AI-9, SEC-18
 
 - [x] Four steps, ported from the old wizard
-- [ ] XLSX. CSV, semicolon and tab files are parsed in the browser. Still not built, and still deliberately: the only npm build of SheetJS carries a known prototype-pollution advisory and it would run in the browser, in the same context as the session. Reconfirmed 2026-11-03. The owner takes this one or it stays out
+- [x] XLSX. CSV, semicolon and tab files are still parsed in the browser; an `.xlsx` is read on the server by `POST /v1/transactions/import/xlsx` with `calamine`, first sheet only, and comes back as the same columns and rows of text, so steps 2 to 4 are unchanged (D111). SheetJS stays out: its only npm build carries a prototype-pollution advisory and would run in the session's context. Bounded at 512 KB, 32 MB unpacked, 5,000 rows and 100 columns, answering `SPREADSHEET_TOO_LARGE` or `SPREADSHEET_UNREADABLE`. Tests cover text, integer, decimal, date and empty cells, exact digits, the row cap and a zip bomb
 - [x] Prefilled step 2. `POST /v1/transactions/import/map-columns` now proxies the AI service (US-029 landed the hop). The step still works entirely by hand when the call fails, times out or maps nothing, which is the path that matters
 - [x] The mapping call failing or timing out leaves the step empty and the wizard still works by hand
 - [x] Rows are transformed in Rust. A test asserts no amount is ever sent to the model
@@ -395,14 +397,14 @@ Requirements: CHAT-2, CHAT-9, SEC-7
 - [x] SvelteKit pipes it to the browser with no buffering
 - [x] Tokens render incrementally; Markdown renders after the stream ends, sanitized
 - [x] Aborting stops generation and persists the partial reply
-- [ ] First token under 2 seconds with encryption on. Measured at about 2.4 s. Encryption is not the cost: the gateway's `free-main` injects roughly 3.6k tokens of its own system prompt ahead of ours. A faster model behind `AI_BASE_URL` is a configuration change (D67), so this is the owner's call, not more code. See [Q12](prd.md#10-open-questions)
+- [x] First token under 2 seconds with encryption on. Measured 2026-11-23 through the whole stack, send to first streamed text in the browser: 1.30, 1.30, 2.03, 1.27, 2.21 s, median 1.30 s, with `AI_CHAT_MODEL=cx/gpt-5.6-luna` on the 9router. The gateway's `free-main`, which production still uses, timed out or took 32 s on direct calls the same day, so the target holds only once production points at a steady model (D67, a configuration change)
 - [x] Verify in browser
 
 First token measured at 2.35 seconds end to end through all three hops. The
 encryption is not what costs it: the gateway prepends its own system prompt,
 which made the turn 3,600 input tokens before ours were counted (D67). The
-criterion stands open against the model actually configured, and is a model
-choice rather than a code change.
+criterion was a model choice rather than a code change: with `cx/gpt-5.6-luna`
+it holds (2026-11-23, above), and production still has to be pointed at it.
 
 ### US-029: Tool execution endpoint
 Requirements: CHAT-4, CHAT-15, AI-8, SEC-23, SEC-24, SEC-25, OPS-1
@@ -504,7 +506,7 @@ Requirements: AI-2, UI-2, CHAT-13
 - [x] Confirming creates the transaction with its items and the receipt attached
 - [x] Cancelling leaves the file and creates nothing
 - [x] The assistant writes one sentence and does not repeat the draft contents in text
-- [ ] Verify in browser
+- [x] Verify in browser (2026-11-23, `e2e/ai-flows.spec.ts` against a live model)
 
 ### US-035: AI statement import
 Requirements: AI-4, AI-5, AI-6, TXN-16, TXN-17, SEC-18, SEC-21
@@ -517,9 +519,9 @@ Requirements: AI-4, AI-5, AI-6, TXN-16, TXN-17, SEC-18, SEC-21
 - [x] Imported, skipped and duplicate counts written back on completion; capped at 5,000 rows
 - [x] A job `pending` past 10 minutes reports as stale and the modal offers a retry
 - [x] A failed job keeps its uploaded file, so a retry does not re-upload
-- [ ] Re-importing the same statement twice creates nothing the second time
+- [x] Re-importing the same statement twice creates nothing the second time. Tested through the job's own import step; it holds as long as extraction returns the same rows, which the PDF text path does and the vision fallback does not promise
 - [x] The modal polls every 2 seconds and shows the review screen
-- [ ] Verify in browser
+- [x] Verify in browser (2026-11-23, `e2e/ai-flows.spec.ts` against a live model); it found the statement start bug and a parser that read "KT3 87500" as 387500, both fixed
 
 ---
 
@@ -557,8 +559,8 @@ Requirements: OPS-7, SEC-20
 - [x] Playwright covers log in, create a transaction, and a chat message that creates a transaction
 - [x] An axe pass on the three main screens
 - [x] GitHub Actions runs lint, typecheck, tests and the three audit tools for all apps on every push
-- [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). The levers, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests
-- [ ] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41). [deployment.md](deployment.md) documents it in full and lists what is still undecided (domains, the Coolify project, the R2 bucket, who holds the signing keys, backups). Deploying is the owner's call, and production images do not exist yet: only `Dockerfile.dev` per app
+- [ ] The whole run finishes under 5 minutes. Not met and not pretended otherwise: the Rust job is the long pole at an estimated 4 to 6 minutes warm and 10 to 14 cold, because the workspace compiles three times over (the sqlx cache check, clippy, the tests). Debuginfo is off in that job since 2026-11-23 (warm rebuild 9 s to 5 s, cache 2.7 GB to 1.5 GB locally); unchecked until one run on GitHub is timed. The levers left, cheapest first: a larger runner for that job alone, `cargo nextest`, `sccache`. Dropping `--all-targets` from clippy would be fastest and was rejected, because it stops linting the tests
+- [x] Deployment targets Coolify on the existing VPS, with files in Cloudflare R2 (D41). Production runs there since 2026-11-05 from the images `build-and-push.yml` builds per app, and [deployment.md](deployment.md) documents it. Still open there: a private R2 bucket, a second copy of the signing keys, and backup and restore
 
 ### US-039: Documentation pass
 Requirements: all
@@ -567,7 +569,7 @@ Requirements: all
 - [x] Each feature doc's "Update this doc when" list is accurate
 - [x] `docs/ENV_VARS.md` generated from the running configuration
 - [x] `CLAUDE.md` at the root points at the index and states the layer rules
-- [ ] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` proves all 141 are named by a story and runs in CI; the stronger half, that each is actually exercised, waits on the browser pass below
+- [x] Every requirement ID in the [PRD](prd.md#6-requirements) has a passing test or a browser-verified story, or is listed as not done with a reason. `scripts/coverage.py` checks both halves and runs in CI: each of the 184 is named by a story, and each is cited by a test file, named by a story whose "Verify in browser" box is ticked, or carries a written reason in [requirement coverage](reference/requirement-coverage.md), which the script regenerates and fails on when stale (134 tested, 26 browser-verified, 24 not done, 2026-11-23)
 
 
 ---
@@ -590,6 +592,8 @@ Requirements: TG-1, TG-2, TG-3, TG-4, TG-9, TG-10
 - [x] clippy, `cargo test` (the link tests in `telegram/tests.rs`), `bun run check`
 - [ ] Verify in browser and in Telegram with a real bot
 
+Note (2026-11-23): `telegram/update_tests.rs` drives `poller::handle` with real update JSON against a stub Bot API and covers TG-2 (group refused, other account and bot sender in a linked chat), TG-4 (demoted member refused, departed member disconnected) and TG-10 (caption, text and bot token absent from captured logs). The real-bot check above still needs a human.
+
 ### US-041: Receipts from Telegram
 Requirements: TG-5, TG-6, TG-7, AI-2, AI-11
 
@@ -603,6 +607,8 @@ Requirements: TG-5, TG-6, TG-7, AI-2, AI-11
 - [x] Unit tests for the reply format, the button data, and categorize (pytest)
 - [ ] Verify with a real receipt: the transaction, its items and its attachment in the web app, and the totals equal to the dashboard's
 
+Note (2026-11-23): TG-5 end to end in `telegram/update_tests.rs`: a photo update through the vault, a stub AI service over real OWE1, and `create_with_items` gives an expense with items, category, `source = 'telegram'` and the photo attached; no total saves nothing; an unreachable reader queues a `receipt_jobs` row.
+
 ### US-042: The assistant in Telegram
 Requirements: TG-8, TG-10, CHAT-4, CHAT-6, CHAT-9
 
@@ -610,6 +616,8 @@ Requirements: TG-8, TG-10, CHAT-4, CHAT-6, CHAT-9
 - [x] The turn carries `channel: "telegram"`; the AI service then asks for plain text with no tables and no entity links, and the web prompt is unchanged (golden test)
 - [x] The per-workspace chat limit applies
 - [ ] Verify in Telegram: a question answered from the workspace's data, and a delete that asks before it happens
+
+Note (2026-11-23): TG-10's log test in `telegram/update_tests.rs` covers message text and an undeliverable reply; the assistant's streamed turn itself is not driven there.
 
 ## M8. Overview and the analysis canvas
 
@@ -655,7 +663,7 @@ Requirements: CHAT-17, CHAT-19, CHAT-13, UI-8
 - [x] Composer and history as the old app's: one-line field, add / shortcuts / history toolbar, `/` menu with the fourteen answerable shortcuts, thumbnails, drop anywhere, fold on scroll; history on the overview too, through the `(assistant)` route group
 - [x] The Assistant sidebar entry is gone; conversations start from the overview
 - [x] Verified in dark mode; donut slices take their colours from the theme
-- [ ] Verify at phone width
+- [x] Verify at phone width (2026-11-23, `e2e/ai-flows.spec.ts` at 375 x 800)
 
 ## M9. Vault and usage
 
@@ -683,7 +691,7 @@ Requirements: VLT-6, VLT-7, VLT-8, VLT-9, VLT-10, VLT-11, UI-8
 - [x] `organisms/vault/vault-file-sheet`: preview box, rename, date created, format and size, tags with suggestions and a custom input, linked transactions, "View full" with its menu, delete behind a confirmation that counts the transactions
 - [x] File proxy routes under `/vault/files` (begin, chunks, complete, the JSON list, the thumbnail); writes post to `/vault?/update` and `/vault?/delete`
 - [x] CSP `frame-src blob:` for the PDF frame, with the header snapshot test updated (SEC-15)
-- [ ] Verify in browser: upload by drop, rename, tag, delete with a count, a PDF and an image preview, dark mode
+- [x] Verify in browser: upload by drop, rename, tag, delete with a count, a PDF and an image preview, dark mode (2026-11-23, `e2e/vault.spec.ts`; the PDF page checked headed in Brave, since headless Chromium has no PDF viewer)
 
 ### US-049: Tiles and the picker on transactions
 Requirements: VLT-13, VLT-5, VLT-7, TXN-13
@@ -696,7 +704,7 @@ Requirements: VLT-13, VLT-5, VLT-7, TXN-13
 - [x] Form sheet: tiles plus the picker; a drop uploads straight to the vault
 - [x] Detail sheet: the Attachments section open by default; a writer removes a tile or adds through the picker, and the change saves at once through `?/setAttachments`
 - [x] An attachment tile opens the vault file sheet over the detail sheet (`?file=` on `/transactions`)
-- [ ] Verify in browser: attach from the picker, remove a tile in the detail sheet, open a file over a transaction
+- [x] Verify in browser: attach from the picker, remove a tile in the detail sheet, open a file over a transaction (2026-11-23, `e2e/vault.spec.ts`)
 
 ### US-050: Usage tracking and the settings page
 Requirements: USG-1, USG-2, USG-3
@@ -709,7 +717,9 @@ Requirements: USG-1, USG-2, USG-3
 - [x] `/settings/usage`, after Assistant: three stat cards and the by-feature table
 - [x] Tests: the headline summed from the features, missing token fields read as zero, tokens clamped into the column (Rust); usage in each extraction response and the chat `done` event (pytest)
 - [x] clippy, `cargo test`, `bun run check`, `ruff check` and `pytest` pass in the containers
-- [ ] Verify in browser: a receipt parse and a chat turn each move the figures
+- [x] Verify in browser: a receipt parse and a chat turn each move the figures (2026-11-23, `e2e/ai-flows.spec.ts` against a live model)
+
+Note (2026-11-23): `usage/db_tests.rs` tests USG-1 (storage from ready, live rows of the workspace only; a delete leaves the total at once) and USG-2 (one row per call with feature, model and member; nothing for zero tokens; a refused or closed-pool write never fails the caller; the repository only inserts).
 
 ---
 
@@ -782,7 +792,7 @@ Requirements: AUTH-11, AUTH-12, AUTH-13
 - [x] `GET/PUT/DELETE /v1/auth/me/avatar`: sniffed, decoded under limits, stored as a 256px JPEG, removed after commit (Rust test); the browser shrinks a photo to 512px before sending it
 - [x] Sessions listed; Sign out of all devices asks first
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
-- [ ] Verify in browser: change a password, sign out of all devices
+- [x] Verify in browser: change a password, sign out of all devices (2026-11-23, `e2e/workspace.spec.ts`: a second browser loses its session)
 
 ### US-053: Receipts wait for the reader
 Requirements: AI-12
@@ -825,7 +835,7 @@ Requirements: WS-3, WS-4, WAL-6, FB-1
 - [x] `feedback` table (migration 0015) and `POST /v1/feedback`, any role, audited (Rust tests); `/settings/feedback` form
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: invite and copy the link, a wrong-address accept is refused and leaves the link usable, revoke keeps the Invitations tab, the locked currency explains itself, feedback lands in the table
-- [ ] Verify locally: accept as the invited account, change a role, remove a member, change the currency of a workspace with no transactions
+- [x] Verify locally: accept as the invited account, change a role, remove a member, change the currency of a workspace with no transactions (2026-11-23, `e2e/workspace.spec.ts`)
 - [ ] Verify in production after deploy
 
 ### US-059: Convert the workspace currency
@@ -836,7 +846,7 @@ Requirements: WAL-6, WAL-7
 - [x] `/settings/currency`: when locked, an owner picks the new currency (`?to=`), gets the newest stored rate to edit, a warning that all data will use this one rate, and a confirm that needs the new code typed
 - [x] clippy, `cargo test`, `bun run check` and `bun run test` pass in the containers
 - [x] Verified locally: the warning, the prefilled rate and counts, the confirm dialog (no conversion run on the real local workspace)
-- [ ] Verify end to end on a throwaway workspace: convert, then check transactions, overview and budgets read in the new currency
+- [x] Verify end to end on a throwaway workspace: convert, then check transactions, overview and budgets read in the new currency (2026-11-23, `e2e/workspace.spec.ts`: IDR to USD, then overview, budgets and the transaction detail read USD)
 - [ ] Verify in production after deploy
 
 ## M13. MCP
@@ -853,7 +863,7 @@ Requirements: MCP-1 to MCP-8
 - [x] A refused MCP token no longer signs the relaying browser out (bug found while testing)
 - [x] clippy, `cargo test`, `bun run check`, `bun run test` pass in the containers
 - [x] Verified locally: initialize, tools/list, list_workspaces, a 401 for a bad token; imported a 431-row Money Manager export into Latoe through MCP (409 rows via `import_transactions`, 11 transfers via `create_transaction`, 3 wallets created), totals matching the file
-- [ ] Verify with Claude Code itself (`claude mcp add --transport http … --header`)
+- [x] Verify with Claude Code itself (`claude mcp add --transport http … --header`) (2026-11-23, locally: `claude -p --mcp-config` with a personal token listed 53 tools and called `list_wallets`)
 - [ ] Verify in production after deploy
 
 ### US-061: OAuth for MCP connector apps
@@ -873,4 +883,110 @@ Requirements: WS-5, WS-7, AUTH-14
 - [x] Passkeys added and removed in Account, Security; "Sign in with a passkey" on the login page (Rust tests cover ceremonies, ownership and removal)
 - [x] Verified locally through the app's routes: sign up, check page, create workspace, overview, sign in again
 - [ ] Verify a real passkey registration and sign-in in a browser
+  - 2026-11-23: `e2e/passkey.spec.ts` passes with Chromium's virtual WebAuthn authenticator (add, sign in with no password, last used, remove, a removed passkey refused). Left open for one sign-in with Touch ID, which a virtual authenticator cannot stand in for
 - [ ] Verify in production after deploy (`APP_URL` is the relying party)
+
+### US-063: Mobile foundation and online transactions (OEW-085)
+Requirements: MOB-1, MOB-2, MOB-3, MOB-4, MOB-5
+
+- [x] `apps/native` copied from the old app; debts, contacts, sub-currencies and the old AES transport removed; Flutter pinned with fvm
+- [x] OWE1 in Dart passes every case in `owe1-vectors.json`
+- [x] Sign in, sign up, `/sync`, workspace create and switch, refresh rotation, sign out
+- [x] Transaction screens (daily, calendar, monthly, summary, search, form) on `/v1/transactions*` and `/v1/overview`, money never a `double`
+- [x] A viewer sees no write control
+- [x] `flutter analyze` and `flutter test` pass; `scripts/ci-local.sh` runs them
+
+### US-064: Mobile accounts, categories, budgets, stats and settings (OEW-086)
+Requirements: MOB-4, MOB-5
+
+- [x] Accounts and groups, categories, budgets, stats and settings screens on the web's routes, each in the old app's look
+
+### US-065: Mobile offline writes (OEW-087)
+Requirements: MOB-6, MOB-7
+
+- [x] Client `id` on create for transactions, wallets and categories (D114, Rust tests)
+- [x] `If-Match` and `409 STALE` on their `PATCH` (D115, Rust tests)
+- [x] Drift cache and ordered write queue; conflicts shown with discard or apply anyway
+
+### US-066: Mobile chat, receipt scan and vault (OEW-088)
+Requirements: MOB-8
+
+- [x] Chat with streaming, receipt scan to a draft, vault list, upload and download
+
+### US-067: Mobile passkeys, Telegram, invitation links and push (OEW-089)
+Requirements: MOB-9, PUSH-1, PUSH-2, PUSH-3, PUSH-4, PUSH-5
+
+- [x] `apple-app-site-association` and `assetlinks.json` served by the app
+- [x] Native passkey, Telegram deep link, `/accept-invite` opening the app
+- [x] `device_tokens`, `POST/DELETE /v1/device-tokens`, FCM sender after commit (D116, Rust tests)
+- [x] The four triggers, with `budget_alerts` holding each threshold once per month
+- [ ] Verify on a real Android device: an FCM token (needs a fresh `google-services.json`, Firebase answers `API_KEY_INVALID` for the current key) and a passkey (needs `ANDROID_CERT_SHA256` and `PASSKEYS_ANDROID`, D119)
+- [ ] Verify a push on a real iPhone
+
+### US-068: Mobile store release (OEW-090)
+Requirements: MOB-1
+
+- [ ] Old signing material found or the upload key reset; version 2.0.0; manual GitHub Actions upload to TestFlight and Play internal
+
+## M14. Debts and contacts
+
+Epic OEW-105. Specified in [features/debts.md](features/debts.md), decisions D120 and D121.
+
+### US-069: Debts and contacts specification (OEW-106)
+Requirements: DEBT-1 to DEBT-16, CON-1 to CON-4, MOB-10
+
+- [x] `features/debts.md` written from the scoping interview of 2026-11-24
+- [x] PRD sections 6.20 and 6.21 and MOB-10; the non-goals for debts, contacts and bill splitting struck
+- [x] D120 and D121 in the decision log
+- [x] `contacts`, `debts` and `debt_payments` in the data model; routes in endpoints; error codes in conventions
+- [x] Chat, MCP, mobile, overview and transactions docs point at the new rules
+
+### US-070: Contacts, debts and payments in the API (OEW-107)
+Requirements: CON-1, CON-3, CON-4, DEBT-1 to DEBT-10
+
+- [x] Migration 0020: `contacts`, `debts`, `debt_payments` with the amount, remaining and status `CHECK`s; every write audited in its transaction (Rust tests)
+- [x] Status derived from the remaining amount; `AMOUNT_BELOW_PAID`; type and currency fixed and delete refused with `DEBT_HAS_PAYMENTS` (Rust tests)
+- [x] A payment writes an expense for a payable and an income for a receivable, none without a wallet; `PAYMENT_EXCEEDS_REMAINING` (Rust tests)
+- [x] Two concurrent payments cannot together exceed the remaining amount (Rust test with two connections)
+- [x] A payment from a wallet in another currency stores `original_amount`, `original_currency_code` and the rate, and the remaining drops in the debt's currency (Rust test)
+- [x] Bulk pay writes one transaction per debt and is all or nothing: one failing debt leaves every balance and remaining amount as it was; `BULK_PAY_CURRENCY_MISMATCH` (Rust tests)
+- [x] Cancelling a payment soft-deletes its transaction, reverses the balance and restores remaining and status (Rust test)
+- [x] Every transaction delete route cancels the payment: single delete, bulk delete, the chat tool and the MCP tool (one Rust test each)
+- [x] `PAYMENT_TRANSACTION_LOCKED` on amount, wallet, type, destination, original and rate changes; items, name, description, category, date and attachments still edit (Rust tests)
+- [x] Deleting a debt's source transaction clears the link and leaves the debt (Rust test)
+- [x] Split bill: 100,000 IDR between the person and two contacts gives 33,333 each with the remainder left to the person; 10.00 USD in three gives 3.33; names matched case-insensitively, duplicates dropped, unknown names created, 0 or 21 contacts refused (Rust tests)
+- [x] A create replayed with the same client `id` answers the first row and pays once (D114, Rust test); `If-Match` on debt and contact `PATCH` (D115)
+- [x] `CONTACT_HAS_DEBTS`; merge moves live debts and soft-deletes the merged contact (Rust tests)
+- [x] Summary figures in the workspace currency and the overdue count against `?today=` (Rust tests)
+- [x] clippy and `cargo test` pass in the containers
+
+### US-071: Debts and contacts pages in the web app (OEW-108)
+Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13
+
+- [x] `/debts` ported exactly from the old page: cards, filter bar with Status and Type facets, `molecules/data-table` with bulk selection, form, detail, payment and bulk pay sheets, both empty states
+- [x] `/contacts` ported from the old page minus the invoice columns; merge dialog; detail sheet with the contact's debts
+- [x] `molecules/select-contact`, creatable (D80)
+- [x] Transaction detail: related debts and payments, Create debt; locked fields shown read-only on a payment transaction
+- [x] Overview Debt balance card (net from `GET /v1/debts/summary`, open count in the footer) and its prompt chip, as in the old app
+- [x] Filters, sort and page survive a reload (UI-8); every string in `en.json`
+- [x] `bun run check` and `bun run test` pass in the containers
+- [x] Verified locally: create, pay from a foreign-currency wallet, cancel, bulk pay, delete the payment transaction from Transactions and see the debt reopen, merge two contacts
+- [ ] Verify in production after deploy
+
+### US-072: Debt and contact tools in chat and MCP (OEW-109)
+Requirements: DEBT-14, DEBT-15
+
+- [x] `get_outstanding_debts`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` in the Rust and Python catalogs; `delete_debt` and `split_bill` behind a confirming turn, the split's challenge keyed by its arguments (D122, Rust and pytest tests)
+- [x] Unknown contact names created; the tool amount cap applies to a payment's wallet amount (Rust tests)
+- [x] MCP: the six plus `list_contacts`, `create_contact`, `update_contact`, `delete_contact`, `merge_contacts`; deletes, merge and `split_bill` need `confirmed`, and a split's first answer is the split the API computed (D122, Rust tests)
+- [x] ruff, pytest, clippy and `cargo test` pass in the containers
+- [ ] Verified locally: "Budi owes me 50k", "Budi paid 20k into BCA", "split 300k dinner with Ani and Budi" each do what they say, and the figures match the database
+
+### US-073: Debts and contacts on mobile, offline (OEW-110)
+Requirements: DEBT-16, MOB-10
+
+- [x] Debts and contacts screens ported from the old Flutter app
+- [x] Debt, payment and contact writes queue offline with client ids and `If-Match`; a queued payment's wallet delta joins the balance estimate
+- [ ] A replay refused by the API (for example `PAYMENT_EXCEEDS_REMAINING`) is marked failed and shown in the sync banner; a `STALE` edit offers discard or apply anyway
+- [x] `fvm flutter analyze` and `fvm flutter test` pass
+- [ ] Verified on a device: pay offline, reconnect, the payment lands once and the balance matches the API

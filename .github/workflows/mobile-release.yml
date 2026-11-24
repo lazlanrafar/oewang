@@ -1,0 +1,216 @@
+# Store release of apps/native: Android to the Play internal track, iOS to
+# TestFlight. Manual only, like ci.yml, because Actions minutes are rationed
+# and a store upload burns a build number for good. Secrets, manual steps and
+# the build number rule: docs/deployment.md#mobile.
+#
+#   gh workflow run mobile-release.yml --ref development -f platform=both
+
+name: Mobile release
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build and upload
+        required: true
+        default: both
+        type: choice
+        options: [android, ios, both]
+      track:
+        description: Play track (iOS always goes to TestFlight)
+        required: true
+        default: internal
+        type: choice
+        options: [internal]
+
+concurrency:
+  group: mobile-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Explicit bash turns on pipefail, which the key check below relies on.
+    shell: bash
+    working-directory: apps/native
+
+jobs:
+  # Once, on the cheap runner: the macOS minute costs ten Linux ones.
+  check:
+    name: Check config, analyze, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      flutter: ${{ steps.meta.outputs.flutter }}
+      build-number: ${{ steps.meta.outputs.build-number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Flutter version and build number
+        id: meta
+        run: |
+          base=$(sed -n 's/^version: [0-9.]*+\([0-9]*\)$/\1/p' pubspec.yaml)
+          [ -n "$base" ] || { echo "::error::pubspec.yaml version has no +N"; exit 1; }
+          echo "flutter=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+          echo "build-number=$((base + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
+
+      # A release build pointed at a dev host, or pinned to a key the API no
+      # longer signs with, installs fine and fails every request.
+      - name: Release config points at production
+        run: |
+          jq -e '.API_URL == "https://api.oewang.com" and .APP_URL == "https://app.oewang.com"' env/prod.json \
+            || { echo "::error::env/prod.json must point at api.oewang.com and app.oewang.com"; exit 1; }
+          keys=$(jq -r .OWE1_SIGNING_KEYS env/prod.json)
+          [ -n "$keys" ] || { echo "::error::env/prod.json has no OWE1_SIGNING_KEYS"; exit 1; }
+          curl -fsS https://api.oewang.com/.well-known/oewang-keys \
+            | jq -r '.[] | "\(.kid):\(.public_key)"' \
+            | while read -r key; do
+                case ",$keys," in
+                  *",$key,"*) ;;
+                  *) echo "::error::env/prod.json lacks the API's key ${key%%:*}"; exit 1 ;;
+                esac
+              done
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ steps.meta.outputs.flutter }}
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  android:
+    name: Android to Play (${{ inputs.track }})
+    needs: check
+    if: inputs.platform != 'ios'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ needs.check.outputs.flutter }}
+          cache: true
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/native/android
+
+      - name: Write signing files and release config
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          SENTRY_DSN: ${{ secrets.NATIVE_SENTRY_DSN }}
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD PLAY_SERVICE_ACCOUNT_JSON; do
+            [ -n "${!name}" ] || { echo "::error::Secret $name is not set (docs/deployment.md#mobile)"; exit 1; }
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storeFile=upload-keystore.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > android/fastlane/play-service-account.json
+          if [ -n "$SENTRY_DSN" ]; then
+            jq --arg dsn "$SENTRY_DSN" '.SENTRY_DSN = $dsn' env/prod.json > env/prod.tmp && mv env/prod.tmp env/prod.json
+          fi
+
+      # sdkmanager is not on the runner's PATH. 36 is the highest compileSdk
+      # among the plugins (flutter_secure_storage, sqflite_android).
+      - name: Android SDK
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" "platforms;android-36"
+
+      - run: flutter pub get
+      - name: Build the app bundle
+        run: >
+          flutter build appbundle --release
+          --dart-define-from-file=env/prod.json
+          --build-number=${{ needs.check.outputs.build-number }}
+      - name: Upload to Play
+        working-directory: apps/native/android
+        env:
+          PLAY_TRACK: ${{ inputs.track }}
+        run: bundle exec fastlane android_internal
+
+  ios:
+    name: iOS to TestFlight
+    needs: check
+    if: inputs.platform != 'android'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      # The image's default Xcode is too old for some pods' Swift.
+      - run: sudo xcode-select -s /Applications/Xcode_26.3.app
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ needs.check.outputs.flutter }}
+          cache: true
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: apps/native/ios
+
+      - name: Write signing files and release config
+        env:
+          IOS_CERT_P12_BASE64: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          SENTRY_DSN: ${{ secrets.NATIVE_SENTRY_DSN }}
+        run: |
+          for name in IOS_CERT_P12_BASE64 IOS_CERT_PASSWORD IOS_PROVISIONING_PROFILE_BASE64 PROVISIONING_PROFILE_NAME ASC_KEY_ID ASC_ISSUER_ID ASC_API_KEY_P8; do
+            [ -n "${!name}" ] || { echo "::error::Secret $name is not set (docs/deployment.md#mobile)"; exit 1; }
+          done
+          printf '%s' "$IOS_CERT_P12_BASE64" | base64 -d > ios/ios_distribution.p12
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 -d > ios/distribution.mobileprovision
+          if [ -n "$SENTRY_DSN" ]; then
+            jq --arg dsn "$SENTRY_DSN" '.SENTRY_DSN = $dsn' env/prod.json > env/prod.tmp && mv env/prod.tmp env/prod.json
+          fi
+
+      # Writes the dart-defines and build number into Generated.xcconfig and
+      # runs pod install; fastlane's archive below reuses both.
+      - run: flutter pub get
+      - name: Build iOS without signing
+        run: >
+          flutter build ios --release --no-codesign
+          --dart-define-from-file=env/prod.json
+          --build-number=${{ needs.check.outputs.build-number }}
+
+      - name: Sign and upload to TestFlight
+        working-directory: apps/native/ios
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+          PROVISIONING_PROFILE_NAME: ${{ secrets.PROVISIONING_PROFILE_NAME }}
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: '30'
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: '5'
+        run: |
+          # The keychain lives and dies with this runner; no secret needed.
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+          export KEYCHAIN_PASSWORD
+          bundle exec fastlane ios_testflight

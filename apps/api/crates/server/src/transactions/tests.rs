@@ -186,6 +186,7 @@ async fn should_move_the_balance_for_each_type(pool: PgPool) {
     assert_eq!(balance(&pool, &cash).await, decimal("50000"));
 }
 
+/// OPS-1
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_write_the_audit_row_in_the_same_transaction(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -461,6 +462,7 @@ async fn should_not_call_the_rate_source_for_a_day_already_stored(pool: PgPool) 
 
 /// The rates list reads the newest snapshot on or before a day and states
 /// every currency in the workspace's own (FX-1, D96).
+/// FX-2
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_list_a_snapshot_against_the_workspace_currency(pool: PgPool) {
     use crate::fx::service::list_rates;
@@ -559,6 +561,7 @@ async fn total_expense(pool: &PgPool) -> Decimal {
 
 // ------------------------------------------------------------------ update
 
+/// TXN-4
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_reverse_the_old_effect_and_apply_the_new_one(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -569,7 +572,7 @@ async fn should_reverse_the_old_effect_and_apply_the_new_one(pool: PgPool) {
         .unwrap();
     assert_eq!(balance(&pool, &cash).await, decimal("-50000"));
 
-    service::update(&pool, actor(), &row.id, expense(&cash, "87500"))
+    service::update(&pool, actor(), &row.id, expense(&cash, "87500"), None)
         .await
         .unwrap();
 
@@ -612,7 +615,7 @@ async fn should_recompute_every_type_transition(pool: PgPool) {
             let row = service::create(&pool, actor(), make(from, "50000"))
                 .await
                 .unwrap();
-            service::update(&pool, actor(), &row.id, make(to, "87500"))
+            service::update(&pool, actor(), &row.id, make(to, "87500"), None)
                 .await
                 .unwrap();
 
@@ -647,7 +650,7 @@ async fn should_follow_a_transaction_that_moves_to_another_wallet(pool: PgPool) 
     let row = service::create(&pool, actor(), expense(&a, "50000"))
         .await
         .unwrap();
-    service::update(&pool, actor(), &row.id, expense(&b, "50000"))
+    service::update(&pool, actor(), &row.id, expense(&b, "50000"), None)
         .await
         .unwrap();
 
@@ -667,7 +670,7 @@ async fn should_record_before_and_after_on_an_update(pool: PgPool) {
     let row = service::create(&pool, actor(), expense(&cash, "50000"))
         .await
         .unwrap();
-    service::update(&pool, actor(), &row.id, expense(&cash, "87500"))
+    service::update(&pool, actor(), &row.id, expense(&cash, "87500"), None)
         .await
         .unwrap();
 
@@ -685,6 +688,7 @@ async fn should_record_before_and_after_on_an_update(pool: PgPool) {
 
 // ------------------------------------------------------------------ delete
 
+/// TXN-5
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_reverse_the_balance_when_a_transaction_is_deleted(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -728,6 +732,7 @@ async fn should_reverse_the_balance_when_a_transaction_is_deleted(pool: PgPool) 
 /// The balance moves by a bound delta on a locked row, never by writing a
 /// total that was read a moment ago, which is the shape that loses a write
 /// under concurrency.
+/// TXN-6
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_give_the_exact_balance_when_two_writes_race(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -752,6 +757,7 @@ async fn should_give_the_exact_balance_when_two_writes_race(pool: PgPool) {
 
 /// Two transfers in opposite directions cannot deadlock, because both lock
 /// their wallets in ascending ID order (D13).
+/// TXN-6
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_not_deadlock_on_opposite_transfers(pool: PgPool) {
     fixture(&pool, "IDR").await;
@@ -1419,7 +1425,7 @@ async fn should_return_the_history_of_one_transaction(pool: PgPool) {
     let row = service::create(&pool, actor(), expense(&cash, "50000"))
         .await
         .unwrap();
-    service::update(&pool, actor(), &row.id, expense(&cash, "87500"))
+    service::update(&pool, actor(), &row.id, expense(&cash, "87500"), None)
         .await
         .unwrap();
 
@@ -1681,6 +1687,7 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
             attachment_ids: Some(&kept),
             ..expense(&cash, "50000")
         },
+        None,
     )
     .await
     .unwrap();
@@ -1708,6 +1715,7 @@ async fn should_sync_attachments_without_deleting_the_file(pool: PgPool) {
             attachment_ids: None,
             ..expense(&cash, "87500")
         },
+        None,
     )
     .await
     .unwrap();
@@ -2010,6 +2018,50 @@ mod statement_jobs {
         assert_eq!(stored["truncated"], false);
     }
 
+    /// The job's own import step, run twice over one statement's rows: the
+    /// second run writes nothing and counts every row as a duplicate (AI-6).
+    /// The model is left out because the rows it returns are the input here;
+    /// what is under test is everything after it.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_create_nothing_when_a_statement_is_imported_again(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        let row = |date: &str, name: &str, amount: &str, direction: &str| {
+            statement::shape(&crate::ai::extraction::StatementRow {
+                date: Some(date.into()),
+                description: Some(name.into()),
+                amount: Some(amount.into()),
+                direction: Some(direction.into()),
+            })
+        };
+        let rows = vec![
+            row("2026-11-02", "WARUNG TEKKO", "87500", "expense"),
+            row("2026-11-01", "SALARY", "12000000", "income"),
+        ];
+
+        let mapping = statement::mapping();
+        let categories = std::collections::BTreeMap::new();
+        let import = || {
+            service::import_rows(
+                &pool,
+                actor().with_source(crate::audit::SOURCE_IMPORT),
+                &cash,
+                &mapping,
+                &rows,
+                &categories,
+                IMPORT_LIMIT,
+            )
+        };
+
+        let first = import().await.unwrap();
+        assert_eq!((first.created, first.duplicates), (2, 0));
+
+        let again = import().await.unwrap();
+        assert_eq!((again.created, again.duplicates), (0, 2));
+        assert_eq!(balance(&pool, &cash).await, decimal("11912500"));
+    }
+
     #[sqlx::test(migrations = "../../migrations")]
     async fn should_record_a_failure_as_a_code_and_nothing_else(pool: PgPool) {
         fixture(&pool, "IDR").await;
@@ -2034,5 +2086,376 @@ mod statement_jobs {
         assert_eq!(job.error.as_deref(), Some("STATEMENT_UNREADABLE"));
         // A message could quote the statement back (OPS-3).
         assert!(!job.error.unwrap().contains(' '));
+    }
+}
+
+// ---------------------------------------------------------- offline writes
+
+/// Client ids on create (D114) and `If-Match` on edit (D115).
+mod offline_writes {
+    use axum::{
+        extract::{Json, Path, State},
+        http::StatusCode,
+    };
+    use oewang_domain::Role;
+
+    use super::*;
+    use crate::{
+        auth::extractor::AuthWrite,
+        offline::IfMatch,
+        response::RequestId,
+        test_support,
+        transactions::handler::{self, TransactionBody},
+    };
+
+    const ID: &str = "tz4a98xxat96iws9zmbrgj3a";
+
+    async fn create_with(
+        pool: &PgPool,
+        actor: Actor<'_>,
+        id: &str,
+        wallet_id: &str,
+    ) -> Result<(String, bool), AppError> {
+        service::create_with_id(pool, actor, Some(id), expense(wallet_id, "50000"), &[])
+            .await
+            .map(|(row, created)| (row.id, created))
+    }
+
+    async fn rows(pool: &PgPool, id: &str) -> i64 {
+        sqlx::query_scalar("SELECT count(*) FROM transactions WHERE id = $1")
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .unwrap()
+    }
+
+    async fn other_workspace(pool: &PgPool) {
+        sqlx::query(
+            "INSERT INTO workspaces (id, name, slug, currency_code)
+             VALUES ('ws_other', 'Other', 'other', 'IDR')",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    /// MOB-6: a replay after a lost response books the money once.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_create_once_under_a_client_id_and_answer_the_repeat(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        assert_eq!(
+            create_with(&pool, actor(), ID, &cash).await.unwrap(),
+            (ID.to_string(), true)
+        );
+        assert_eq!(
+            create_with(&pool, actor(), ID, &cash).await.unwrap(),
+            (ID.to_string(), false)
+        );
+
+        assert_eq!(balance(&pool, &cash).await, decimal("-50000"), "moved once");
+        assert_eq!(rows(&pool, ID).await, 1);
+        assert_eq!(audit_actions(&pool, ID).await, vec!["transaction.created"]);
+    }
+
+    /// MOB-6: no id behaves as before, a fresh generated id each time.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_create_twice_without_a_client_id(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        let mut ids = Vec::new();
+        for _ in 0..2 {
+            let (row, created) =
+                service::create_with_id(&pool, actor(), None, expense(&cash, "50000"), &[])
+                    .await
+                    .unwrap();
+            assert!(created);
+            ids.push(row.id);
+        }
+        assert_ne!(ids[0], ids[1]);
+        assert_eq!(balance(&pool, &cash).await, decimal("-100000"));
+    }
+
+    /// MOB-6: a replay cannot resurrect a row deleted in between, and a
+    /// replay still answers after the body's wallet would no longer validate.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_answer_a_deleted_row_without_resurrecting_it(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        create_with(&pool, actor(), ID, &cash).await.unwrap();
+        service::delete(&pool, actor(), ID).await.unwrap();
+
+        let (row, created) =
+            service::create_with_id(&pool, actor(), Some(ID), expense("w_gone", "1"), &[])
+                .await
+                .unwrap();
+
+        assert!(!created);
+        assert_eq!((row.id.as_str(), row.amount), (ID, decimal("50000")));
+        assert_eq!(balance(&pool, &cash).await, Decimal::ZERO);
+        assert!(matches!(
+            service::find(&pool, WORKSPACE, ID).await,
+            Err(AppError::TransactionNotFound)
+        ));
+        assert_eq!(
+            audit_actions(&pool, ID).await,
+            vec!["transaction.created", "transaction.deleted"]
+        );
+    }
+
+    /// MOB-6: an id held by another workspace, or by another kind of row,
+    /// is a conflict and never the row.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_refuse_an_id_held_elsewhere(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        other_workspace(&pool).await;
+        sqlx::query(
+            "INSERT INTO wallets (id, workspace_id, name, currency_code)
+             VALUES ('w_theirs', 'ws_other', 'Theirs', 'IDR')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let theirs = Actor::web("ws_other", USER);
+        create_with(&pool, theirs, ID, "w_theirs").await.unwrap();
+
+        let error = create_with(&pool, actor(), ID, &cash).await.unwrap_err();
+        assert!(matches!(error, AppError::IdTaken), "{error:?}");
+
+        let category_id = category(&pool, "kz4a98xxat96iws9zmbrgj3a", "expense").await;
+        let error = create_with(&pool, actor(), &category_id, &cash)
+            .await
+            .unwrap_err();
+        assert!(matches!(error, AppError::IdTaken), "{error:?}");
+
+        assert_eq!(balance(&pool, &cash).await, Decimal::ZERO);
+        assert!(audit_actions(&pool, ID).await.is_empty());
+    }
+
+    /// MOB-6
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_refuse_a_client_id_that_is_not_a_cuid2(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        let error = create_with(&pool, actor(), "not an id", &cash)
+            .await
+            .unwrap_err();
+        assert!(matches!(&error, AppError::Validation(fields) if fields.contains_key("id")));
+        assert_eq!(balance(&pool, &cash).await, Decimal::ZERO);
+    }
+
+    /// MOB-6: the primary key settles a race, so eight concurrent replays of
+    /// one create make one row and move the balance once.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_make_one_row_when_creates_with_one_id_race(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        let mut handles = Vec::new();
+        for _ in 0..8 {
+            let pool = pool.clone();
+            let cash = cash.clone();
+            handles.push(tokio::spawn(async move {
+                create_with(&pool, actor(), ID, &cash).await.unwrap().1
+            }));
+        }
+        let mut made = 0;
+        for handle in handles {
+            made += usize::from(handle.await.unwrap());
+        }
+
+        assert_eq!(made, 1);
+        assert_eq!(rows(&pool, ID).await, 1);
+        assert_eq!(balance(&pool, &cash).await, decimal("-50000"));
+        assert_eq!(audit_actions(&pool, ID).await, vec!["transaction.created"]);
+    }
+
+    /// MOB-7: the version the client read lets the edit through, and the
+    /// edit moves the version.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_update_when_if_match_names_the_current_version(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let row = service::create(&pool, actor(), expense(&cash, "50000"))
+            .await
+            .unwrap();
+
+        let after = service::update(
+            &pool,
+            actor(),
+            &row.id,
+            expense(&cash, "75000"),
+            Some(row.updated_at),
+        )
+        .await
+        .unwrap();
+
+        assert!(after.updated_at > row.updated_at);
+        assert_eq!(balance(&pool, &cash).await, decimal("-75000"));
+    }
+
+    /// MOB-7: an edit made elsewhere since the client read the row refuses
+    /// the queued one, and nothing changes.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_refuse_a_stale_if_match_and_change_nothing(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let row = service::create(&pool, actor(), expense(&cash, "50000"))
+            .await
+            .unwrap();
+        service::update(&pool, actor(), &row.id, expense(&cash, "60000"), None)
+            .await
+            .unwrap();
+
+        let error = service::update(
+            &pool,
+            actor(),
+            &row.id,
+            expense(&cash, "99000"),
+            Some(row.updated_at),
+        )
+        .await
+        .unwrap_err();
+
+        assert!(matches!(error, AppError::Stale(None)), "{error:?}");
+        assert_eq!(balance(&pool, &cash).await, decimal("-60000"));
+        assert_eq!(
+            audit_actions(&pool, &row.id).await,
+            vec!["transaction.created", "transaction.updated"]
+        );
+    }
+
+    /// MOB-7: a deleted row is stale for a client that sent `If-Match`, and
+    /// stays a plain 404 for one that did not.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_answer_stale_for_a_deleted_row(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let row = service::create(&pool, actor(), expense(&cash, "50000"))
+            .await
+            .unwrap();
+        service::delete(&pool, actor(), &row.id).await.unwrap();
+
+        let stale = service::update(
+            &pool,
+            actor(),
+            &row.id,
+            expense(&cash, "1"),
+            Some(row.updated_at),
+        )
+        .await;
+        assert!(matches!(stale, Err(AppError::Stale(None))), "{stale:?}");
+
+        let plain = service::update(&pool, actor(), &row.id, expense(&cash, "1"), None).await;
+        assert!(
+            matches!(plain, Err(AppError::TransactionNotFound)),
+            "{plain:?}"
+        );
+
+        let unknown = service::update(
+            &pool,
+            actor(),
+            ID,
+            expense(&cash, "1"),
+            Some(row.updated_at),
+        )
+        .await;
+        assert!(
+            matches!(unknown, Err(AppError::TransactionNotFound)),
+            "{unknown:?}"
+        );
+        assert_eq!(balance(&pool, &cash).await, Decimal::ZERO);
+    }
+
+    fn owner() -> AuthWrite {
+        AuthWrite {
+            user_id: USER.into(),
+            workspace_id: WORKSPACE.into(),
+            role: Role::Owner,
+            source: "web",
+        }
+    }
+
+    fn body(value: serde_json::Value) -> Json<TransactionBody> {
+        Json(serde_json::from_value(value).unwrap())
+    }
+
+    /// MOB-6, MOB-7 through the handlers: 201 then 200 on a repeat, and a
+    /// stale edit carries the row as it is now in `details.current`.
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_answer_the_documented_statuses_over_http(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let state = test_support::state(pool.clone(), test_support::NOWHERE);
+        let create = serde_json::json!({
+            "id": ID, "type": "expense", "wallet_id": cash, "amount": "50000",
+            "date": "2026-11-02T09:00:00Z", "name": "Lunch"
+        });
+
+        let (status, Json(first)) = handler::create(
+            State(state.clone()),
+            owner(),
+            RequestId("r1".into()),
+            body(create.clone()),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("create failed"));
+        assert_eq!(status, StatusCode::CREATED);
+        let (status, Json(again)) = handler::create(
+            State(state.clone()),
+            owner(),
+            RequestId("r2".into()),
+            body(create.clone()),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("repeat failed"));
+        assert_eq!(status, StatusCode::OK);
+
+        let seen = first.data.unwrap().updated_at;
+        assert_eq!(again.data.unwrap().updated_at, seen);
+        let if_match = IfMatch(Some(
+            DateTime::parse_from_rfc3339(&seen)
+                .unwrap()
+                .with_timezone(&Utc),
+        ));
+
+        let mut edit = create.clone();
+        edit["amount"] = "60000".into();
+        let Ok(Json(edited)) = handler::update(
+            State(state.clone()),
+            owner(),
+            Path(ID.into()),
+            RequestId("r3".into()),
+            if_match,
+            body(edit.clone()),
+        )
+        .await
+        else {
+            panic!("matching edit failed");
+        };
+        assert_ne!(edited.data.unwrap().updated_at, seen);
+
+        edit["amount"] = "70000".into();
+        let Err(refused) = handler::update(
+            State(state.clone()),
+            owner(),
+            Path(ID.into()),
+            RequestId("r4".into()),
+            if_match,
+            body(edit),
+        )
+        .await
+        else {
+            panic!("a stale edit is refused");
+        };
+        assert_eq!(refused.error.status(), 409);
+        let details = refused.error.to_body("r4").details.unwrap();
+        assert_eq!(details["current"]["id"], ID);
+        assert_eq!(details["current"]["amount"], "60000.0000");
+        assert_eq!(balance(&pool, &cash).await, decimal("-60000"));
     }
 }

@@ -17,6 +17,7 @@ use crate::{
         },
     },
     mcp_handler,
+    offline::IfMatch,
 };
 use oewang_domain::Result;
 
@@ -243,6 +244,7 @@ async fn update_wallet(ctx: Ctx, mut value: Value) -> Result<Value> {
         ctx.auth_write()?,
         Path(id),
         ctx.request_id(),
+        IfMatch(None),
         Json(body),
     )
     .await)
@@ -364,6 +366,7 @@ async fn update_category(ctx: Ctx, mut value: Value) -> Result<Value> {
         ctx.auth_write()?,
         Path(id),
         ctx.request_id(),
+        IfMatch(None),
         Json(body),
     )
     .await)

@@ -1,0 +1,298 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transactions\n           SET wallet_id = $3, to_wallet_id = $4, category_id = $5, amount = $6, to_amount = $7,\n               original_amount = $8, original_currency_code = $9, exchange_rate = $10,\n               base_amount = $11, base_rate = $12, base_rate_source = $13, base_rate_date = $14,\n               date = $15, type = $16, name = $17, description = $18,\n               updated_at = now()\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL\n             AND ($19::timestamptz IS NULL OR updated_at = $19)\n           RETURNING id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                     original_amount, original_currency_code, exchange_rate,\n                     base_amount, base_rate, base_rate_source, base_rate_date,\n                     date, type AS \"type!\", name, description, is_exported,\n                     source, fingerprint, created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "wallet_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "wallet_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "to_wallet_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "to_wallet_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "category_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "category_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "amount",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "amount"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "to_amount",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "to_amount"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "original_amount",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "original_amount"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "original_currency_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "original_currency_code"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "exchange_rate",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "exchange_rate"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "base_amount",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_amount"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "base_rate",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_rate"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "base_rate_source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_rate_source"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "base_rate_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "base_rate_date"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "date",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "date"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "type!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "type"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "is_exported",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "is_exported"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "fingerprint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "fingerprint"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "transactions",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Text",
+        "Numeric",
+        "Numeric",
+        "Numeric",
+        "Text",
+        "Date",
+        "Timestamptz",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "b1babe9e450437b2aeb325d86ba9664137f60c3f43a337631e2107f7550a75db"
+}

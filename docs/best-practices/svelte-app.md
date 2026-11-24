@@ -19,7 +19,7 @@ How the web app is structured and written. It is a BFF as much as a UI: it holds
 | Language | Svelte 5 with runes, TypeScript in strict mode |
 | Styling | Tailwind CSS v4, CSS-first config |
 | Components | shadcn-svelte, generated into the repo, owned by the repo |
-| Table | No table library. `molecules/data-table` is written here: a flex row of fixed-width cells per record, with sorting, column visibility, resizing, selection, sticky columns, sticky day groups, row virtualisation and column reordering all written against its own row model (D57, D76) |
+| Table | No table library. `molecules/data-table` is written here: a flex row of fixed-width cells per record, with sorting, column visibility, resizing, selection, sticky columns, sticky day groups, row virtualisation, column reordering and dragging rows into a new order (off unless the page passes `onReorder`) all written against its own row model (D57, D76) |
 | Forms | Superforms with a Zod adapter |
 | Icons | Lucide Svelte |
 | Theme | mode-watcher, light by default (`defaultMode="light"` on the component and the same fallback in the bootstrap); the toggle still offers dark and system. The before-paint bootstrap is in `app.html` so it can carry the CSP nonce ([hardening](../security/hardening.md#browser-headers)) |
@@ -397,6 +397,7 @@ src/lib/i18n/
 
 - Every user-facing string resolves through `t("transactions.form.amount_label")` (UI-1).
 - A build script generates the key union from `en.json`, so an unknown key is a typecheck error.
+- A count picks its word with `{count|file|files}`: `"{count} {count|file|files}"` reads "1 file" and "2 files", by `Intl.PluralRules`. A formatted value ("1,234") counts by its digits. Write a new counted string this way, not "file(s)".
 - No locale segment in the URL and no negotiation for now (D15). Adding `id.json` later means a file, a store and a switcher, with no change at call sites.
 - Error codes from the API map to dictionary keys through one table, so a new code without a string is caught at build time.
 - Every page sets its document title with `pageTitle(...)` from `$lib/page-title`, most specific part first: `pageTitle(t('settings.assistant_title'), t('settings.title'))` gives "Assistant | Settings | Oewang", the old app's `%s | Oewang` template. The root layout sets no title, because a second `<title>` in the head is the one a browser shows.

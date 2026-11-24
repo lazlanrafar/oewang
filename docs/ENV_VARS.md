@@ -4,7 +4,7 @@
 modules. Do not edit by hand: change the configuration and run it
 again.** CI runs `--check` and fails when this file is stale.
 
-Last generated 2026-11-05.
+Last generated 2026-11-24.
 
 A value shown as `secret` is never printed, logged or committed
 (OPS-3). `required` means the process refuses to start without it.
@@ -24,8 +24,10 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 | `AI_SERVICE_API_KEY` | secret |
 | `AI_SERVICE_URL` | unset |
 | `AI_SIGNING_PUBLIC_KEYS` | unset |
+| `ANDROID_CERT_SHA256` | unset |
 | `API_PORT` | `3002` |
 | `APP_ENV` | unset |
+| `APP_RELAY_KEY` | secret |
 | `APP_URL` | unset |
 | `BODY_LIMIT_BYTES` | `1024 * 1024` |
 | `CHAT_MAX_TOOL_AMOUNT` | unset |
@@ -36,6 +38,7 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 | `DB_MAX_CONNECTIONS` | `20` |
 | `DB_STATEMENT_TIMEOUT_SECS` | `10` |
 | `EMAIL_FROM` | unset |
+| `FCM_SERVICE_ACCOUNT_JSON` | secret |
 | `FX_ACCESS_KEY` | secret |
 | `FX_API_URL` | unset |
 | `IMPORT_ROW_LIMIT` | `crate::transactions::service::IMPORT_LIMIT` |
@@ -47,6 +50,7 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 | `RATE_LIMIT_AUTHENTICATED` | `defaults.authenticated.max` |
 | `RATE_LIMIT_CHAT_TURNS` | `defaults.chat_turn.max` |
 | `RATE_LIMIT_CREDENTIAL` | `defaults.credential.max` |
+| `RATE_LIMIT_CREDENTIAL_CEILING` | `defaults.credential_ceiling.max` |
 | `RATE_LIMIT_CREDENTIAL_WINDOW_SECS` | `defaults.credential.window_secs` |
 | `RATE_LIMIT_HANDSHAKE` | `defaults.handshake.max` |
 | `REQUEST_TIMEOUT_SECS` | `30` |
@@ -103,8 +107,10 @@ reaches the browser (D5).
 
 | Variable |
 |---|
+| `ANDROID_CERT_SHA256` |
 | `API_URL` |
 | `APP_ENV` |
+| `APP_RELAY_KEY` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` |
 | `OWE1_ENABLED` |
 | `OWE1_VECTORS_PATH` |

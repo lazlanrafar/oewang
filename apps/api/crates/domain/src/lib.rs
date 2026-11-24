@@ -8,15 +8,19 @@
 pub mod auth;
 pub mod budget;
 pub mod csv_import;
+pub mod debt;
 pub mod envelope;
 pub mod error;
 pub mod files;
 pub mod ledger;
 pub mod money;
 pub mod owe1;
+pub mod passkeys;
 pub mod receipt;
 pub mod secret;
+pub mod spreadsheet;
 pub mod tools;
+pub mod wallet_totals;
 
 pub use auth::Role;
 pub use envelope::{Envelope, Meta, Page, PageMeta};

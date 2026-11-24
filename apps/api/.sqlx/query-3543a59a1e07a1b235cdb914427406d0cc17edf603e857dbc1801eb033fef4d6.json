@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\" FROM debts\n           WHERE workspace_id = $1 AND deleted_at IS NULL AND status <> 'paid'\n             AND due_date < $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Date"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3543a59a1e07a1b235cdb914427406d0cc17edf603e857dbc1801eb033fef4d6"
+}

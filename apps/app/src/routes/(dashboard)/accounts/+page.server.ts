@@ -3,6 +3,7 @@ import { fail, type Actions } from '@sveltejs/kit';
 import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 import { ApiError } from '$lib/server/api';
 import * as ledger from '$lib/server/ledger';
+import { reorder, sortOrderChanges } from '$lib/reorder';
 import { walletTotals } from '$lib/wallets';
 
 import type { PageServerLoad } from './$types';
@@ -142,7 +143,38 @@ export const actions: Actions = {
 		),
 
 	deleteGroup: async ({ request, locals }) =>
-		run(request, (form) => ledger.deleteWalletGroup(text(form, 'id'), locals.accessToken))
+		run(request, (form) => ledger.deleteWalletGroup(text(form, 'id'), locals.accessToken)),
+
+	/** The groups' order, top first, as the groups sheet's drag left it. */
+	reorderGroups: async ({ request, locals }) =>
+		run(request, async (form) => {
+			const groups = (await ledger.listWalletGroups(locals.accessToken)).data ?? [];
+			const order = reorder(groups, form.getAll('ids').map(String));
+			await Promise.all(
+				sortOrderChanges(order).map(({ id, sort_order }) =>
+					ledger.updateWalletGroup(id, { sort_order }, locals.accessToken)
+				)
+			);
+		}),
+
+	/**
+	 * One group's wallets in the order the table's drag left them.
+	 *
+	 * The list orders by group first, so a wallet only moves among its own
+	 * group; `group_id` names which, and empty is the wallets in no group.
+	 */
+	reorderWallets: async ({ request, locals }) =>
+		run(request, async (form) => {
+			const group = optional(form, 'group_id');
+			const wallets = (await ledger.listWallets(locals.accessToken)).data ?? [];
+			const siblings = wallets.filter((wallet) => wallet.group_id === group);
+			const order = reorder(siblings, form.getAll('ids').map(String));
+			await Promise.all(
+				sortOrderChanges(order).map(({ id, sort_order }) =>
+					ledger.updateWallet(id, { sort_order }, locals.accessToken)
+				)
+			);
+		})
 };
 
 async function run(request: Request, call: (form: FormData) => Promise<unknown>) {

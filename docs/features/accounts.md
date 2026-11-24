@@ -34,7 +34,7 @@ The load reads wallets, wallet groups and today's rates together, because none o
 
 Search and the group filter live in the URL and are applied on the server (UI-8, D55). The page shows what the server matched, because filtering in both places is two rules to keep in step.
 
-**Every mutation is a form action.** There is no `fetch` that writes. The page works with JavaScript disabled, and after a write the list is what the server holds rather than what the browser guessed. The two writes the table starts from a cell, setting the group and setting the default, post the action and then `invalidateAll()`: the cell has already drawn the new value, so a failure has to be able to put the row back.
+**Every mutation is a form action.** There is no `fetch` to the API that writes, and after a write the list is what the server holds rather than what the browser guessed. The controls that start a write (the sheets, the row menu, the drag) need JavaScript; without it the page is read-only. A plain-form copy of each was weighed and dropped: it adds markup to every row for a case nobody here uses. The two writes the table starts from a cell, setting the group and setting the default, post the action and then `invalidateAll()`: the cell has already drawn the new value, so a failure has to be able to put the row back.
 
 A `member` sees the page and no write on it: no add button, no group select, and a row menu with **View** alone ([permissions](../security/auth.md#permission-matrix)).
 
@@ -61,6 +61,8 @@ Every figure arrives formatted. The component does no arithmetic and never sees 
 A wallet in the workspace currency contributes its balance. A foreign wallet is converted at today's rate, fetched per currency in the load. This is the one read path that converts: a balance is a live figure with no stored `base_amount` to sum, unlike a transaction (TXN-19).
 
 A wallet whose currency has no rate today is **left out**, and the card says how many were left out. An honest partial figure beats a whole one that is wrong, and refusing to render the screen because one rate is unavailable would be worse than either. It is the same behaviour the Settings group total already had, in `inBaseCurrency`, which both screens share.
+
+The API answers the same figures at `GET /v1/wallets/totals` (D117), which the mobile app reads. The page still computes its own; a change to the rule here is a change to `oewang_domain::wallet_totals` too, until the page reads the endpoint.
 
 The cards describe the workspace, not the filtered view. A search narrows the table only; a total that moved with it would read as money having disappeared.
 
@@ -124,7 +126,7 @@ The fields are a separate component, `accounts-form-fields.svelte`, so there is 
 
 **There is no balance field.** A new account starts at zero, and an opening figure is a transaction rather than a column write (TXN-3). The detail sheet records it.
 
-The currency field can be locked, for the wallet that already has a live transaction (WAL-6). A disabled control submits nothing and an absent `currency_code` reads as "clear it", so the locked field carries the current code in a hidden input and the save is a no-op on that column rather than a blanking of it.
+The currency field is locked for a wallet that already has a live transaction (WAL-6). The list carries `has_transactions` per wallet, read in the same query, so the form knows before the save rather than after a `WALLET_CURRENCY_LOCKED`; the API still refuses the change on its own. A disabled control submits nothing and an absent `currency_code` reads as "clear it", so the locked field carries the current code in a hidden input and the save is a no-op on that column rather than a blanking of it.
 
 ### The detail sheet, for one account
 
@@ -150,17 +152,22 @@ Three things follow from the shape:
 
 A correction records `web` as its source, so it is an ordinary row in the transaction list and in that wallet's history.
 
+## Groups and order
+
+**Manage groups** in the header opens `accounts-groups-sheet.svelte`: add, rename, delete and drag a group, each a form action on this page (`createGroup`, `updateGroup`, `deleteGroup`, `reorderGroups`). The rows are the settings screen's sortable list, so a group moves exactly as a category does. Deleting a group keeps its accounts, ungrouped. The picker in the row cell still creates a group in place.
+
+A wallet is dragged by the handle before its name, or moved with the arrow keys on that handle. The drag lives in the shared `data-table` molecule and is off unless a page passes `onReorder`, so no other table changes. A wallet moves only among its own group, because the list orders by group first. The order is posted 400 ms after the rows stop moving (`reorderWallets`), and the reload replaces the local order, so a refused save puts the rows back. The drag is offered only to an owner or admin on the unfiltered list: a filtered view's order would push the hidden wallets to the end of their group.
+
+Both reorders write positions from the result (`$lib/reorder.ts`, shared with categories) rather than nudging, because seeded rows all carry `sort_order` 0.
+
 ## What is deliberately not built
 
 | Missing | What the old app does | Why, and what it costs |
 |---|---|---|
-| Group management on this screen | Create, rename and delete a group from the accounts page | The page's actions exist (`createGroup`, `updateGroup`, `deleteGroup`) and nothing on screen calls them yet. Settings used to be where a group was created, and that tab is gone, so **no screen creates a group today**: a group is assigned in the row cell and comes from the seed or the API. The actions and the strings are already here, so this is the next piece of work, not a design question |
 | A group filter control | A group dropdown in the header | The load reads `?group_id=`, including `group_id=none` for the ungrouped, so a link still carries it. Only the control is missing. Small |
 | Column visibility | A column menu in the header | Five columns, one of which is furniture. Not worth a menu yet |
 | Column resizing | A drag handle per column | `columns.ts` declares `resizable` and `minWidth`/`maxWidth` per column, and the shell takes a `widths` map, but nothing draws a handle. The declaration is ready; the handle is not. Small |
 | Sorting | Three-click sortable headers | The live accounts page has none either, so this is a match rather than a gap |
-| Reordering wallets | Move a wallet up or down within its group | The Settings tab owned `sort_order` and went with the tab, so **nothing writes it today**. The list still orders by it, so the column is read and never set. Moving the gesture here means a drag or a pair of buttons and the same swap the settings action used |
-| A plain form for the sheets | | Both sheet components are written to be rendered inside `<noscript>` as a plain form, and the page does not render them there yet. The create path therefore needs script even though every action behind it does not |
 
 ## UI port map
 

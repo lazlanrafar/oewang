@@ -201,6 +201,9 @@ impl Run {
         {
             tracing::error!(job_id = %self.job_id, %error, "the import job outcome was lost");
         }
+
+        let imported = (status == "succeeded").then_some(counts.0);
+        crate::push::service::import_finished(&self.pool, &self.user_id, imported).await;
     }
 
     /// The outcome and the rows it describes, so the caller can pair them
@@ -293,7 +296,7 @@ fn review_of(
     })
 }
 
-fn mapping() -> ColumnMapping {
+pub(super) fn mapping() -> ColumnMapping {
     ColumnMapping {
         date: Some(COLUMN_DATE.into()),
         name: Some(COLUMN_DESCRIPTION.into()),
@@ -311,7 +314,7 @@ fn mapping() -> ColumnMapping {
 /// The direction decides which column the figure lands in, and nothing
 /// else about the figure is touched here: it stays the string the model
 /// produced until `csv_import::parse_amount` reads it (D12, D28).
-fn shape(row: &crate::ai::extraction::StatementRow) -> BTreeMap<String, String> {
+pub(super) fn shape(row: &crate::ai::extraction::StatementRow) -> BTreeMap<String, String> {
     let mut shaped = BTreeMap::new();
     shaped.insert(
         COLUMN_DATE.to_string(),
@@ -399,6 +402,7 @@ mod tests {
         assert!(transform(&mapping(), &shape(&raw)).is_err());
     }
 
+    /// TXN-17
     #[test]
     fn should_call_a_pending_job_stale_only_after_the_window() {
         let base = ImportJobRow {

@@ -70,7 +70,7 @@
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
-	import { absDecimal } from '$lib/money';
+	import { absDecimal, trimZeros } from '$lib/money';
 	import { toDetail } from '$lib/transaction-detail';
 	import { isoDay, toRow } from '$lib/transactions';
 	import { readParam, readText, readValues, reloading, writeParams } from '$lib/url-state';
@@ -88,18 +88,20 @@
 	 * filters: a changed filter is a different list and resets it, while a
 	 * changed page number is more of the same list and appends.
 	 */
-	const held = pagedRows<TransactionRow>();
+	const loaded = $derived({
+		rows: data.transactions.map((transaction) => toRow(transaction)),
+		page: data.meta.page ?? 1,
+		key: data.filterKey
+	});
+	// Seeded from the load, so the server render and the first paint show the rows.
+	const held = pagedRows<TransactionRow>(untrack(() => loaded));
 
 	$effect(() => {
 		// Only `data` is read inside the tracked part. `update` reads the
 		// rows and the page it is holding, and those are state this effect
 		// writes: tracked, the effect would depend on its own output and run
 		// until the browser gave up, which is exactly what it did.
-		const next = {
-			rows: data.transactions.map((transaction) => toRow(transaction)),
-			page: data.meta.page ?? 1,
-			key: data.filterKey
-		};
+		const next = loaded;
 		untrack(() => held.update(next));
 	});
 
@@ -333,8 +335,22 @@
 	/** The files the sheet will submit with the transaction (TXN-13). */
 	let attachments = $state<UploadedFile[]>([]);
 
-	/** Rebuild the draft whenever the sheet points somewhere new. */
+	// A primitive, so a data reload that rebuilds the same row does not count as a new target.
+	const editingId = $derived(editing?.id ?? null);
+
+	/**
+	 * Rebuild the draft whenever the sheet points somewhere new, and only
+	 * then. Creating an account or category from a picker reloads every
+	 * load (invalidateAll), which hands back new `data` objects; reading
+	 * them tracked here wiped what the user had typed.
+	 */
 	$effect(() => {
+		void sheetParam;
+		void editingId;
+		untrack(rebuildDraft);
+	});
+
+	function rebuildDraft() {
 		const fresh = emptyDraft(
 			defaultWallet?.id ?? '',
 			defaultWallet?.currency_code ?? baseCurrency,
@@ -362,19 +378,19 @@
 					// original figure when the entry currency differed. Reopening
 					// it with the wallet-currency figure beside the entry currency
 					// would convert an already converted number.
-					amount: absDecimal(editing.original_amount ?? editing.amount),
+					amount: trimZeros(absDecimal(editing.original_amount ?? editing.amount)),
 					currency: editing.original_currency_code ?? editing.wallet_currency_code,
 					exchangeRate: editing.exchange_rate ?? '',
 					baseRate: editing.base_rate,
 					accountId: editing.wallet_id,
 					toAccountId: editing.to_wallet_id ?? '',
-					toAmount: editing.to_amount ?? '',
+					toAmount: trimZeros(editing.to_amount ?? ''),
 					categoryId: editing.category_id ?? '',
 					date: isoDay(editing.date),
 					notes: editing.description ?? '',
 				}
 			: fresh;
-	});
+	}
 
 	const draftWalletCurrency = $derived(walletCurrencies[draft.accountId] ?? baseCurrency);
 
@@ -838,7 +854,13 @@
 		</div>
 	</div>
 
-	<FormError message={form?.code ? messageForCode(form.code) : undefined} />
+	<FormError
+		message={form?.fields?.original_currency_code
+			? t('errors.foreign_entry_same_wallet')
+			: form?.code
+				? messageForCode(form.code)
+				: undefined}
+	/>
 
 	<TransactionsDataTable
 		loading={reloading(RELOAD_KEYS)}
@@ -889,6 +911,7 @@
 	{baseCurrency}
 	walletCurrency={draftWalletCurrency}
 	fieldErrors={form?.fields}
+	paidDebt={editing ? data.paidDebt : null}
 	action={editing ? '?/update' : '?/create'}
 	createLabel={(typed) => t('common.create_named', { name: typed })}
 	enhance={(node) => enhance(node, saveAndClose)}
@@ -923,6 +946,9 @@
 		if (!open && detailParam !== '') closeDetail();
 	}}
 	transaction={detail}
+	debts={data.detail?.debts ?? null}
+	debtHref={(id) => `/debts?debt=${encodeURIComponent(id)}`}
+	onCreateDebt={() => goto(`/debts?source=${encodeURIComponent(detailParam)}`)}
 	{canEdit}
 	onEdit={editFromDetail}
 	onDelete={() => (confirmDelete = true)}
@@ -1194,7 +1220,9 @@
 <ConfirmDialog
 	bind:open={confirmDelete}
 	title={t('txn.delete_title')}
-	description={t('txn.delete_confirm')}
+	description={data.detail?.debts?.payment
+		? t('txn.delete_confirm_payment', { name: data.detail.debts.payment.debt.contact_name })
+		: t('txn.delete_confirm')}
 	confirmLabel={t('common.delete')}
 	cancelLabel={t('common.cancel')}
 	onConfirm={() => deleteForm?.requestSubmit()}

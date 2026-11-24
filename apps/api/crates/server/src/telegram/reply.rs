@@ -323,6 +323,7 @@ mod tests {
         }
     }
 
+    /// TG-6
     #[test]
     fn should_read_like_the_receipt_reply_the_owner_asked_for() {
         assert_eq!(
@@ -344,6 +345,7 @@ mod tests {
         assert!(text.ends_with("Pick a category below."));
     }
 
+    /// TG-6
     #[test]
     fn should_name_what_to_check() {
         let mut view = view();
@@ -351,6 +353,7 @@ mod tests {
         assert!(compose(&view).contains("⚠️ Please check: total, date."));
     }
 
+    /// TG-6
     #[test]
     fn should_tick_the_current_category_and_end_with_delete() {
         let categories = vec![

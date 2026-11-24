@@ -167,7 +167,7 @@ impl FileSort {
 }
 
 fn push_file_filters<'a>(
-    builder: &mut QueryBuilder<'a, sqlx::Postgres>,
+    builder: &mut QueryBuilder<sqlx::Postgres>,
     workspace_id: &'a str,
     filters: &FileFilters<'a>,
 ) {

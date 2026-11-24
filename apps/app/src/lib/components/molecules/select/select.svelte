@@ -184,6 +184,7 @@
 	{:else}
 	<Combobox
 		{id}
+		{ariaLabel}
 		items={options}
 		bind:value
 		onSelect={onChange}

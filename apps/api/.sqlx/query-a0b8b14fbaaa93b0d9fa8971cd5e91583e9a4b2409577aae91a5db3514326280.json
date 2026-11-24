@@ -1,0 +1,155 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT w.id, w.group_id, g.name AS \"group_name?\", w.name, w.currency_code,\n                  w.balance, w.is_included_in_totals, w.is_default, w.sort_order,\n                  EXISTS(\n                    SELECT 1 FROM transactions t\n                    WHERE t.workspace_id = w.workspace_id\n                      AND (t.wallet_id = w.id OR t.to_wallet_id = w.id)\n                      AND t.deleted_at IS NULL\n                  ) AS \"has_transactions!\",\n                  w.created_at, w.updated_at\n           FROM wallets w\n           LEFT JOIN wallet_groups g\n             ON g.id = w.group_id AND g.deleted_at IS NULL\n           WHERE w.workspace_id = $1 AND w.deleted_at IS NULL\n           ORDER BY g.sort_order NULLS LAST, g.name NULLS LAST,\n                    w.sort_order, w.name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "group_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "group_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "group_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallet_groups",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "currency_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "currency_code"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "balance",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "balance"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "is_included_in_totals",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "is_included_in_totals"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "is_default",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "is_default"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "sort_order",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "sort_order"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "has_transactions!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "a0b8b14fbaaa93b0d9fa8971cd5e91583e9a4b2409577aae91a5db3514326280"
+}

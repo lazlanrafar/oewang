@@ -14,9 +14,10 @@ from typing import Any
 from app.modules.chat import tools
 from tests.support import Owe1TestClient
 
-#: `Tool::ALL` in apps/api/crates/domain/src/tools.rs, in its order. Fifteen:
-#: the catalog is small on purpose (D17); the three analysis tools (D88) and
-#: the budget status (D103) are the only additions since.
+#: `Tool::ALL` in apps/api/crates/domain/src/tools.rs, in its order.
+#: Twenty-one: the catalog is small on purpose (D17); the three analysis tools
+#: (D88), the budget status (D103) and the six debt tools (D120) are the only
+#: additions since.
 RUST_TOOL_NAMES = [
     "get_workspace_context",
     "get_recent_transactions",
@@ -26,12 +27,18 @@ RUST_TOOL_NAMES = [
     "get_income_summary",
     "get_burn_rate",
     "get_budget_status",
+    "get_outstanding_debts",
     "create_transaction",
     "update_transaction",
     "delete_transaction",
     "add_transaction_items",
     "create_wallet",
     "create_category",
+    "create_debt",
+    "pay_debt",
+    "update_debt",
+    "delete_debt",
+    "split_bill",
     "present_choices",
 ]
 
@@ -70,9 +77,10 @@ def test_every_tool_has_a_name_a_description_and_an_object_schema() -> None:
         assert isinstance(definition["input_schema"]["properties"], dict)
 
 
-def test_the_catalog_is_exactly_the_fifteen_tools_the_api_knows() -> None:
+# SEC-26
+def test_the_catalog_is_exactly_the_tools_the_api_knows() -> None:
     assert [definition["name"] for definition in tools.TOOL_DEFINITIONS] == RUST_TOOL_NAMES
-    assert len(tools.TOOL_DEFINITIONS) == 15
+    assert len(tools.TOOL_DEFINITIONS) == 21
     assert tools.tool_definition("bulk_delete_transactions") is None
     assert tools.tool_definition("delete_wallet") is None
 
@@ -109,7 +117,7 @@ def test_every_required_argument_is_one_the_schema_declares() -> None:
 def test_a_date_argument_asks_for_iso_8601_and_nothing_else() -> None:
     for label, node in every_schema():
         for name, field in node.get("properties", {}).items():
-            if name not in {"from", "to", "date"}:
+            if name not in {"from", "to", "date", "due_date"}:
                 continue
             assert field["type"] == "string", f"{label}.{name}"
             assert "ISO 8601" in field["description"], f"{label}.{name}"
@@ -203,6 +211,74 @@ def test_a_read_tool_says_the_figures_are_already_computed() -> None:
     summary = tools.TOOLS_BY_NAME["get_spending_summary"]["description"]
     assert "computed" in summary
     assert "arithmetic" in summary
+
+
+
+# ------------------------------------------------------------------ debts
+
+
+# DEBT-14
+def test_the_debt_tools_take_what_the_validator_takes() -> None:
+    assert schema("get_outstanding_debts")["properties"] == {}
+    assert set(schema("create_debt")["properties"]) == {
+        "type",
+        "contact_name",
+        "amount",
+        "currency_code",
+        "description",
+        "due_date",
+    }
+    assert schema("create_debt")["required"] == ["type", "contact_name", "amount"]
+    assert schema("create_debt")["properties"]["type"]["enum"] == ["payable", "receivable"]
+    assert set(schema("pay_debt")["properties"]) == {"debt_id", "amount", "wallet_id"}
+    assert schema("pay_debt")["required"] == ["debt_id", "amount"]
+    assert set(schema("update_debt")["properties"]) == {
+        "debt_id",
+        "amount",
+        "description",
+        "due_date",
+    }
+    assert schema("update_debt")["required"] == ["debt_id"]
+    assert set(schema("delete_debt")["properties"]) == {"debt_id", "confirmed"}
+    assert schema("delete_debt")["required"] == ["debt_id"]
+    assert set(schema("split_bill")["properties"]) == {
+        "amount",
+        "name",
+        "wallet_id",
+        "category_id",
+        "contact_names",
+        "confirmed",
+    }
+    assert schema("split_bill")["required"] == ["amount", "name", "contact_names"]
+
+
+# DEBT-14
+def test_a_debt_id_is_never_guessed() -> None:
+    for name in ("pay_debt", "update_debt"):
+        description = tools.TOOLS_BY_NAME[name]["description"]
+        assert "get_outstanding_debts" in description, name
+        assert "never guess" in description, name
+
+
+# DEBT-14, D122
+def test_the_delete_and_the_split_ask_before_they_write() -> None:
+    for name in ("delete_debt", "split_bill"):
+        description = tools.TOOLS_BY_NAME[name]["description"]
+        assert "CONFIRMATION_REQUIRED" in description, name
+        assert "later turn" in description, name
+        assert schema(name)["properties"]["confirmed"]["type"] == "boolean", name
+        assert "confirmed" not in schema(name)["required"], name
+
+    split = tools.TOOLS_BY_NAME["split_bill"]["description"]
+    assert "same arguments" in split
+    assert "Never compute the shares yourself" in split
+
+
+# D122
+def test_a_split_names_one_to_twenty_people() -> None:
+    names = schema("split_bill")["properties"]["contact_names"]
+    assert names["minItems"] == 1
+    assert names["maxItems"] == tools.MAX_SPLIT_CONTACTS == 20
 
 
 def test_the_endpoint_answers_with_the_catalog(owe1_client: Owe1TestClient) -> None:

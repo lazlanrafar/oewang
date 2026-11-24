@@ -2,8 +2,10 @@
 	/**
 	 * The overview tab's figures (D87, OVR-2).
 	 *
-	 * Ported from the old app's `overview-cards.tsx`, minus budget usage and
-	 * debt balance, which stay out of v1 (PRD non-goals). Every figure is the
+	 * Ported from the old app's `overview-cards.tsx`, minus budget usage,
+	 * which stays on its own page. Debt balance came back with debts (D120,
+	 * DEBT-13): the net position the debts page shows, in the workspace
+	 * currency, and how many debts are open. Every figure is the
 	 * API's formatted string, and every card covers the whole selected range,
 	 * which the old cards claimed and did not do: they showed the last month
 	 * under a label for the year.
@@ -12,7 +14,7 @@
 	 * assistant about it, as the old cards did.
 	 */
 	import Flame from '@lucide/svelte/icons/flame';
-	import PieChart from '@lucide/svelte/icons/chart-pie';
+	import HandCoins from '@lucide/svelte/icons/hand-coins';
 	import Receipt from '@lucide/svelte/icons/receipt';
 	import TrendingUp from '@lucide/svelte/icons/trending-up';
 	import Wallet from '@lucide/svelte/icons/wallet';
@@ -20,7 +22,8 @@
 
 	import { t } from '$lib/i18n';
 	import { formatMoney } from '$lib/money';
-	import { rangeLabel, shareLabel, type Overview } from '$lib/reports';
+	import { rangeLabel, type Overview } from '$lib/reports';
+	import type { DebtSummary } from '$lib/server/debts';
 	import type { WalletTotals } from '$lib/wallets';
 
 	import { StatCard } from '../../molecules/stat-card/index.js';
@@ -29,11 +32,14 @@
 	let {
 		overview,
 		balance,
+		debts,
 		onAsk
 	}: {
 		overview: Overview;
 		/** Streamed: it waits on today's rates, the rest of the page does not. */
 		balance: Promise<{ totals: WalletTotals; currency: string }>;
+		/** Streamed too; null when the debt figures could not be read. */
+		debts: Promise<DebtSummary | null>;
 		onAsk: (message: string) => void;
 	} = $props();
 
@@ -44,7 +50,6 @@
 	const signed = (value: string) => formatMoney(value, overview.currency_code, { signed: true });
 
 	const range = $derived(rangeLabel(overview.from, overview.to));
-	const top = $derived(overview.expense_categories.find((share) => !share.other) ?? null);
 	const ask = (key: Parameters<typeof t>[0]) => onAsk(t(key, { range }));
 </script>
 
@@ -81,14 +86,6 @@
 		onclick={() => ask('overview.ask_net')}
 	/>
 	<StatCard
-		label={t('overview.card_top_expense')}
-		icon={PieChart}
-		value={top ? shareLabel(top) : t('overview.card_top_expense_none')}
-		hint={top ? `${money(top.total)} · ${top.share_formatted ?? ''}` : range}
-		ariaLabel={t('overview.card_ask', { label: t('overview.card_top_expense') })}
-		onclick={() => ask('overview.ask_top')}
-	/>
-	<StatCard
 		label={t('overview.card_burn')}
 		icon={Flame}
 		value={count(overview.average_expense)}
@@ -96,6 +93,25 @@
 		ariaLabel={t('overview.card_ask', { label: t('overview.card_burn') })}
 		onclick={() => ask('overview.ask_burn')}
 	/>
+	{#await debts}
+		<StatCard label={t('overview.card_debts')} icon={HandCoins} value="" loading />
+	{:then resolved}
+		{#if resolved}
+			<StatCard
+				label={t('overview.card_debts')}
+				icon={HandCoins}
+				value={{
+					value: resolved.net,
+					format: (value) => formatMoney(value, resolved.currency_code, { signed: true })
+				}}
+				hint={resolved.left_out > 0
+					? t('debts.left_out', { count: resolved.left_out })
+					: t('overview.card_debts_hint', { count: resolved.open_count })}
+				ariaLabel={t('overview.card_ask', { label: t('overview.card_debts') })}
+				onclick={() => onAsk(t('overview.ask_debts'))}
+			/>
+		{/if}
+	{/await}
 	{#await balance}
 		<StatCard label={t('overview.card_balance')} icon={Wallet} value="" loading />
 	{:then resolved}

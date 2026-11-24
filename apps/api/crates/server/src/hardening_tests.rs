@@ -21,10 +21,10 @@ use crate::{
 // ------------------------------------------------------------ log capture
 
 #[derive(Clone, Default)]
-struct Capture(Arc<Mutex<Vec<u8>>>);
+pub(crate) struct Capture(Arc<Mutex<Vec<u8>>>);
 
 impl Capture {
-    fn text(&self) -> String {
+    pub(crate) fn text(&self) -> String {
         String::from_utf8_lossy(&self.0.lock().unwrap()).to_string()
     }
 }
@@ -144,6 +144,13 @@ fn should_default_every_limit_to_the_documented_value() {
     assert_eq!(
         (limits.credential.max, limits.credential.window_secs),
         (10, 900)
+    );
+    assert_eq!(
+        (
+            limits.credential_ceiling.max,
+            limits.credential_ceiling.window_secs
+        ),
+        (1000, 900)
     );
     assert_eq!(
         (limits.handshake.max, limits.handshake.window_secs),

@@ -25,6 +25,13 @@ import { clearSession } from './session';
 const API_URL = process.env.API_URL ?? 'http://api:3002';
 
 /**
+ * Proves to the API that this server, not whoever reached its public
+ * address, names the browser's address (D112). The API counts its rate
+ * limits against that address; without the key every user is this server.
+ */
+const APP_RELAY_KEY = process.env.APP_RELAY_KEY?.trim() || null;
+
+/**
  * Plaintext mode, which only development may turn on (D22).
  *
  * With encryption on, an unsealed answer is refused rather than read: an
@@ -305,6 +312,46 @@ export async function apiStream(options: StreamOptions): Promise<ReadableStream<
 	}
 }
 
+/**
+ * Who the browser is, for the API's session list and rate limits.
+ *
+ * The API sees this server's own fetch, so without these every session reads
+ * "Bun" with no address and every user shares one rate limit. The address
+ * goes with the relay key or the API ignores it (D112). Exported so the rule
+ * is tested without a request.
+ */
+export function clientHeaders(
+	userAgent: string | null,
+	address: string | null,
+	relayKey: string | null = APP_RELAY_KEY
+): Record<string, string> {
+	const headers: Record<string, string> = {};
+	if (userAgent) headers['x-client-user-agent'] = userAgent;
+	if (address) {
+		headers['x-client-ip'] = address;
+		if (relayKey) headers['x-relay-key'] = relayKey;
+	}
+	return headers;
+}
+
+/** The current request's browser, or nothing outside a request. */
+function browserHeaders(): Record<string, string> {
+	let event;
+	try {
+		event = getRequestEvent();
+	} catch {
+		return {};
+	}
+	let address: string | null = null;
+	try {
+		// adapter-node reads ADDRESS_HEADER behind a proxy (docs/deployment.md#app).
+		address = event.getClientAddress();
+	} catch {
+		// No address is known; the session row just shows none.
+	}
+	return clientHeaders(event.request.headers.get('user-agent'), address);
+}
+
 type PreparedRequest = {
 	method: string;
 	requestId: string;
@@ -336,6 +383,7 @@ function prepare(options: RequestOptions, active: Session): PreparedRequest {
 	};
 
 	if (options.token) headers.authorization = `Bearer ${options.token}`;
+	Object.assign(headers, browserHeaders());
 
 	let payload: string | undefined;
 	if (options.body !== undefined) {

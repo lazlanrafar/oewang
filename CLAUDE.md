@@ -15,6 +15,7 @@ Before writing code, read the doc that owns the area you are touching:
 | A route | [docs/api/endpoints.md](docs/api/endpoints.md) and [docs/api/conventions.md](docs/api/conventions.md) |
 | Rust | [docs/best-practices/rust-api.md](docs/best-practices/rust-api.md) |
 | Svelte | [docs/best-practices/svelte-app.md](docs/best-practices/svelte-app.md) |
+| Flutter (`apps/native`) | [docs/features/mobile.md](docs/features/mobile.md) |
 | A screen that lists rows | [A list screen](docs/best-practices/svelte-app.md#a-list-screen) |
 | How anything looks | [Changing how something looks](docs/best-practices/svelte-app.md#changing-how-something-looks), and the [design system page](docs/best-practices/svelte-app.md#the-design-system-page) at `/design-system` |
 | Auth, roles, tokens | [docs/security/auth.md](docs/security/auth.md) |
@@ -25,7 +26,7 @@ Work is tracked in [docs/backlog.md](docs/backlog.md) as US-xxx stories. Each na
 
 ## Commands
 
-Everything runs in containers, so results do not depend on the host.
+Everything runs in containers, so results do not depend on the host. The one exception is the Flutter app in `apps/native`, which runs on the host with the version pinned by `apps/native/.fvmrc`, because iOS builds need Xcode (D113, [mobile](docs/features/mobile.md#checks)).
 
 ```bash
 docker compose -f infra/docker-compose.yml up          # the whole stack
@@ -45,6 +46,7 @@ docker compose -f infra/docker-compose.yml run --rm --no-deps api cargo test
 docker compose -f infra/docker-compose.yml run --rm --no-deps app bun run check
 docker compose -f infra/docker-compose.yml run --rm --no-deps ai uv run ruff check .
 docker compose -f infra/docker-compose.yml run --rm --no-deps ai uv run pytest
+(cd apps/native && fvm flutter analyze && fvm flutter test)
 ```
 
 The compose project is named `oewang-dev`, not `oewang`. A volume set under the latter already exists on this machine from an earlier project. Do not rename it back, and do not delete that volume.
@@ -132,4 +134,14 @@ New requirement IDs are appended, never renumbered.
 
 Do not add these back without a new PRD. Each was considered and rejected, and the reasoning is in [docs/prd.md](docs/prd.md#non-goals-for-v1) and [docs/security/ai-safety.md](docs/security/ai-safety.md#what-is-deliberately-not-built):
 
-Invoices, debts, contacts, document RAG over the vault (the vault itself came back in D90), billing and quotas (usage is recorded but never limited, D92), integrations, OAuth login, notifications, a background worker, web search in chat, external app tools, bulk write tools, embedding-based tool selection, and a second UI locale.
+Invoices, document RAG over the vault (the vault itself came back in D90), billing and quotas (usage is recorded but never limited, D92), integrations, OAuth login, notifications, a background worker, web search in chat, external app tools, bulk write tools, embedding-based tool selection, and a second UI locale.
+
+<!-- boekti:start -->
+## Boekti
+
+This repo reports agent sessions to Boekti (project `OEW`, see `.boekti.json`). Hooks report the session and claim edited files: do not check Boekti yourself or poll it.
+
+- A denied edit means another session holds the file: comment on the ticket, never work around it.
+- Starting a ticket, changing docs, saving a project fact or finishing: read `.agents/skills/boekti/SKILL.md` first and follow it.
+- No Boekti block at session start: call `list_memories` (project `OEW`) once.
+<!-- boekti:end -->

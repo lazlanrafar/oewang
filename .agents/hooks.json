@@ -1,0 +1,42 @@
+{
+  "boekti": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "boekti hook --cli antigravity event",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "write_file|edit_file|write_to_file|replace_file_content|multi_replace_file_content|run_command|invoke_subagent"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "boekti hook --cli antigravity pre-edit",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "write_file|edit_file|write_to_file|replace_file_content|multi_replace_file_content"
+      }
+    ],
+    "SessionStart": [
+      {
+        "command": "boekti hook --cli antigravity session-start",
+        "timeout": 10,
+        "type": "command"
+      }
+    ],
+    "Stop": [
+      {
+        "command": "boekti hook --cli antigravity event",
+        "timeout": 5,
+        "type": "command"
+      }
+    ]
+  }
+}

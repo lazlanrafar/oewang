@@ -27,9 +27,11 @@
 
 	let { data } = $props();
 
-	const held = pagedRows<SnapshotRate>();
+	const loaded = $derived({ rows: data.rates, page: data.meta.page ?? 1, key: data.filterKey });
+	// Seeded from the load, so the server render and the first paint show the rows.
+	const held = pagedRows<SnapshotRate>(untrack(() => loaded));
 	$effect(() => {
-		const next = { rows: data.rates, page: data.meta.page ?? 1, key: data.filterKey };
+		const next = loaded;
 		untrack(() => held.update(next));
 	});
 

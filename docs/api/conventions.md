@@ -83,6 +83,8 @@ Validation error, with per-field detail:
 }
 ```
 
+An error may also carry `details`, an object, when the client needs more than a message to act on it. Only `STALE` has one so far: `details.current` is the row as it reads now, or `null` when it is deleted (D115). The key is absent on every other error.
+
 The web app maps `code` to a dictionary key and renders that. It never renders `message` directly to the user (UI-1). `message` and `hint` exist for developers, logs and agents.
 
 ## Resources and URLs
@@ -90,6 +92,7 @@ The web app maps `code` to a dictionary key and renders that. It never renders `
 - Base path `/v1`. Internal, service-to-service routes live under `/v1/internal`.
 - Resources are plural nouns: `/v1/transactions`, `/v1/wallets`.
 - The workspace is never in the path. It comes from the JWT (AUTH-4). `/v1/transactions` means "transactions of the workspace this token is scoped to".
+- Nor in the body or the query. A request whose JSON body has a top-level `workspace_id`, or whose query string has one, is refused with `WORKSPACE_ID_NOT_ALLOWED` before any handler runs, rather than the field being silently ignored, so a client that thinks it chose a workspace finds out. One layer does this for every protected route (`auth/workspace_param.rs`). Two routes are registered outside it, because naming a workspace is their job and each checks the name against the membership row: `POST /v1/auth/switch-workspace` and the internal `POST /v1/internal/tools/execute` (D4). An MCP tool call's `workspace_id` argument is nested in the JSON-RPC `params`, so the layer does not see it; the MCP service checks it against the token's grant (D106). `workspace_ids` (plural), the set an MCP token is granted, is a different field and is allowed.
 - Sub-resources nest one level at most: `/v1/transactions/{id}/items/{item_id}`.
 - Actions that are not CRUD use a verb segment on the collection: `/v1/transactions/export`, `/v1/transactions/bulk`, `/v1/auth/switch-workspace`.
 
@@ -134,6 +137,7 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `NO_WORKSPACE` | 403 | A session with no workspace yet, on a route that reads or writes one (D109) |
 | `LAST_OWNER` | 409 | Removing or demoting the only owner (WS-4) |
 | `INVITE_INVALID` | 404 | Unknown, already accepted, or expired invite token |
+| `WORKSPACE_ID_NOT_ALLOWED` | 400 | A body or query string named `workspace_id`. The workspace comes from the token (AUTH-4) |
 
 ### Validation and general
 
@@ -164,6 +168,24 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `TRANSFER_AMOUNT_REQUIRED` | 422 | `to_amount` missing on a transfer, or set on a non-transfer (TXN-18) |
 | `WALLET_CURRENCY_LOCKED` | 409 | Changing a wallet's currency once it has a live transaction (WAL-6) |
 | `WORKSPACE_CURRENCY_LOCKED` | 409 | Changing the workspace currency once any transaction exists (WAL-6) |
+| `ID_TAKEN` | 409 | A create's client `id` already names a row the caller cannot have (D114) |
+| `STALE` | 409 | `If-Match` no longer matches the row, or the row is deleted; `details.current` holds the row or null (D115) |
+| `PAYMENT_TRANSACTION_LOCKED` | 409 | A change to the amount, wallet, type, destination wallet, original amount or currency, or rate of a debt payment's transaction. Change the payment instead; line items stay editable (DEBT-8, D121) |
+
+### Debts and contacts
+
+| Code | Status | Meaning |
+|---|---|---|
+| `CONTACT_NOT_FOUND` | 404 | Unknown contact in this workspace |
+| `CONTACT_HAS_DEBTS` | 409 | Delete blocked, a live debt names the contact, paid or not (CON-3) |
+| `CONTACT_MERGE_SELF` | 422 | A merge whose `into_id` is the contact itself (CON-4) |
+| `DEBT_NOT_FOUND` | 404 | Unknown debt in this workspace |
+| `PAYMENT_NOT_FOUND` | 404 | Unknown payment, or one of another debt |
+| `DEBT_HAS_PAYMENTS` | 409 | Delete, or a change of `type` or `currency_code`, blocked while a live payment exists (DEBT-2, DEBT-3) |
+| `AMOUNT_BELOW_PAID` | 422 | A debt amount below what is already paid (DEBT-2) |
+| `PAYMENT_EXCEEDS_REMAINING` | 422 | A payment above the debt's remaining amount, or any payment on a paid debt (DEBT-4) |
+| `BULK_PAY_CURRENCY_MISMATCH` | 422 | Bulk pay through a wallet with a debt in another currency (DEBT-6) |
+| `SPLIT_SOURCE_NOT_EXPENSE` | 422 | A split whose source transaction is not a live expense (DEBT-10) |
 | `WORKSPACE_CURRENCY_CHANGED` | 409 | A transaction write whose rate was resolved before a currency conversion committed. Retry (D105) |
 | `MCP_TOKEN_INVALID` | 401 | An MCP token that is unknown, revoked or expired (D106) |
 | `FX_RATE_UNAVAILABLE` | 503 | No rate could be resolved: the source did not answer and no cached rate has ever existed for this pair. The user may still enter one by hand (TXN-22) |
@@ -179,6 +201,8 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `UNSUPPORTED_FILE_TYPE` | 415 | Not JPEG, PNG, WebP or PDF |
 | `FILE_NOT_FOUND` | 404 | Unknown file in this workspace |
 | `THUMBNAIL_UNAVAILABLE` | 404 | The file exists but no preview can be made from it (a PDF, or bytes that do not decode) (D91) |
+| `SPREADSHEET_UNREADABLE` | 422 | The import file is not a readable `.xlsx`: not a zip, a corrupt package, or no worksheet (D111) |
+| `SPREADSHEET_TOO_LARGE` | 413 | The import spreadsheet is over a bound: 512 KB, 32 MB unpacked, a million shared strings, 100 columns or 5,000 rows (D111) |
 
 ### Transport
 
@@ -245,7 +269,8 @@ A client that parses money into a floating point number is a bug, in any languag
 | `X-Owe-Request-Id` | in and out | A ULID, unique per message. Doubles as the envelope's `request_id` |
 | `X-Owe-Timestamp` | in | Unix seconds, within 120 seconds of server time |
 | `X-Owe-Query` | in | The encrypted query string. Required even when empty |
-| `Idempotency-Key` | in | Optional on create endpoints. A repeat within 24 hours returns the first result |
+| `Idempotency-Key` | in | Superseded by D114 and never built. A create that must be safe to repeat takes a client `id` instead |
+| `If-Match` | in | Optional on `PATCH` of transactions, wallets, categories, contacts and debts: the `updated_at` the client last saw (D115) |
 | `Retry-After` | out | Set on 429 |
 
 ## Rate limits
@@ -268,8 +293,8 @@ Exceeding a limit returns `RATE_LIMITED` with `Retry-After`.
 ## Idempotency
 
 - `GET` and `DELETE` are idempotent by nature. Deleting an already-deleted row returns 204.
-- `POST` creates accept `Idempotency-Key`. The key, the route and the caller's workspace form the cache key, held for 24 hours.
-- `PATCH` is last-write-wins. There is no optimistic concurrency header; the only contended rows are wallet balances, and those are protected by row locks, not by the client (D13).
+- ~~`POST` creates accept `Idempotency-Key`.~~ Superseded by D114 before it was built. `POST /v1/transactions`, `/v1/wallets`, `/v1/categories`, `/v1/contacts`, `/v1/debts` and `/v1/debts/{id}/payments` accept an optional client `id` (a CUID2). A repeat with an id that already names a row in the caller's workspace answers that row with 200 and changes nothing: no second balance change, no second audit row. An id that names a row in another workspace, or a different kind of row, answers `409 ID_TAKEN`.
+- `PATCH` is last-write-wins unless the request carries `If-Match` (D115). With it, on transactions, wallets, categories, contacts and debts, a row whose `updated_at` differs, or that is soft-deleted, answers `409 STALE` with the current row (null when deleted) in `error.details.current`. Wallet balances are still protected by row locks, not by the client (D13).
 
 ## Related docs
 

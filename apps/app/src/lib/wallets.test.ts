@@ -57,6 +57,7 @@ describe('groupWallets', () => {
 		expect(grouped[0].unconverted).toBe(1);
 	});
 
+	// WAL-2
 	it('should skip a wallet that does not count towards totals', () => {
 		const grouped = groupWallets(
 			[wallet({ group_id: 'g1', is_included_in_totals: false })],

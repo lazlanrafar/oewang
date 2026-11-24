@@ -150,6 +150,14 @@
 	let rowCategory = $state<Record<string, string>>({});
 	let rowWallet = $state<Record<string, string>>({});
 
+	// An in-cell pick shows at once, until the page's reload brings the saved
+	// rows: then the rows speak, so a change the API refused reverts.
+	$effect(() => {
+		void rows;
+		rowCategory = {};
+		rowWallet = {};
+	});
+
 	/**
 	 * Column widths, which the handles on the header edges change.
 	 *
@@ -582,7 +590,7 @@
 		{#snippet groupRow({ key, rows: dayRows, collapsed, toggle })}
 			<button
 				type="button"
-				class="text-subtle text-small flex items-center gap-1"
+				class="text-subtle text-small flex min-w-0 items-center gap-1 truncate"
 				aria-expanded={!collapsed}
 				onclick={toggle}
 			>
@@ -593,8 +601,8 @@
 				{/if}
 				{dayLabel(key)}
 			</button>
-			<span class="text-green text-small ml-auto font-mono">{dayTotal(dayRows, 'in')}</span>
-			<span class="text-red text-small font-mono">{dayTotal(dayRows, 'out')}</span>
+			<span class="text-green text-small ml-auto shrink-0 font-mono whitespace-nowrap">{dayTotal(dayRows, 'in')}</span>
+			<span class="text-red text-small shrink-0 font-mono whitespace-nowrap">{dayTotal(dayRows, 'out')}</span>
 		{/snippet}
 
 		{#snippet empty()}

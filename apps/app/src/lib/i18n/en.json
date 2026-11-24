@@ -28,7 +28,9 @@
 		"vault": "Vault",
 		"database_group": "Database",
 		"rates": "Currency rates",
-		"items": "Items"
+		"items": "Items",
+		"debts": "Debts",
+		"contacts": "Contacts"
 	},
 	"common": {
 		"loading": "Loading",
@@ -51,6 +53,7 @@
 		"name": "Name",
 		"create": "Create",
 		"create_named": "Create “{name}”",
+		"resize_column": "Resize {name}",
 		"saving": "Saving",
 		"view": "View"
 	},
@@ -276,7 +279,7 @@
 		"creating": "Creating",
 		"or": "or",
 		"passkey_sign_in": "Sign in with a passkey",
-		"passkey_waiting": "Waiting for your passkey\u2026",
+		"passkey_waiting": "Waiting for your passkey…",
 		"passkey_failed": "That passkey did not sign you in. Try again, or use your password.",
 		"passkey_unsupported": "This browser cannot use passkeys. Sign in with your password."
 	},
@@ -335,8 +338,23 @@
 		"ai_unavailable": "The assistant could not be reached. Everything here still works by hand.",
 		"extraction_no_answer": "The receipt reader didn't answer in time, so this file wasn't read. It may be perfectly clear: try again in a moment, or enter it by hand.",
 		"receipt_unreadable": "That image could not be read as a receipt.",
+		"spreadsheet_unreadable": "That file could not be read as an .xlsx spreadsheet. Save it as .xlsx again, or export it as CSV.",
+		"workspace_id_not_allowed": "That request named a workspace itself. Reload the page and try again.",
+		"spreadsheet_too_large": "That spreadsheet is too large: up to 512 KB, 5,000 rows and 100 columns. Split it, or export it as CSV.",
 		"telegram_disabled": "Telegram is not set up on this server yet.",
-		"workspace_currency_changed": "The workspace currency was just converted. Try again."
+		"workspace_currency_changed": "The workspace currency was just converted. Try again.",
+		"contact_not_found": "That contact no longer exists.",
+		"contact_has_debts": "This contact still has debts. Merge it into another contact instead.",
+		"contact_merge_self": "Pick a different contact to merge into.",
+		"debt_not_found": "That debt no longer exists.",
+		"payment_not_found": "That payment no longer exists.",
+		"debt_has_payments": "This debt has payments. Cancel them first.",
+		"amount_below_paid": "The amount cannot be less than what is already paid.",
+		"payment_exceeds_remaining": "The payment is more than what remains on the debt.",
+		"bulk_pay_currency_mismatch": "Every debt must be in the account's currency.",
+		"split_source_not_expense": "Only an expense can be split.",
+		"payment_transaction_locked": "This transaction pays a debt. Change its amount, account or type from the debt instead.",
+		"foreign_entry_same_wallet": "That account already holds the currency this was entered in. Open the transaction to change its account."
 	},
 	"style": {
 		"title": "Design system",
@@ -419,7 +437,7 @@
 		"usage_title": "Usage",
 		"usage_description": "What this workspace stores and what the assistant has spent. Recorded and shown, with no limit for now.",
 		"usage_storage": "Storage",
-		"usage_storage_detail": "{count} files in the vault",
+		"usage_storage_detail": "{count} {count|file|files} in the vault",
 		"usage_tokens_month": "AI tokens this month",
 		"usage_tokens_total": "AI tokens, all time",
 		"usage_tokens_detail": "{input} in · {output} out",
@@ -508,7 +526,7 @@
 		"currency_convert_confirm_title": "Convert the workspace to {to}?",
 		"currency_convert_confirm_body": "Every transaction and budget is recalculated at 1 {from} = {rate} {to}, including those from before today. This cannot be undone exactly. Type {to} to confirm.",
 		"currency_convert_confirm_label": "Type {to} to confirm",
-		"currency_convert_done": "Converted to {to}. {count} transactions and {budgets} budgets recalculated."
+		"currency_convert_done": "Converted to {to}. {count} {count|transaction|transactions} and {budgets} {budgets|budget|budgets} recalculated."
 	},
 	"txn": {
 		"search_placeholder": "Search transactions",
@@ -540,6 +558,7 @@
 		"created_named": "“{name}” created",
 		"deleted": "Transaction deleted.",
 		"delete_confirm": "Delete this transaction? The balance it moved is put back.",
+		"delete_confirm_payment": "Delete this transaction? The balance it moved is put back, and its payment on {name}'s debt is cancelled, so the debt is owed again.",
 		"export": "Export",
 		"import": "Import",
 		"bulk_applied": "Applied.",
@@ -564,11 +583,16 @@
 		"form_create": "Create transaction",
 		"form_save": "Save changes",
 		"receipt": "Scan a receipt",
-		"receipt_hint": "A photo or a PDF. The assistant reads it and you confirm what it found."
+		"receipt_hint": "A photo or a PDF. The assistant reads it and you confirm what it found.",
+		"related_debts": "Related Debts",
+		"create_debt": "Create debt",
+		"unknown_contact": "Unknown",
+		"payment_locked": "This transaction pays a debt with {name}. Its amount, account and type change from the debt.",
+		"open_debt": "Open the debt"
 	},
 	"import": {
 		"title": "Import transactions",
-		"subtitle": "A CSV from your bank. Four steps, and nothing is written until the last one.",
+		"subtitle": "A CSV or .xlsx from your bank. Four steps, and nothing is written until the last one.",
 		"step_file": "File",
 		"step_columns": "Columns",
 		"step_values": "Values",
@@ -577,7 +601,8 @@
 		"wallet_hint": "Every row lands in this wallet, in its currency.",
 		"file": "File",
 		"search_columns": "Search columns",
-		"file_hint": "CSV, semicolon or tab separated. Read in your browser; only the text crosses the wire.",
+		"file_hint": "CSV, semicolon or tab separated, or an Excel .xlsx. A CSV is read in your browser; a spreadsheet is read on the server, first sheet only.",
+		"reading_spreadsheet": "Reading the spreadsheet.",
 		"read_summary": "{name}: {rows} row(s) read.",
 		"mapping_pending": "Asking the assistant which column holds what.",
 		"mapping_failed": "The assistant could not propose a mapping. Set the columns yourself; nothing else changes.",
@@ -677,6 +702,7 @@
 	"accounts": {
 		"title": "Accounts",
 		"search_placeholder": "Search accounts",
+		"name_placeholder": "Cash",
 		"add": "Add account",
 		"edit": "Edit account",
 		"new": "New account",
@@ -715,7 +741,14 @@
 		"deleted": "Account deleted",
 		"default_set": "Default account changed",
 		"group_updated": "Group changed",
-		"group_created": "Group created"
+		"group_created": "Group created",
+		"manage_groups": "Manage groups",
+		"groups_title": "Account groups",
+		"groups_description": "Groups order the accounts table and its filter.",
+		"groups_empty": "No groups yet.",
+		"group_name_placeholder": "Savings",
+		"group_deleted": "Group deleted",
+		"order_saved": "Order saved"
 	},
 	"budget": {
 		"search_placeholder": "Search categories",
@@ -827,8 +860,6 @@
 		"card_income": "Total income",
 		"card_expense": "Total expenses",
 		"card_net": "Net income",
-		"card_top_expense": "Top expense",
-		"card_top_expense_none": "No recorded expenses",
 		"card_burn": "Average monthly burn",
 		"card_balance": "Tracked balance",
 		"card_balance_hint": "{count} included accounts",
@@ -859,7 +890,11 @@
 		"chart_burn": "Burn rate",
 		"chart_empty": "Nothing recorded in this range.",
 		"starting": "Starting a conversation",
-		"start_failed": "The conversation could not be started. Try again."
+		"start_failed": "The conversation could not be started. Try again.",
+		"chip_debts": "Debt balance",
+		"ask_debts": "Show my outstanding debts and receivables, including who owes whom and the remaining balances.",
+		"card_debts": "Debt balance",
+		"card_debts_hint": "{count} open {count|balance|balances}"
 	},
 	"vault": {
 		"title": "Vault",
@@ -881,7 +916,7 @@
 		},
 		"storage": {
 			"usage": "{used} used",
-			"files": "{count} files",
+			"files": "{count} {count|file|files}",
 			"title": "Vault Storage"
 		},
 		"details": {
@@ -926,7 +961,7 @@
 		"delete_confirm": {
 			"title": "Delete {name}?",
 			"description": "The file is removed from the vault.",
-			"used": "It is attached to {count} transactions and will be removed from them too.",
+			"used": "It is attached to {count} {count|transaction|transactions} and will be removed from them too.",
 			"confirm": "Delete"
 		},
 		"toasts": {
@@ -1041,7 +1076,7 @@
 			"password_title": "Change password",
 			"current_label": "Current password",
 			"new_label": "New password",
-			"new_hint": "At least 8 characters.",
+			"new_hint": "At least 10 characters.",
 			"change": "Change password",
 			"changed": "Password changed. Every other session was signed out.",
 			"sessions_title": "Active sessions",
@@ -1129,7 +1164,7 @@
 	},
 	"onboarding": {
 		"sync_title": "Opening your workspace",
-		"redirecting": "Redirecting\u2026",
+		"redirecting": "Redirecting…",
 		"create_page_title": "Create workspace",
 		"signed_in_as": "Signed in as {email}"
 	},
@@ -1151,6 +1186,209 @@
 		"allow": "Allow",
 		"deny": "Deny",
 		"invalid_title": "This connection request cannot be used",
-		"invalid_body": "The app sent an incomplete or unknown request. Start connecting again from the app."
+		"invalid_body": "The app sent an incomplete or unknown request. Start connecting again from the app.",
+		"returning": "Taking you back to {host}.",
+		"continue": "Continue to {host}"
+	},
+	"debts": {
+		"search_placeholder": "Search debts...",
+		"status_label": "Status",
+		"type_label": "Type",
+		"add_button": "Add Debt",
+		"owed_to_you": "Owed to You",
+		"you_owe_card": "You Owe",
+		"net_position": "Net Position",
+		"overdue": "Overdue",
+		"empty": {
+			"title": "No debts found",
+			"description": "Keep track of money you owe or are owed. Add your first debt to get started.",
+			"action": "Add First Debt"
+		},
+		"empty_filtered": {
+			"title": "No debts match",
+			"description": "Try another name, status or type, or clear the filters.",
+			"action": "Clear filters"
+		},
+		"columns": {
+			"contact": "Contact",
+			"due_date": "Due Date",
+			"status": "Status",
+			"type": "Type",
+			"description": "Description",
+			"summary": "Summary",
+			"actions": "Actions",
+			"select_all": "Select every row",
+			"select_row": "Select {name}"
+		},
+		"statuses": {
+			"unpaid": "Unpaid",
+			"partial": "Partial",
+			"paid": "Paid"
+		},
+		"types": {
+			"receivable": "Receivable",
+			"payable": "Payable",
+			"you_owe": "You owe",
+			"you_are_owed": "You are owed"
+		},
+		"actions": {
+			"view_details": "View details",
+			"edit": "Edit",
+			"delete": "Delete",
+			"open_menu": "Open menu"
+		},
+		"toasts": {
+			"deleted": "Debt deleted successfully",
+			"created": "Debt created successfully",
+			"updated": "Debt updated successfully",
+			"payment_recorded": "Payment recorded",
+			"payment_cancelled": "Payment cancelled",
+			"settled": "Successfully settled debts",
+			"bulk_deleted": "Successfully deleted {count} debts"
+		},
+		"bulk": {
+			"selected": "{count} selected",
+			"deselect": "Deselect",
+			"delete_title": "Delete {count} debts?",
+			"delete_description": "Are you sure you want to delete {count} selected debts? This action cannot be undone.",
+			"delete_tooltip": "Delete selected",
+			"close": "Close"
+		},
+		"bulk_settlement": {
+			"title": "Bulk Settlement",
+			"no_outstanding": "No outstanding debts for this contact.",
+			"select_all": "Select all",
+			"pay_from_account": "Pay from account",
+			"total_to_settle": "Total to settle",
+			"settle_button": "Settle All",
+			"selected_count": "{count} {count|debt|debts} selected"
+		},
+		"confirmations": {
+			"delete_title": "Delete this debt?",
+			"delete_description": "This action cannot be undone. The debt record will be removed.",
+			"cancel_payment_title": "Cancel this payment?",
+			"cancel_payment_description": "The payment and the transaction it wrote are removed, and the amount goes back on the debt."
+		},
+		"details": {
+			"title": "Debt Details",
+			"summary": "Summary",
+			"original_amount": "Original Amount",
+			"paid_amount": "Paid Amount",
+			"due_date": "Due Date",
+			"no_due_date": "No due date",
+			"from_transaction": "From Transaction",
+			"notes": "Notes",
+			"settled": "Settled",
+			"record_payment": "Record Payment",
+			"settle_all": "Settle all",
+			"payments": "Payments",
+			"no_wallet": "No account",
+			"cancel_payment": "Cancel payment",
+			"delete": "Delete debt"
+		},
+		"form": {
+			"add_title": "New Debt",
+			"edit_title": "Edit Debt",
+			"description_sr": "Money owed between you and one contact.",
+			"type_payable": "You Owe",
+			"type_receivable": "You Are Owed",
+			"contact_label": "Contact",
+			"contact_placeholder": "Select contact",
+			"contact_description": "Who is involved in this debt?",
+			"amount_label": "Amount",
+			"amount_description": "The total amount of the debt.",
+			"currency_label": "Currency",
+			"notes_label": "Description",
+			"notes_placeholder": "What is this debt for?",
+			"due_date_label": "Due Date",
+			"due_date_placeholder": "Select date",
+			"due_date_description": "Optional deadline for settlement.",
+			"from_transaction": "From transaction: {name}",
+			"submit": "Save"
+		},
+		"payment": {
+			"title": "Record Payment",
+			"paying_to_from": "Paying to/from",
+			"remaining_balance": "Remaining balance",
+			"amount_to_pay": "Amount to Pay",
+			"amount_to_pay_description": "The amount being settled.",
+			"account_label": "Account",
+			"account_placeholder": "Select account",
+			"account_description": "Select the account where the transaction occurs. Leave it empty to record the payment without moving money.",
+			"date_label": "Date",
+			"rate_label": "Rate, 1 {from} to {to}",
+			"rate_hint": "That figure is what leaves or reaches the account. Edit the rate until it matches what really moved.",
+			"submit": "Save Payment"
+		},
+		"left_out": "{count} {count|currency|currencies} left out, no rate"
+	},
+	"contacts": {
+		"search_placeholder": "Search contacts...",
+		"add_button": "New Contact",
+		"summary": {
+			"total": "Total Contacts",
+			"added_this_month": "Added This Month",
+			"with_email": "With Email",
+			"with_phone": "With Phone"
+		},
+		"columns": {
+			"name": "Name",
+			"email": "Email",
+			"phone": "Phone",
+			"actions": "Actions"
+		},
+		"empty": {
+			"title": "No contacts yet",
+			"description": "Add your first contact to get started.",
+			"action": "Add First Contact"
+		},
+		"empty_filtered": {
+			"title": "No contacts match",
+			"description": "Try another name, email or phone, or clear the search.",
+			"action": "Clear search"
+		},
+		"details": {
+			"title": "Contact Details",
+			"quick_edit": "Quick Edit",
+			"view_details": "View Details",
+			"no_email": "No email available",
+			"activity_history": "Activity History",
+			"no_history": "No debt history",
+			"progress": "Progress",
+			"settled": "settled",
+			"notes": "Notes",
+			"edit_contact": "Edit Contact",
+			"delete_contact": "Delete Contact",
+			"merge_contact": "Merge into...",
+			"delete_confirm_title": "Delete contact?",
+			"delete_confirm_desc": "This action will remove this contact. A contact with debts cannot be deleted; merge it instead."
+		},
+		"form": {
+			"add_title": "New Contact",
+			"edit_title": "Edit Contact",
+			"description_sr": "Someone a debt can name.",
+			"name_label": "Name",
+			"name_placeholder": "John Doe",
+			"email_label": "Email",
+			"email_placeholder": "john@example.com",
+			"phone_label": "Phone",
+			"phone_placeholder": "+1 234 567 890",
+			"notes_label": "Notes",
+			"notes_placeholder": "Additional information...",
+			"save": "Save Changes",
+			"create": "Create Contact"
+		},
+		"merge": {
+			"title": "Merge {name} into...",
+			"description": "Every debt of {name} moves to the contact you pick, and {name} is removed. Use it to join two entries for the same person.",
+			"placeholder": "Select contact",
+			"confirm": "Merge"
+		},
+		"toasts": {
+			"created": "Contact created successfully",
+			"updated": "Contact updated successfully",
+			"deleted": "Contact deleted successfully",
+			"merged": "Contacts merged"
+		}
 	}
 }

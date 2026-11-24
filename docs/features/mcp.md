@@ -36,7 +36,7 @@ For apps that sign in instead of taking a pasted token (claude.ai and ChatGPT co
 |---|---|---|
 | Discovery | `/.well-known/oauth-protected-resource[/mcp]`, `/.well-known/oauth-authorization-server` (app) | Built from the request's origin; `/mcp`'s 401 points at the first |
 | Registration | `POST /oauth/register` (app) → `/v1/oauth/register` | Public clients only (`none` auth). Redirect URIs: https, http to localhost/127.0.0.1/[::1], or an app's own scheme; never `javascript:`, `data:`, `file:` and the like. The name is the app's claim and the consent page says so |
-| Consent | `/oauth/authorize` (app page, session required) | Never redirects until the client exists and the redirect URI is one it registered, exactly. `response_type=code` and PKCE S256 are required. The person picks every workspace or some. Not frameable |
+| Consent | `/oauth/authorize` (app page, session required) | Never redirects until the client exists and the redirect URI is one it registered, exactly. `response_type=code` and PKCE S256 are required. The person picks every workspace or some. Not frameable. Allow and Deny answer with a page that navigates back to the app (meta refresh and a link), not a 303: browsers apply the page's `form-action 'self'` to where a form post is redirected |
 | Code | `/v1/oauth/authorize` | Single use, ten minutes, bound to client, redirect URI and challenge; stored as SHA-256 |
 | Token | `POST /oauth/token` (app, form or JSON) → `/v1/oauth/token` | The code is claimed in one statement before anything is compared, so a failed check spends it. Access token one hour, refresh token thirty days, rotated on every use; presenting a spent refresh token revokes the whole grant |
 
@@ -54,6 +54,8 @@ One registry in Rust (`mcp/tools/*.rs`). Every tool deserializes its arguments i
 | Wallets and groups | `list_wallets`, `get_wallet`, `create_wallet`, `update_wallet`, `set_default_wallet`, `adjust_wallet_balance`, `delete_wallet`, `list_wallet_groups`, `create_wallet_group`, `update_wallet_group`, `delete_wallet_group` |
 | Categories | `list_categories`, `create_category`, `update_category`, `delete_category` |
 | Budgets | `get_budget_status`, `create_budget`, `update_budget`, `delete_budget` |
+| Debts | `get_outstanding_debts`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` (DEBT-15, D120) |
+| Contacts | `list_contacts`, `create_contact`, `update_contact`, `delete_contact`, `merge_contacts` |
 | Reports | `get_overview`, `get_spending_analysis`, `get_income_summary`, `get_burn_rate` |
 | Database | `list_items`, `get_item_history`, `list_exchange_rates`, `list_currencies` |
 | Vault | `list_files`, `get_file` (metadata only), `update_file`, `delete_file` |
@@ -70,7 +72,7 @@ Deliberately not exposed: deleting a workspace, converting its currency, anythin
 
 Per token, per rolling minute, minted by the API (the client cannot reset it): 120 calls, 30 writes, 5 deletes. The amount ceiling of every write path still applies.
 
-Every delete is two calls. The first deletes nothing and answers `CONFIRMATION_REQUIRED`; the same call with `confirmed: true` within five minutes deletes. The challenge is keyed by token and the exact call. Tools carry `readOnlyHint` and `destructiveHint`, so clients ask the person before writing. The API cannot prove a human answered between the two calls; soft delete keeps every delete reversible, and the audit source `mcp` keeps it traceable.
+Every delete is two calls, and so are `merge_contacts` and `split_bill` (D122). The first deletes nothing and answers `CONFIRMATION_REQUIRED`; the same call with `confirmed: true` within five minutes deletes. The challenge is keyed by token and the exact call. Tools carry `readOnlyHint` and `destructiveHint`, so clients ask the person before writing. The API cannot prove a human answered between the two calls; soft delete keeps every delete reversible, and the audit source `mcp` keeps it traceable.
 
 ## Screens
 

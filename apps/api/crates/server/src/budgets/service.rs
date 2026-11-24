@@ -477,6 +477,7 @@ mod unit {
         ]
     }
 
+    /// BUD-2, BUD-5
     #[test]
     fn should_total_every_budget_and_name_the_ones_over() {
         let month = Month::parse("2026-11").unwrap();

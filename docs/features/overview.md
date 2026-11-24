@@ -17,7 +17,7 @@ The workspace's front page, ported from the old app's `overview`: a greeting, on
 | Route | `/overview`. `/` redirects here, keeping the query string |
 | Header | "Good afternoon, {first name}", read from the clock after mount; the range picker; the two tabs |
 | URL | `?tab=overview\|metrics` (default `overview`), `?from&to` (days, default the current month). A malformed or half range falls back to the default as a whole. The tab is written with shallow routing (`replaceState`): both tabs read the same report, so switching runs no load, and the URL still restores it |
-| Overview tab | Six cards, then seven prompt chips |
+| Overview tab | Six cards, then eight prompt chips |
 | Metrics tab | Income over time, expenses over time, income breakdown, expense breakdown, burn rate |
 | Composer | `ChatInput` in a `ChatDock`, sticky to the bottom of the shell's scroll box: the old composer, with the history list and the `/` shortcuts ([chat](chat.md#the-composer)). It folds as the page scrolls, unless it is in use |
 | Route group | `(dashboard)/(assistant)/` holds `/overview` and `/chat`, so one layout loads the conversation list for both |
@@ -29,13 +29,13 @@ Every money figure is computed by the API's report module (`server/src/reports`)
 | Card | Source |
 |---|---|
 | Total income, total expenses, net income | `income`, `expense`, `net` over the range, each with `comparison` against the period of equal length that ends the day before the range starts. Expenses going up shows red (`invert`) |
-| Top expense | The largest entry of `expense_categories`, not the "Other" bucket |
 | Average monthly burn | `average_expense`: expense over the range divided by every month the range touches, empty months included |
 | Tracked balance | Streamed: the page renders on the report and this card fills in when today's rates arrive, because a rate lookup can take a second. Not from the report. The wallets flagged "include in totals", converted to the workspace currency with today's rate, by `walletTotals` and `ledger.walletRates`, the same path the accounts page takes. A wallet with no rate is left out and the card says how many |
+| Debt balance | `net` from `GET /v1/debts/summary`: what is owed to the person minus what they owe, over unpaid and partial debts, converted to the workspace currency like tracked balance. The footer is the open count. Not range-bound: a debt is owed until it is paid (DEBT-13, D120) |
 
 The old cards showed the last month of the range under a label for the whole range. These cover the whole range, which is what the label says.
 
-Debt balance is not here: debts are a PRD non-goal. Budget usage is not here either: budgets came back with D103 on their own page, and a card for them here was not asked for.
+Top expense is not here either: the owner removed it on 2026-11-24 so the cards sit in a 3 by 2 grid; the Top expenses chip and the metrics tab's breakdown still answer it. Budget usage is not here: budgets came back with D103 on their own page, and a card for them here was not asked for.
 
 ## Charts
 

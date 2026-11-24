@@ -10,6 +10,8 @@
  * one.
  */
 
+import type { ParsedFile } from '$lib/csv';
+
 import { api, type Envelope } from './api';
 
 export type Role = 'owner' | 'admin' | 'member';
@@ -25,6 +27,8 @@ export type Wallet = {
 	is_included_in_totals: boolean;
 	is_default: boolean;
 	sort_order: number;
+	/** Any live transaction, which locks the currency (WAL-6). Null on a single-wallet read. */
+	has_transactions: boolean | null;
 	created_at: string;
 	updated_at: string;
 };
@@ -473,6 +477,22 @@ export function mapColumns(
 		body,
 		token,
 		signal
+	});
+}
+
+/**
+ * Step one of the wizard for an `.xlsx` (D111).
+ *
+ * The file is read by the API, never in the browser, and comes back in the
+ * shape `parseDelimited` makes of a CSV: column names and rows of cell text.
+ * The bytes travel as base64 inside the OWE1 envelope, as a vault chunk's do.
+ */
+export function readSpreadsheet(bytes: Uint8Array, token?: string) {
+	return api<ParsedFile>({
+		method: 'POST',
+		path: '/v1/transactions/import/xlsx',
+		body: { data: Buffer.from(bytes).toString('base64') },
+		token
 	});
 }
 

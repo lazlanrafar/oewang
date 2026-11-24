@@ -10,7 +10,7 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use oewang_db::{
-    repositories::{accounts, audit, categories, transactions as repo, vault, wallets},
+    repositories::{accounts, audit, categories, debts, transactions as repo, vault, wallets},
     PgPool,
 };
 use oewang_domain::{
@@ -26,7 +26,7 @@ use sqlx::{Postgres, Transaction};
 
 use crate::{
     audit::{log, snapshot, Actor},
-    fx,
+    fx, offline,
 };
 
 pub use oewang_db::repositories::transactions::{
@@ -79,7 +79,7 @@ pub struct TransactionInput<'a> {
 }
 
 /// Everything the service worked out before it opened a transaction.
-struct Prepared {
+pub(crate) struct Prepared {
     shape: TransactionShape,
     foreign: Option<ForeignEntry>,
     /// What the source wallet's balance is denominated in. Carried here
@@ -131,7 +131,7 @@ pub async fn list(
 }
 
 pub async fn find(pool: &PgPool, workspace_id: &str, id: &str) -> Result<TransactionListRow> {
-    repo::find_detail(pool, workspace_id, id)
+    repo::find_detail(pool, workspace_id, id, false)
         .await
         .map_err(internal)?
         .ok_or(AppError::TransactionNotFound)
@@ -192,6 +192,59 @@ pub async fn create_with_items(
     input: TransactionInput<'_>,
     items: &[ItemInput<'_>],
 ) -> Result<TransactionRow> {
+    insert_with_items(pool, actor, &cuid2::create_id(), input, items)
+        .await?
+        .ok_or_else(|| AppError::Internal(anyhow::anyhow!("a generated id was already taken")))
+}
+
+/// The create `POST /v1/transactions` runs: the row as the list reads it,
+/// and whether this call made it (D114).
+///
+/// With a client `id` that already names a transaction of this workspace,
+/// live or deleted, nothing is written and that row is the answer: a replay
+/// after a lost response must not book the money twice, nor bring back a
+/// row deleted in between. It is checked before the body is, so a replay
+/// still answers after the wallet it names is gone.
+pub async fn create_with_id(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: Option<&str>,
+    input: TransactionInput<'_>,
+    items: &[ItemInput<'_>],
+) -> Result<(TransactionListRow, bool)> {
+    if let Some(id) = id {
+        offline::validate_id(id)?;
+        if offline::is_repeat(pool, actor.workspace_id, offline::TRANSACTION, id).await? {
+            return Ok((repeated(pool, actor.workspace_id, id).await?, false));
+        }
+    }
+
+    let id = id.map_or_else(cuid2::create_id, str::to_string);
+    match insert_with_items(pool, actor, &id, input, items).await? {
+        Some(_) => Ok((find(pool, actor.workspace_id, &id).await?, true)),
+        // A concurrent create with the same id committed first.
+        None => Ok((repeated(pool, actor.workspace_id, &id).await?, false)),
+    }
+}
+
+/// The row a repeated create names. `None` means the id is held by another
+/// workspace, which is answered without the row.
+async fn repeated(pool: &PgPool, workspace_id: &str, id: &str) -> Result<TransactionListRow> {
+    repo::find_detail(pool, workspace_id, id, true)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::IdTaken)
+}
+
+/// `None` when `id` is already taken: the database transaction is dropped,
+/// which rolls back the balance it had moved.
+async fn insert_with_items(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    id: &str,
+    input: TransactionInput<'_>,
+    items: &[ItemInput<'_>],
+) -> Result<Option<TransactionRow>> {
     for item in items {
         validate_item(item)?;
     }
@@ -199,17 +252,9 @@ pub async fn create_with_items(
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
-    ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
-
-    let moves = net(prepared.shape.effect());
-    apply_moves(&mut tx, actor.workspace_id, &moves).await?;
-
-    let row = repo::insert(
-        &mut *tx,
-        new_row(&cuid2::create_id(), actor, &input, &prepared, None),
-    )
-    .await
-    .map_err(internal)?;
+    let Some(row) = write_row(&mut tx, actor, id, &input, &prepared).await? else {
+        return Ok(None);
+    };
 
     sync_attachments(&mut tx, actor.workspace_id, &row.id, input.attachment_ids).await?;
 
@@ -249,6 +294,54 @@ pub async fn create_with_items(
     .await?;
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(pool, actor.workspace_id, [row.date]).await;
+    Ok(Some(row))
+}
+
+/// Lock the wallets, move the balances and insert the row, on the caller's
+/// transaction. `None` when `id` is already taken.
+async fn write_row(
+    tx: &mut Transaction<'_, Postgres>,
+    actor: Actor<'_>,
+    id: &str,
+    input: &TransactionInput<'_>,
+    prepared: &Prepared,
+) -> Result<Option<TransactionRow>> {
+    ensure_currency(tx, actor.workspace_id, &prepared.workspace_currency).await?;
+
+    // Wallets are locked before the insert, never after: the insert's
+    // foreign keys take a share lock on them, and two creates that each hold
+    // that share lock and then ask for the update lock deadlock.
+    let moves = net(prepared.shape.effect());
+    apply_moves(tx, actor.workspace_id, &moves).await?;
+
+    repo::insert(&mut **tx, new_row(id, actor, input, prepared, None))
+        .await
+        .map_err(internal)
+}
+
+/// A create inside someone else's database transaction: a debt payment
+/// writes its transaction and its payment row together, or neither (D121).
+/// `prepared` comes from [`prepare`], run before that transaction opened.
+pub(crate) async fn write_created(
+    tx: &mut Transaction<'_, Postgres>,
+    actor: Actor<'_>,
+    input: &TransactionInput<'_>,
+    prepared: &Prepared,
+) -> Result<TransactionRow> {
+    let row = write_row(tx, actor, &cuid2::create_id(), input, prepared)
+        .await?
+        .ok_or_else(|| AppError::Internal(anyhow::anyhow!("a generated id was already taken")))?;
+    log(
+        tx,
+        actor,
+        "transaction.created",
+        ENTITY,
+        &row.id,
+        None,
+        snapshot(&row)?,
+    )
+    .await?;
     Ok(row)
 }
 
@@ -259,21 +352,36 @@ pub async fn create_with_items(
 /// All nine type transitions, plus a changed amount, wallet or destination,
 /// go through this one path: there is no per-transition branch, because
 /// reversal is the negation of an effect and nothing else.
+///
+/// `if_match` is the `updated_at` the client last read (D115). It is checked
+/// on the row read here and again by the update statement under its row
+/// lock, which also proves the balance reversed below is the row's current
+/// effect. Without it the edit is last-write-wins, as it always was.
 pub async fn update(
     pool: &PgPool,
     actor: Actor<'_>,
     id: &str,
     input: TransactionInput<'_>,
+    if_match: Option<DateTime<Utc>>,
 ) -> Result<TransactionRow> {
+    refuse_payment_move(pool, actor.workspace_id, id, &input).await?;
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
     ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
 
-    let before = repo::find(&mut *tx, actor.workspace_id, id)
+    let Some(before) = repo::find(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
-        .ok_or(AppError::TransactionNotFound)?;
+    else {
+        let not_found = AppError::TransactionNotFound;
+        let kind = offline::TRANSACTION;
+        return Err(
+            offline::missing(&mut *tx, actor.workspace_id, kind, id, if_match, not_found).await,
+        );
+    };
+    offline::check(if_match, before.updated_at)?;
+    refuse_payment_change(&mut tx, actor.workspace_id, &before, &prepared).await?;
 
     let old_effect = effect_of(&before)?;
     let moves = net(reverse(&old_effect)
@@ -286,10 +394,14 @@ pub async fn update(
         actor.workspace_id,
         id,
         new_row(id, actor, &input, &prepared, before.fingerprint.as_deref()),
+        if_match,
     )
     .await
     .map_err(internal)?
-    .ok_or(AppError::TransactionNotFound)?;
+    .ok_or(match if_match {
+        Some(_) => AppError::Stale(None),
+        None => AppError::TransactionNotFound,
+    })?;
 
     sync_attachments(&mut tx, actor.workspace_id, id, input.attachment_ids).await?;
 
@@ -305,7 +417,70 @@ pub async fn update(
     .await?;
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(pool, actor.workspace_id, [after.date]).await;
     Ok(after)
+}
+
+/// The same refusal, before `prepare`: moving a payment to another wallet
+/// or direction would otherwise fail its validation (a foreign entry in the
+/// new wallet's own currency) and the client would learn the wrong reason.
+async fn refuse_payment_move(
+    pool: &PgPool,
+    workspace_id: &str,
+    id: &str,
+    input: &TransactionInput<'_>,
+) -> Result<()> {
+    let Some(before) = repo::find(pool, workspace_id, id).await.map_err(internal)? else {
+        return Ok(());
+    };
+    let moved = before.wallet_id != input.wallet_id
+        || before.r#type != input.kind.as_str()
+        || before.to_wallet_id.as_deref() != input.to_wallet_id
+        || before.original_currency_code.as_deref() != input.original_currency_code;
+    if !moved {
+        return Ok(());
+    }
+    let payments = debts::payments_for_transactions(pool, workspace_id, &[before.id])
+        .await
+        .map_err(internal)?;
+    if payments.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::PaymentTransactionLocked)
+    }
+}
+
+/// A debt payment's transaction keeps what the payment is: its money, its
+/// wallet and its direction. Name, category, date, items and attachments
+/// stay editable (DEBT-8, D121).
+async fn refuse_payment_change(
+    tx: &mut Transaction<'_, Postgres>,
+    workspace_id: &str,
+    before: &TransactionRow,
+    prepared: &Prepared,
+) -> Result<()> {
+    let foreign = prepared.foreign.as_ref();
+    let unchanged = before.amount == prepared.shape.amount
+        && before.wallet_id == prepared.shape.wallet_id
+        && before.r#type == prepared.shape.kind.as_str()
+        && before.to_wallet_id == prepared.shape.to_wallet_id
+        && before.original_amount == foreign.map(|f| f.original_amount)
+        && before.original_currency_code.as_deref()
+            == foreign.map(|f| f.original_currency_code.as_str())
+        && before.exchange_rate == foreign.map(|f| f.exchange_rate);
+    if unchanged {
+        return Ok(());
+    }
+
+    let ids = [before.id.clone()];
+    let payments = debts::payments_for_transactions(&mut **tx, workspace_id, &ids)
+        .await
+        .map_err(internal)?;
+    if payments.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::PaymentTransactionLocked)
+    }
 }
 
 /// Make the join rows match the set the client sent (TXN-13).
@@ -353,21 +528,37 @@ async fn sync_attachments(
 /// Soft delete, reversing the balance it moved (TXN-5).
 pub async fn delete(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<()> {
     let mut tx = pool.begin().await.map_err(internal)?;
+    delete_in(&mut tx, actor, id).await?;
+    tx.commit().await.map_err(internal)?;
+    Ok(())
+}
 
-    let before = repo::find(&mut *tx, actor.workspace_id, id)
+/// The delete on the caller's transaction. Cancelling a debt payment comes
+/// through here too, so a payment and its transaction always go together.
+pub(crate) async fn delete_in(
+    tx: &mut Transaction<'_, Postgres>,
+    actor: Actor<'_>,
+    id: &str,
+) -> Result<()> {
+    let before = repo::find(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
         .ok_or(AppError::TransactionNotFound)?;
 
     let moves = net(reverse(&effect_of(&before)?));
-    apply_moves(&mut tx, actor.workspace_id, &moves).await?;
+    apply_moves(tx, actor.workspace_id, &moves).await?;
 
-    repo::soft_delete(&mut *tx, actor.workspace_id, id)
+    // A second delete of the same row waited on the wallet lock and finds it
+    // already gone: refusing here rolls back the balance it just reversed.
+    let deleted = repo::soft_delete(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?;
+    if deleted == 0 {
+        return Err(AppError::TransactionNotFound);
+    }
 
     log(
-        &mut tx,
+        tx,
         actor,
         "transaction.deleted",
         ENTITY,
@@ -377,8 +568,7 @@ pub async fn delete(pool: &PgPool, actor: Actor<'_>, id: &str) -> Result<()> {
     )
     .await?;
 
-    tx.commit().await.map_err(internal)?;
-    Ok(())
+    crate::debts::service::release_transactions(tx, actor, &[id.to_string()]).await
 }
 
 // -------------------------------------------------------------------- bulk
@@ -484,7 +674,10 @@ pub async fn bulk_create(
                     new_row(&cuid2::create_id(), actor, input, &prepared, Some(&print)),
                 )
                 .await
-                .map_err(internal)?;
+                .map_err(internal)?
+                .ok_or_else(|| {
+                    AppError::Internal(anyhow::anyhow!("a generated id was already taken"))
+                })?;
 
                 log(
                     &mut tx,
@@ -512,11 +705,33 @@ pub async fn bulk_create(
     }
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(
+        pool,
+        actor.workspace_id,
+        inputs.iter().map(|input| input.date),
+    )
+    .await;
     Ok(outcome)
 }
 
 /// Transform spreadsheet rows and commit them (TXN-11, D28).
 ///
+/// Read an `.xlsx` into column names and rows of cell text (D111).
+///
+/// Nothing is written and nothing is parsed into a number: the rows go back
+/// to the wizard, which commits them through [`import_rows`] exactly as it
+/// commits a CSV's.
+pub async fn read_spreadsheet(
+    bytes: Vec<u8>,
+    row_limit: usize,
+) -> Result<oewang_domain::spreadsheet::Sheet> {
+    // Inflating a package and walking its XML is CPU work; it stays off the
+    // async workers.
+    tokio::task::spawn_blocking(move || oewang_domain::spreadsheet::read_xlsx(&bytes, row_limit))
+        .await
+        .map_err(|error| AppError::Internal(anyhow::anyhow!(error)))?
+}
+
 /// The rows arrive as they came out of the file, with a mapping of which
 /// column holds what. Everything numeric happens here, in code: the model
 /// mapped column names once and never saw a row, so it cannot have moved a
@@ -668,6 +883,12 @@ pub async fn bulk_update(
     }
 
     tx.commit().await.map_err(internal)?;
+    crate::push::service::budgets_after_write(
+        pool,
+        actor.workspace_id,
+        after.iter().map(|row| row.date),
+    )
+    .await;
     Ok(before.len())
 }
 
@@ -690,9 +911,14 @@ pub async fn bulk_delete(pool: &PgPool, actor: Actor<'_>, ids: &[String]) -> Res
     let moves = net(all);
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
 
-    repo::soft_delete_many(&mut *tx, actor.workspace_id, ids)
+    // Rows another delete took while this one waited on the wallet locks
+    // were reversed twice above; refusing rolls the whole selection back.
+    let deleted = repo::soft_delete_many(&mut *tx, actor.workspace_id, ids)
         .await
         .map_err(internal)?;
+    if deleted != rows.len() as u64 {
+        return Err(AppError::Stale(None));
+    }
 
     for row in &rows {
         log(
@@ -706,6 +932,9 @@ pub async fn bulk_delete(pool: &PgPool, actor: Actor<'_>, ids: &[String]) -> Res
         )
         .await?;
     }
+
+    let deleted: Vec<String> = rows.iter().map(|row| row.id.clone()).collect();
+    crate::debts::service::release_transactions(&mut tx, actor, &deleted).await?;
 
     tx.commit().await.map_err(internal)?;
     Ok(rows.len())
@@ -807,7 +1036,7 @@ fn quote(value: &str) -> String {
 /// Everything that can be worked out before the transaction opens,
 /// including the rate lookup, so the transaction holds its locks only for
 /// the writes.
-async fn prepare(
+pub(crate) async fn prepare(
     pool: &PgPool,
     workspace_id: &str,
     input: &TransactionInput<'_>,

@@ -31,6 +31,16 @@ pub enum Spend {
     Read,
     Write,
     Delete,
+    /// A write the person agrees to first, like a delete, counted as a
+    /// write: `split_bill`, which writes many rows in one call (D122).
+    Confirmed,
+}
+
+impl Spend {
+    /// Whether a call runs only as the second of two (CHAT-6's rule).
+    pub fn needs_confirmation(self) -> bool {
+        matches!(self, Spend::Delete | Spend::Confirmed)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -129,6 +139,7 @@ impl McpBudget {
 mod tests {
     use super::*;
 
+    /// MCP-6
     #[test]
     fn should_cap_writes_and_deletes_per_minute_per_token() {
         let budget = McpBudget::new();
@@ -144,6 +155,7 @@ mod tests {
         budget.spend("t", Spend::Delete, 60).unwrap();
     }
 
+    /// MCP-6
     #[test]
     fn should_answer_a_challenge_once_for_the_exact_call() {
         let budget = McpBudget::new();

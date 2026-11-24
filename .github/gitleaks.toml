@@ -7,7 +7,18 @@
 #     the command that generates a real one.
 #   - the OWE1 test vectors and the fixtures around them, which hold
 #     fixed key material generated for the test and published in the
-#     repository on purpose.
+#     repository on purpose, and the throwaway RSA key the FCM client's
+#     tests sign with (apps/api/crates/clients/testdata).
+#   - an MCP token's `token_prefix`: the first characters the API keeps to
+#     tell tokens apart, shown in the UI and in design-system specimens.
+#     A prefix cannot be used as a token. Matched on the whole
+#     `token_prefix: '...'` text, so a full token anywhere else still fails.
+#   - the Android app's Firebase config file. Its API key identifies the
+#     Firebase project and grants nothing by itself; Google ships it inside
+#     every app build. It is restricted to the app and Firebase APIs in the
+#     Google Cloud console, which is where its protection lives (D116).
+#   - an `android:apk-key-hash:` origin: the hash of a public signing
+#     certificate, which Android sends in every passkey ceremony (D119).
 #
 # Nothing here allowlists a path that could hold a live credential. The
 # real .env is gitignored and is not a scanned path.
@@ -22,6 +33,13 @@ description = "Documented placeholders and published test vectors"
 paths = [
   '''^\.env\.example$''',
   '''^apps/api/crates/domain/testdata/.*''',
+  '''^apps/api/crates/clients/testdata/.*''',
   '''^apps/api/seeds/.*\.sql$''',
   '''^apps/ai/tests/golden/.*''',
+  '''^apps/native/android/app/google-services\.json$''',
+]
+regexTarget = "match"
+regexes = [
+  '''token_prefix: 'owm_[A-Za-z0-9]{1,12}'?''',
+  '''apk-key-hash:[A-Za-z0-9_-]{43}''',
 ]
