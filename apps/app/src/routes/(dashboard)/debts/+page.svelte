@@ -35,7 +35,7 @@
 		DebtsSummaryCards
 	} from '$lib/components/organisms/debts';
 	import { localToday } from '$lib/debts';
-	import { messageForCode } from '$lib/errors';
+	import { messageForCode, toastRefusal } from '$lib/errors';
 	import { filterBar } from '$lib/filter-bar.svelte';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
@@ -132,6 +132,7 @@
 		saving = true;
 		return async ({ result, update }) => {
 			saving = false;
+			if (toastRefusal(result)) return;
 			if (result.type === 'success') {
 				formOpen = false;
 				toast.success(editing ? t('debts.toasts.updated') : t('debts.toasts.created'));
@@ -154,6 +155,7 @@
 			paying = true;
 			return async ({ result, update }) => {
 				paying = false;
+				if (toastRefusal(result)) return;
 				if (result.type === 'success') {
 					paymentOpen = false;
 					toast.success(t('debts.toasts.payment_recorded'));
@@ -256,6 +258,7 @@
 	action="?/delete"
 	class="hidden"
 	use:enhance={() => async ({ result, update }) => {
+		if (toastRefusal(result)) return;
 		if (result.type === 'success') {
 			toast.success(t('debts.toasts.deleted'));
 			if (data.open?.id === deleting?.id) await writeParams({ debt: null });
@@ -276,6 +279,7 @@
 		const count = selection.length;
 		return async ({ result, update }) => {
 			bulkDeleting = false;
+			if (toastRefusal(result)) return;
 			if (result.type === 'success') {
 				toast.success(t('debts.toasts.bulk_deleted', { count }));
 				selection = [];
@@ -293,6 +297,7 @@
 	action="?/cancelPayment"
 	class="hidden"
 	use:enhance={() => async ({ result, update }) => {
+		if (toastRefusal(result)) return;
 		if (result.type === 'success') toast.success(t('debts.toasts.payment_cancelled'));
 		await update({ navigate: false });
 	}}

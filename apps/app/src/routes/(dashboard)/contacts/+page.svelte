@@ -29,7 +29,7 @@
 		ContactsSummaryCards
 	} from '$lib/components/organisms/contacts';
 	import { contactCounts } from '$lib/contacts';
-	import { messageForCode } from '$lib/errors';
+	import { messageForCode, toastRefusal } from '$lib/errors';
 	import { filterBar } from '$lib/filter-bar.svelte';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
@@ -88,6 +88,7 @@
 		saving = true;
 		return async ({ result, update }) => {
 			saving = false;
+			if (toastRefusal(result)) return;
 			if (result.type === 'success') after();
 			await update({ navigate: false });
 		};
@@ -113,6 +114,7 @@
 			settling = true;
 			return async ({ result, update }) => {
 				settling = false;
+				if (toastRefusal(result)) return;
 				if (result.type === 'success') toast.success(t('debts.toasts.settled'));
 				await update({ navigate: false, invalidateAll: true });
 			};
@@ -145,6 +147,7 @@
 			const merged = target?.id;
 			return async ({ result, update }) => {
 				merging = false;
+				if (toastRefusal(result)) return;
 				if (result.type === 'success') {
 					mergeOpen = false;
 					toast.success(t('contacts.toasts.merged'));
@@ -210,6 +213,7 @@
 	action="?/delete"
 	class="hidden"
 	use:enhance={() => async ({ result, update }) => {
+		if (toastRefusal(result)) return;
 		if (result.type === 'success') {
 			toast.success(t('contacts.toasts.deleted'));
 			if (data.open?.contact.id === target?.id) await writeParams({ contact: null });

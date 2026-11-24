@@ -7,6 +7,8 @@
  * into an Indonesian UI later.
  */
 
+import { toast } from 'svelte-sonner';
+
 import { t, type TranslationKey } from '$lib/i18n';
 
 const CODE_TO_KEY: Record<string, TranslationKey> = {
@@ -59,4 +61,20 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 export function messageForCode(code: string): string {
 	const key = CODE_TO_KEY[code];
 	return key ? t(key) : t('errors.unexpected');
+}
+
+/**
+ * Say a refusal in a toast, and report whether the result was one.
+ *
+ * An action started in a sheet or a dialog would otherwise land in the
+ * page's banner, behind the overlay, where nobody reads it. A refusal with
+ * field errors is left to the form, which shows them beside its fields.
+ */
+export function toastRefusal(result: {
+	type: string;
+	data?: { code?: unknown; fields?: unknown };
+}): boolean {
+	if (result.type !== 'failure' || result.data?.fields) return false;
+	toast.error(messageForCode(String(result.data?.code ?? '')));
+	return true;
 }
