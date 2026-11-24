@@ -45,6 +45,7 @@ DebtSummary debtSummaryFromJson(Map<String, dynamic> json) {
     youOwe: money('you_owe'),
     net: money('net'),
     overdueCount: (json['overdue_count'] as num?)?.toInt() ?? 0,
+    leftOut: (json['left_out'] as num?)?.toInt() ?? 0,
   );
 }
 

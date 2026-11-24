@@ -334,8 +334,10 @@ class SyncService {
     if (!later) await db.putRow(ws, e.kind, row);
   }
 
-  /// A payment answers `{payment, debt, transaction}` (DEBT-4); a cancel
-  /// answers nothing. Either way the wallet the API moved is kept in step.
+  /// A payment answers `{payment, debt, transaction}` (DEBT-4), a replayed
+  /// one the same with 200; a cancel answers nothing. Either way the wallet
+  /// the API moved is kept in step. The payment view carries no wallet: it
+  /// is the transaction's.
   Future<void> _paymentLanded(QueueEntry e, String debtId, Json? row) async {
     final ws = e.workspaceId;
     if (e.op == QueueOp.delete) {
@@ -354,6 +356,7 @@ class SyncService {
       await db.putRow(ws, e.kind, {
         ...payment,
         'debt_id': debtId,
+        'wallet_id': ?transaction?['wallet_id'],
         'transaction': ?transaction,
       });
     }
@@ -383,8 +386,9 @@ class SyncService {
     if (wallet == null) return const {};
     final debt = await db.row(ws, 'debts', debtId);
     final rate = payment['exchange_rate'] as String?;
-    // shortcut: a queued payment in another currency with no rate typed
-    // estimates the wallet amount 1:1 until the API resolves the rate.
+    // shortcut: without the transaction (a queued payment with no rate typed,
+    // or a payment read from GET /debts/{id}, which carries no rate) a
+    // payment in another currency estimates 1:1 until the API's figure lands.
     final amount =
         Decimal.parse(payment['amount'] as String) *
         (rate == null ? Decimal.one : Decimal.parse(rate));

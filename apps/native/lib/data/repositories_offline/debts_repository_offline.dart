@@ -114,9 +114,15 @@ class DebtsRepositoryOffline implements DebtsRepository {
       if (error != null) return Failure(error);
     }
     final currency = await _currencyOf(ws, debtId);
+    final wallets = {
+      for (final w in await _db.rows(ws, 'wallets')) w['id']: w['name'],
+    };
     return Success([
       for (final r in await _db.rows(ws, kind))
-        debtPaymentFromJson(r, currency: currency),
+        debtPaymentFromJson({
+          ...r,
+          'wallet_name': ?wallets[r['wallet_id']],
+        }, currency: currency),
     ]);
   }
 
@@ -136,6 +142,7 @@ class DebtsRepositoryOffline implements DebtsRepository {
       'contact_name': contact?['name'] ?? '',
       'currency_code': currency,
       'remaining_amount': body['amount'],
+      'paid_amount': '0',
       'status': 'unpaid',
     });
   }
@@ -251,6 +258,7 @@ class DebtsRepositoryOffline implements DebtsRepository {
     final amount = Decimal.parse(debt['amount'] as String);
     debt
       ..['remaining_amount'] = '$remaining'
+      ..['paid_amount'] = '${amount - remaining}'
       ..['status'] = DebtStatus.of(amount: amount, remaining: remaining).name;
   }
 

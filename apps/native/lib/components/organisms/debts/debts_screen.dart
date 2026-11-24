@@ -10,6 +10,8 @@ import 'package:oewang/components/molecules/confirm_dialog.dart';
 import 'package:oewang/components/molecules/page_app_bar.dart';
 import 'package:oewang/components/organisms/debts/debts_pay_view_model.dart';
 import 'package:oewang/components/organisms/transactions/transactions_sub_tab_bar.dart';
+import 'package:oewang/components/organisms/wallets/wallets_screen.dart'
+    show totalsNote;
 import 'package:oewang/config/dependencies.dart';
 import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/core/theme/oewang_colors.dart';
@@ -306,37 +308,58 @@ class _SummaryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.palette;
     final s = summary;
+    final note = s == null
+        ? null
+        : totalsNote(leftOut: s.leftOut, estimate: false);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: _cell(
-                'Owed to you',
-                s?.owedToYou,
-                OewangColors.blue,
-                palette,
-              ),
-            ),
-            VerticalDivider(width: 17, thickness: 1, color: palette.border),
-            Expanded(
-              child: _cell('You owe', s?.youOwe, OewangColors.coral, palette),
-            ),
-            VerticalDivider(width: 17, thickness: 1, color: palette.border),
-            Expanded(
-              child: _cell(
-                'Net',
-                s?.net,
-                (s?.net.isNegative ?? false)
-                    ? OewangColors.coral
-                    : palette.foreground,
-                palette,
+      child: Column(
+        children: [
+          _cells(s, palette),
+          if (note != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              note,
+              style: OewangFonts.sans(
+                color: palette.mutedForeground,
+                fontSize: 11,
               ),
             ),
           ],
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cells(DebtSummary? s, OewangPalette palette) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _cell(
+              'Owed to you',
+              s?.owedToYou,
+              OewangColors.blue,
+              palette,
+            ),
+          ),
+          VerticalDivider(width: 17, thickness: 1, color: palette.border),
+          Expanded(
+            child: _cell('You owe', s?.youOwe, OewangColors.coral, palette),
+          ),
+          VerticalDivider(width: 17, thickness: 1, color: palette.border),
+          Expanded(
+            child: _cell(
+              'Net',
+              s?.net,
+              (s?.net.isNegative ?? false)
+                  ? OewangColors.coral
+                  : palette.foreground,
+              palette,
+            ),
+          ),
+        ],
       ),
     );
   }

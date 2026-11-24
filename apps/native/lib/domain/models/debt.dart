@@ -125,6 +125,7 @@ class DebtSummary extends Equatable {
     required this.youOwe,
     required this.net,
     required this.overdueCount,
+    this.leftOut = 0,
   });
 
   final Money owedToYou;
@@ -132,8 +133,12 @@ class DebtSummary extends Equatable {
   final Money net;
   final int overdueCount;
 
+  /// Debts in a currency with no rate to the workspace's, left out of the
+  /// three figures (as the wallet totals do, D117).
+  final int leftOut;
+
   @override
-  List<Object?> get props => [owedToYou, youOwe, net, overdueCount];
+  List<Object?> get props => [owedToYou, youOwe, net, overdueCount, leftOut];
 }
 
 /// A new debt from the form.

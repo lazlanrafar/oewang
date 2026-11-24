@@ -23,33 +23,46 @@ typedef Json = Map<String, dynamic>;
 
 Decimal d(String s) => Decimal.parse(s);
 
-/// The debts contract in memory (docs/api/endpoints.md#debts): client ids
-/// on create (D114), payments that move a wallet and answer
-/// `{payment, debt, transaction}`, and the API's refusals.
+/// The debts contract in memory, in the shapes the real handlers answer
+/// (apps/api/crates/server/src/debts/handler.rs, contacts/handler.rs):
+/// `DebtView` rows paged by `page`/`per_page`, `GET /debts/{id}` with its
+/// payments, `PaidView {payment, debt, transaction}` on a payment and the
+/// same with 200 on a replayed client id (D114), the target `ContactView`
+/// on a merge, and the API's refusals.
 class FakeDebtsApi implements HttpClientAdapter {
   final wallets = <String, Json>{};
   final contacts = <String, Json>{};
   final debts = <String, Json>{};
+
+  /// Stored with their wallet and transaction; answered as `PaymentView`.
   final payments = <String, Json>{};
   final log = <String>[];
   bool unreachable = false;
   bool loseNextResponse = false;
+  int leftOut = 0;
   var _clock = 0;
 
   String _now() =>
-      '2026-11-24T00:00:00.${(++_clock).toString().padLeft(6, '0')}Z';
+      '2026-11-24T00:00:00.${(++_clock).toString().padLeft(6, '0')}+00:00';
 
   void seedWallet(String id, String balance) => wallets[id] = {
     'id': id,
-    'name': id,
+    'name': 'Wallet $id',
     'balance': balance,
     'currency_code': 'IDR',
     'is_included_in_totals': true,
     'updated_at': _now(),
   };
 
-  void seedContact(String id, String name) =>
-      contacts[id] = {'id': id, 'name': name, 'updated_at': _now()};
+  void seedContact(String id, String name) => contacts[id] = {
+    'id': id,
+    'name': name,
+    'email': null,
+    'phone': null,
+    'note': null,
+    'created_at': _now(),
+    'updated_at': _now(),
+  };
 
   void seedDebt(
     String id,
@@ -60,16 +73,54 @@ class FakeDebtsApi implements HttpClientAdapter {
   }) => debts[id] = {
     'id': id,
     'contact_id': contactId,
-    'contact_name': contacts[contactId]!['name'],
+    'source_transaction_id': null,
     'type': type,
+    'origin': 'manual',
     'currency_code': currency,
     'amount': amount,
     'remaining_amount': amount,
     'status': 'unpaid',
+    'description': null,
+    'due_date': null,
+    'created_at': _now(),
     'updated_at': _now(),
   };
 
   Decimal balanceOf(String id) => d(wallets[id]!['balance'] as String);
+
+  /// `DebtView`: the stored row plus what the handler computes.
+  Json debtView(Json row) {
+    final amount = d(row['amount'] as String);
+    final remaining = d(row['remaining_amount'] as String);
+    return {
+      ...row,
+      'contact_name': contacts[row['contact_id']]?['name'] ?? '',
+      'amount_formatted': 'Rp $amount',
+      'remaining_amount_formatted': 'Rp $remaining',
+      'paid_amount': '${amount - remaining}',
+      'paid_amount_formatted': 'Rp ${amount - remaining}',
+      'overdue': false,
+    };
+  }
+
+  /// `PaymentView`: `wallet_id` only in a debt's detail, never on a
+  /// payment's own answer.
+  Json paymentView(Json p, {bool detail = false}) => {
+    'id': p['id'],
+    'debt_id': p['debt_id'],
+    'transaction_id': (p['transaction'] as Json?)?['id'],
+    if (detail && p['wallet_id'] != null) 'wallet_id': p['wallet_id'],
+    'amount': p['amount'],
+    'amount_formatted': 'Rp ${p['amount']}',
+    'date': p['date'],
+    'created_at': p['created_at'],
+  };
+
+  Json paidView(Json p) => {
+    'payment': paymentView(p),
+    'debt': debtView(debts[p['debt_id']]!),
+    'transaction': p['transaction'],
+  };
 
   @override
   Future<ResponseBody> fetch(
@@ -90,6 +141,14 @@ class FakeDebtsApi implements HttpClientAdapter {
     return answer;
   }
 
+  /// `Page::new`: `per_page` defaults to 25, clamped to 1..100.
+  List<Json> _page(List<Json> all, RequestOptions o) {
+    final q = o.uri.queryParameters;
+    final page = int.tryParse(q['page'] ?? '') ?? 1;
+    final per = (int.tryParse(q['per_page'] ?? '') ?? 25).clamp(1, 100);
+    return all.skip((page - 1) * per).take(per).toList();
+  }
+
   ResponseBody _handle(String method, String path, RequestOptions o) {
     final p = path.split('/').where((s) => s.isNotEmpty).toList();
     final body = o.data is Map ? Json.from(o.data as Map) : <String, dynamic>{};
@@ -97,10 +156,14 @@ class FakeDebtsApi implements HttpClientAdapter {
       case ('GET', ['wallets']):
         return _ok(200, wallets.values.toList());
       case ('GET', ['contacts']):
-        return _ok(200, contacts.values.toList());
+        return _ok(200, _page(contacts.values.toList(), o));
       case ('POST', ['contacts']):
         final id = body['id'] as String;
-        return _ok(201, contacts[id] ??= {...body, 'updated_at': _now()});
+        if (contacts[id] case final again?) return _ok(200, again);
+        return _ok(
+          201,
+          contacts[id] = {...body, 'created_at': _now(), 'updated_at': _now()},
+        );
       case ('DELETE', ['contacts', final id]):
         if (debts.values.any((x) => x['contact_id'] == id)) {
           return _error(409, 'CONTACT_HAS_DEBTS', 'Contact has debts');
@@ -108,50 +171,49 @@ class FakeDebtsApi implements HttpClientAdapter {
         contacts.remove(id);
         return ResponseBody.fromString('', 204);
       case ('POST', ['contacts', final id, 'merge']):
-        if (!contacts.containsKey(id)) {
+        final into = contacts[body['into_id']];
+        if (!contacts.containsKey(id) || into == null) {
           return _error(404, 'CONTACT_NOT_FOUND', 'Not found');
         }
-        final into = contacts[body['into_id']]!;
         for (final x in debts.values) {
-          if (x['contact_id'] == id) {
-            x
-              ..['contact_id'] = into['id']
-              ..['contact_name'] = into['name'];
-          }
+          if (x['contact_id'] == id) x['contact_id'] = into['id'];
         }
         contacts.remove(id);
         return _ok(200, into);
       case ('GET', ['debts']):
-        return _ok(200, debts.values.toList());
+        return _ok(200, _page(debts.values.map(debtView).toList(), o));
       case ('GET', ['debts', 'summary']):
         return _ok(200, {
           'currency_code': 'IDR',
           'owed_to_you': '0',
+          'owed_to_you_formatted': 'Rp 0',
           'you_owe': '0',
+          'you_owe_formatted': 'Rp 0',
           'net': '0',
+          'net_formatted': 'Rp 0',
+          'open_count': debts.length,
           'overdue_count': 0,
+          'left_out': leftOut,
         });
       case ('GET', ['debts', final id]):
         return _ok(200, {
-          ...debts[id]!,
+          ...debtView(debts[id]!),
           'payments': [
             for (final x in payments.values)
-              if (x['debt_id'] == id) x,
+              if (x['debt_id'] == id) paymentView(x, detail: true),
           ],
+          'source_transaction': null,
         });
       case ('POST', ['debts']):
         final id = body['id'] as String;
-        return _ok(
-          201,
-          debts[id] ??= {
-            ...body,
-            'contact_name': contacts[body['contact_id']]!['name'],
-            'currency_code': 'IDR',
-            'remaining_amount': body['amount'],
-            'status': 'unpaid',
-            'updated_at': _now(),
-          },
+        if (debts[id] case final again?) return _ok(200, debtView(again));
+        seedDebt(
+          id,
+          body['contact_id'] as String,
+          body['amount'] as String,
+          type: body['type'] as String,
         );
+        return _ok(201, debtView(debts[id]!));
       case ('POST', ['debts', final debtId, 'payments']):
         return _pay(debtId, body);
       case ('DELETE', ['debts', final debtId, 'payments', final id]):
@@ -165,26 +227,20 @@ class FakeDebtsApi implements HttpClientAdapter {
 
   ResponseBody _pay(String debtId, Json body) {
     final id = body['id'] as String;
+    if (payments[id] case final again?) return _ok(200, paidView(again));
     final debt = debts[debtId]!;
-    if (payments[id] case final again?) {
-      return _ok(200, {'payment': again, 'debt': debt, 'transaction': null});
-    }
     final amount = d(body['amount'] as String);
     if (amount > d(debt['remaining_amount'] as String)) {
       return _error(422, 'PAYMENT_EXCEEDS_REMAINING', 'More than remaining');
     }
-    final payment = {...body, 'debt_id': debtId};
-    payments[id] = payment;
-    final transaction = _move(debtId, payment, 1);
-    return _ok(201, {
-      'payment': payment,
-      'debt': debt,
-      'transaction': transaction,
-    });
+    final payment = {...body, 'debt_id': debtId, 'created_at': _now()};
+    payments[id] = payment..['transaction'] = _move(debtId, payment, 1);
+    return _ok(201, paidView(payment));
   }
 
   /// Applies ([sign] 1) or reverses (-1) a payment: the debt's remaining
-  /// amount and status, and the wallet's balance. Answers the transaction.
+  /// amount and status, and the wallet's balance. Answers the
+  /// `TransactionView` a payment writes, or null without a wallet.
   Json? _move(String debtId, Json payment, int sign) {
     final debt = debts[debtId]!;
     final amount = d(payment['amount'] as String);
@@ -207,9 +263,17 @@ class FakeDebtsApi implements HttpClientAdapter {
         '${balanceOf(walletId) + walletAmount * Decimal.fromInt(income ? sign : -sign)}';
     return {
       'id': 'tx-${payment['id']}',
+      'wallet_id': walletId,
+      'to_wallet_id': null,
       'type': income ? 'income' : 'expense',
       'amount': '$walletAmount',
-      'wallet_id': walletId,
+      'to_amount': null,
+      'original_amount': rate == null ? null : '$amount',
+      'original_currency_code': rate == null ? null : debt['currency_code'],
+      'exchange_rate': rate,
+      'base_amount': '$walletAmount',
+      'date': payment['date'],
+      'updated_at': _now(),
     };
   }
 
@@ -456,6 +520,46 @@ void main() {
     expect(h.server.log, contains('POST /contacts/c-budi2/merge'));
     expect(h.server.debts['debt-2']!['contact_id'], 'c-budi');
     expect(await h.queue(), isEmpty);
+  });
+
+  test('MOB-10: a list longer than one page is read whole, by page and '
+      'per_page', () async {
+    for (var i = 0; i < 130; i++) {
+      h.server.seedDebt('debt-x$i', 'c-budi', '1');
+    }
+    expect((await h.debts.list()).ok, hasLength(131));
+    expect(
+      h.server.log.where((l) => l == 'GET /debts'),
+      hasLength(2), // 100, then 31
+    );
+  });
+
+  test('MOB-10: the summary is the API figures with left_out, and offline '
+      'the last answer', () async {
+    h.server.leftOut = 2;
+    expect((await h.debts.summary()).ok.leftOut, 2);
+    await h.offline();
+    final cached = (await h.debts.summary()).ok;
+    expect(cached.leftOut, 2);
+    expect(cached.net.amount, Decimal.zero);
+  });
+
+  test('MOB-10: a payment answer carries no wallet; the cached payment takes '
+      'it from the transaction, and the detail names the wallet', () async {
+    await h.wallets.list();
+    (await h.debts.pay('debt-1', payment('40', walletId: 'w-bca'))).ok;
+    expect((await h.wallet('w-bca')).balance, d('1040'));
+
+    await h.offline();
+    final cached = (await h.debts.payments('debt-1')).ok.single;
+    expect(cached.walletId, 'w-bca');
+    expect(cached.walletName, 'Wallet w-bca');
+    expect((await h.debt('debt-1')).remainingAmount.amount, d('260'));
+
+    await h.online();
+    final read = (await h.debts.payments('debt-1')).ok.single;
+    expect(read.walletId, 'w-bca');
+    expect(read.amount.amount, d('40'));
   });
 
   test(
