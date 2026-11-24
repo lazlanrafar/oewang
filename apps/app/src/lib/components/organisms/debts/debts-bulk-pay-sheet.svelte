@@ -23,7 +23,7 @@
 	import { Checkbox } from '$lib/components/atoms/checkbox';
 	import * as Sheet from '$lib/components/atoms/sheet';
 	import { SelectAccount } from '$lib/components/molecules/select-account';
-	import { isPartlyPaid, localToday, remainingByCurrency } from '$lib/debts';
+	import { localToday, remainingByCurrency } from '$lib/debts';
 	import { t } from '$lib/i18n';
 	import { formatMoney } from '$lib/money';
 	import type { Debt } from '$lib/server/debts';
@@ -153,7 +153,7 @@
 								<p class="font-serif text-lg font-normal">
 									{formatMoney(debt.remaining_amount, debt.currency_code)}
 								</p>
-								{#if isPartlyPaid(debt)}
+								{#if debt.status === 'partial'}
 									<p class="text-muted-foreground mt-0.5 text-[10px] line-through opacity-60">
 										{t('debts.details.original_amount')}: {formatMoney(debt.amount, debt.currency_code)}
 									</p>

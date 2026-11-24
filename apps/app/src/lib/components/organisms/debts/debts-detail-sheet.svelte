@@ -9,7 +9,7 @@
 	 * Cancelling removes the payment and the transaction it wrote, and the
 	 * amount goes back on the debt.
 	 *
-	 * Paid is the amount less what remains, as decimal strings (D12).
+	 * Every figure is the API's, paid amount included (D27).
 	 */
 	import ArrowDownLeft from '@lucide/svelte/icons/arrow-down-left';
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
@@ -22,10 +22,10 @@
 	import { Button } from '$lib/components/atoms/button';
 	import { Separator } from '$lib/components/atoms/separator';
 	import * as Sheet from '$lib/components/atoms/sheet';
-	import { paidAmount } from '$lib/debts';
 	import { t } from '$lib/i18n';
 	import { formatMoney } from '$lib/money';
 	import type { DebtDetail } from '$lib/server/debts';
+	import { workspaceLists } from '$lib/workspace-data.svelte';
 
 	let {
 		open = $bindable(false),
@@ -74,9 +74,12 @@
 		);
 
 	const capsLabel = 'text-muted-foreground text-[10px] font-medium tracking-widest uppercase';
-	const sourceName = $derived(
-		debt?.source_transaction?.name ?? debt?.source_transaction_name ?? null
-	);
+	const sourceName = $derived(debt?.source_transaction?.name ?? null);
+
+	/* A payment names its account by id; the workspace's list has the name. */
+	const lists = workspaceLists();
+	const walletName = (id: string | null | undefined) =>
+		(id && lists.wallets.find((wallet) => wallet.id === id)?.name) || t('debts.details.no_wallet');
 </script>
 
 <Sheet.Root bind:open {onOpenChange}>
@@ -139,7 +142,7 @@
 
 						<div class="space-y-1">
 							<p class={capsLabel}>{t('debts.details.paid_amount')}</p>
-							<p class="font-serif text-lg font-normal text-emerald-500">{money(paidAmount(debt))}</p>
+							<p class="font-serif text-lg font-normal text-emerald-500">{money(debt.paid_amount)}</p>
 						</div>
 
 						<div class="space-y-1">
@@ -184,8 +187,7 @@
 									<div class="min-w-0">
 										<p class="font-serif text-lg font-normal">{money(payment.amount)}</p>
 										<p class="text-muted-foreground truncate text-[11px]">
-											{instantLabel(payment.date)} · {payment.wallet_name ??
-												t('debts.details.no_wallet')}
+											{instantLabel(payment.date)} · {walletName(payment.wallet_id)}
 										</p>
 									</div>
 									{#if canEdit}

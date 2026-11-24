@@ -21,7 +21,7 @@
 	import { Badge } from '$lib/components/atoms/badge';
 	import { Button } from '$lib/components/atoms/button';
 	import * as Sheet from '$lib/components/atoms/sheet';
-	import { isPartlyPaid, paidAmount, paidPercent, remainingByCurrency } from '$lib/debts';
+	import { paidPercent, remainingByCurrency } from '$lib/debts';
 	import { t } from '$lib/i18n';
 	import { formatMoney } from '$lib/money';
 	import type { Contact } from '$lib/server/contacts';
@@ -239,7 +239,7 @@
 												</p>
 											{/if}
 
-											{#if isPartlyPaid(debt)}
+											{#if debt.status === 'partial'}
 												<div class="mt-2 space-y-1">
 													<div class="bg-muted h-0.5 w-full overflow-hidden rounded-none">
 														<div class="bg-primary h-full transition-all" style:width="{paidPercent(debt)}%"></div>
@@ -249,7 +249,7 @@
 															{t('contacts.details.progress')}
 														</p>
 														<p class="text-primary text-[9px] font-medium">
-															{formatMoney(paidAmount(debt), debt.currency_code)}
+															{formatMoney(debt.paid_amount, debt.currency_code)}
 															{t('contacts.details.settled')}
 														</p>
 													</div>

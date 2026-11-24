@@ -1,59 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-	crossRate,
-	isOverdue,
-	isPartlyPaid,
-	localToday,
-	paidAmount,
-	paidPercent,
-	remainingByCurrency
-} from './debts';
+import { crossRate, localToday, paidPercent, remainingByCurrency } from './debts';
 
-const debt = (overrides: Partial<Parameters<typeof remainingByCurrency>[0][number]> = {}) => ({
+const debt = (overrides: Partial<Parameters<typeof remainingByCurrency>[0][number] & { amount: string; paid_amount: string }> = {}) => ({
 	type: 'receivable' as const,
-	status: 'partial' as const,
 	currency_code: 'IDR',
 	amount: '100000.0000',
 	remaining_amount: '40000.0000',
-	due_date: '2026-11-20',
+	paid_amount: '60000.0000',
 	...overrides
 });
 
-describe('DEBT-11 overdue against the reader’s own date', () => {
-	it('should be overdue when the due date is before today and the debt is open', () => {
-		expect(isOverdue(debt(), '2026-11-24')).toBe(true);
-	});
-
-	it('should not be overdue on the due date itself', () => {
-		expect(isOverdue(debt(), '2026-11-20')).toBe(false);
-	});
-
-	it('should not be overdue when paid or without a due date', () => {
-		expect(isOverdue(debt({ status: 'paid' }), '2026-12-01')).toBe(false);
-		expect(isOverdue(debt({ due_date: null }), '2026-12-01')).toBe(false);
-	});
-
-	it('should read today from the local calendar', () => {
+describe('DEBT-11 the reader’s own date, which the page sends as today', () => {
+	it('should read today from the local calendar, not UTC', () => {
 		expect(localToday(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
 	});
 });
 
-describe('DEBT-11 paid amounts stay decimal strings', () => {
-	it('should subtract the remainder from the amount exactly', () => {
-		expect(paidAmount(debt())).toBe('60000.0000');
-		expect(paidAmount(debt({ amount: '0.3000', remaining_amount: '0.1000' }))).toBe('0.2000');
-	});
-
-	it('should know a partly paid debt from an unpaid or a settled one', () => {
-		expect(isPartlyPaid(debt())).toBe(true);
-		expect(isPartlyPaid(debt({ remaining_amount: '100000.0000' }))).toBe(false);
-		expect(isPartlyPaid(debt({ remaining_amount: '0.0000' }))).toBe(false);
-	});
-
-	it('should give the paid share for a bar width', () => {
+describe('DEBT-11 the paid share draws a bar from the API’s figures', () => {
+	it('should give the paid share of the amount', () => {
 		expect(paidPercent(debt())).toBe(60);
-		expect(paidPercent(debt({ amount: '0.0000', remaining_amount: '0.0000' }))).toBe(0);
+	});
+
+	it('should draw nothing for a zero amount', () => {
+		expect(paidPercent(debt({ amount: '0.0000', paid_amount: '0.0000' }))).toBe(0);
 	});
 });
 

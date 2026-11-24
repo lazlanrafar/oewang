@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const order = readParam(url, 'order', ['asc', 'desc'] as const, 'asc');
 	const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
 
-	const query = new URLSearchParams({ sort, order, limit: String(PAGE_SIZE) });
+	const query = new URLSearchParams({ sort, order, per_page: String(PAGE_SIZE) });
 	if (search) query.set('search', search);
 
 	const openId = url.searchParams.get('contact');

@@ -22,10 +22,10 @@ export type Contact = {
 
 export type ContactBody = { name: string; email?: string | null; phone?: string | null; note?: string | null };
 
-/** The API caps a page at 100 (docs/api/conventions.md#pagination). */
-const PAGE_LIMIT = 100;
+/** The contact list pages with `per_page`, capped at 100 (docs/api/endpoints.md#contacts). */
+const PAGE_SIZE = 100;
 
-/** `search`, `sort`, `order`, `page` and `limit`, passed straight through. */
+/** `search`, `sort`, `order`, `page` and `per_page`, passed straight through. */
 export function listContacts(query: URLSearchParams, token?: string): Promise<Envelope<Contact[]>> {
 	return api<Contact[]>({ path: '/v1/contacts', query, token });
 }
@@ -39,7 +39,7 @@ export function listContacts(query: URLSearchParams, token?: string): Promise<En
 export async function allContacts(token?: string): Promise<Contact[]> {
 	const rows: Contact[] = [];
 	for (let page = 1; ; page++) {
-		const query = new URLSearchParams({ sort: 'name', page: String(page), limit: String(PAGE_LIMIT) });
+		const query = new URLSearchParams({ sort: 'name', page: String(page), per_page: String(PAGE_SIZE) });
 		const result = await listContacts(query, token);
 		rows.push(...(result.data ?? []));
 		if (page >= (result.meta.total_pages ?? 1)) return rows;

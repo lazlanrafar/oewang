@@ -60,13 +60,13 @@ As in the old app, split bill has no screen: it is a chat and MCP tool and an AP
 
 `/debts`, in the Finance group after Budget. The old page, ported exactly:
 
-- **Cards**: Owed to you, You owe, Net position (each converted to the workspace currency as `GET /v1/wallets/totals` does, D117), and Overdue (a count, red when above 0). From `GET /v1/debts/summary`, every figure computed in the API (D27).
+- **Cards**: Owed to you, You owe, Net position (each converted to the workspace currency as `GET /v1/wallets/totals` does, D117; a currency with no rate is left out and the net says how many, as the accounts cards do), and Overdue (a count, red when above 0). From `GET /v1/debts/summary`, every figure computed in the API (D27).
 - **Header**: the filter bar (search on contact name and description; facets Status and Type) on the left, Add Debt on the right.
 - **Table**: select, Type, Contact, Description, Summary (amount and remaining), Status, Due date, row menu (View details, Edit, Delete; Pay is in the detail sheet). Selecting rows shows the old bulk edit bar, whose one action is Delete: one call per debt, stopping at the first refusal (a debt with payments). A contact's name opens that contact's sheet on `/contacts`.
 - **Sheets**: debt form (type, amount with currency, contact with `<SelectContact creatable />`, due date, description), detail (figures, payments with Cancel, the source transaction), payment (amount, wallet optional, date, rate when currencies differ). `?debt=` opens the detail and `?source=` the form for a debt made from that transaction.
 - **Empty states**: "No debts found" with Add First Debt; "No debts match" with Clear filters.
 
-`?search=`, `?status=`, `?type=`, `?contact_id=`, `?sort=` (default `due_date`, no due date last), `?order=` and `?page=` live in the URL (UI-8). Overdue means `due_date` before the person's local date. The rows mark it against the browser's own date; the Overdue card is the API's count against the UTC date, because the server render has no reader's time zone to send as `?today=` (a shortcut: the two can differ for a few hours around midnight).
+`?search=`, `?status=`, `?type=`, `?contact_id=`, `?sort=` (default `due_date`, no due date last), `?order=` and `?page=` live in the URL (UI-8). Overdue means `due_date` before the person's local date. The page sends one `?today=` to both the list and the summary, so the rows' `overdue` and the Overdue card agree: the server's UTC date on the first render, and when the browser's own date differs (near midnight, far from UTC) the page writes the browser's into the URL and reloads.
 
 Elsewhere on the web: the overview shows the old Debt balance card (the summary's `net` and the open count, streamed so the overview never waits on it) and its prompt chip, "Show my outstanding debts and receivables, including who owes whom and the remaining balances."; the transaction detail sheet lists related debts and payments and has Create debt, which opens the debt form with the transaction as its source.
 

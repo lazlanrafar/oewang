@@ -5,7 +5,9 @@
 	 *
 	 * Every figure is the API's, converted to the workspace currency there
 	 * (D27, D117), and it covers every debt whatever the filters. Green and
-	 * red as the old cards were: the page card's own tones.
+	 * red as the old cards were: the page card's own tones. A currency with
+	 * no stored rate is left out of the sums and said so under the net, as
+	 * the accounts cards say it.
 	 */
 	import { t } from '$lib/i18n';
 	import { formatMoney, isNegative, isZero } from '$lib/money';
@@ -40,6 +42,7 @@
 		label={t('debts.net_position')}
 		value={{ value: summary.net, format: money }}
 		tone={isZero(summary.net) ? 'default' : isNegative(summary.net) ? 'negative' : 'positive'}
+		hint={summary.left_out > 0 ? t('debts.left_out', { count: summary.left_out }) : undefined}
 		{loading}
 	/>
 	<PageCard

@@ -584,7 +584,9 @@
 		"receipt_hint": "A photo or a PDF. The assistant reads it and you confirm what it found.",
 		"related_debts": "Related Debts",
 		"create_debt": "Create debt",
-		"unknown_contact": "Unknown"
+		"unknown_contact": "Unknown",
+		"payment_locked": "This transaction pays a debt with {name}. Its amount, account and type change from the debt.",
+		"open_debt": "Open the debt"
 	},
 	"import": {
 		"title": "Import transactions",
@@ -1317,7 +1319,8 @@
 			"rate_label": "Rate, 1 {from} to {to}",
 			"rate_hint": "That figure is what leaves or reaches the account. Edit the rate until it matches what really moved.",
 			"submit": "Save Payment"
-		}
+		},
+		"left_out": "{count} {count|currency|currencies} left out, no rate"
 	},
 	"contacts": {
 		"search_placeholder": "Search contacts...",

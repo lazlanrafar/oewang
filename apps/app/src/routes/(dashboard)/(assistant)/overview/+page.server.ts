@@ -48,17 +48,12 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 
 	/*
 	 * The debt balance card (DEBT-13): the net position the debts page shows
-	 * and how many debts are open. Streamed like the balance, and null when
+	 * and how many debts are open, both from the summary. It counts no
+	 * overdue, so the API's own date is fine here. Streamed like the balance, and null when
 	 * the read fails, so the overview never waits on it or breaks for it.
 	 */
-	const open = new URLSearchParams({ limit: '1' });
-	open.append('status', 'unpaid');
-	open.append('status', 'partial');
-	const debts = Promise.all([
-		debtsApi.debtSummary(new URLSearchParams(), token),
-		debtsApi.listDebts(open, token)
-	]).then(
-		([summary, list]) => ({ summary: summary.data!, open: list.meta.total ?? 0 }),
+	const debts = debtsApi.debtSummary(new URLSearchParams(), token).then(
+		(summary) => summary.data,
 		() => null
 	);
 

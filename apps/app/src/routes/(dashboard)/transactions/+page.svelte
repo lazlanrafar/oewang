@@ -905,6 +905,7 @@
 	{baseCurrency}
 	walletCurrency={draftWalletCurrency}
 	fieldErrors={form?.fields}
+	paidDebt={editing ? data.paidDebt : null}
 	action={editing ? '?/update' : '?/create'}
 	createLabel={(typed) => t('common.create_named', { name: typed })}
 	enhance={(node) => enhance(node, saveAndClose)}
@@ -939,7 +940,7 @@
 		if (!open && detailParam !== '') closeDetail();
 	}}
 	transaction={detail}
-	debts={data.detail?.debts ?? []}
+	debts={data.detail?.debts ?? null}
 	debtHref={(id) => `/debts?debt=${encodeURIComponent(id)}`}
 	onCreateDebt={() => goto(`/debts?source=${encodeURIComponent(detailParam)}`)}
 	{canEdit}

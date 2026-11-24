@@ -1,12 +1,13 @@
 /**
  * Debt helpers the browser may run (DEBT-11 to DEBT-13, D120).
  *
- * Every figure a card shows is the API's (D27). What lives here is what a
- * sheet needs between two loads: how much of a debt is paid, the totals a
- * contact's sheet prints, and whether a row is past its due date for the
- * reader's own calendar. Money stays a decimal string throughout (D12).
+ * Every figure a card or a row shows is the API's, `paid_amount` and
+ * `overdue` included (D27). What lives here is the reader's own date, which
+ * the page sends as `?today=`, a bar's width, a contact's totals per
+ * currency, and the payment sheet's rate prefill. Money stays a decimal
+ * string throughout (D12).
  */
-import { addDecimals, chartValue, compareDecimals, divideDecimals, negate } from '$lib/money';
+import { addDecimals, chartValue, compareDecimals, divideDecimals } from '$lib/money';
 
 export const DEBT_STATUSES = ['unpaid', 'partial', 'paid'] as const;
 export const DEBT_TYPES = ['receivable', 'payable'] as const;
@@ -14,11 +15,10 @@ export const DEBT_SORTS = ['due_date', 'amount', 'remaining', 'created_at', 'con
 
 type DebtLike = {
 	type: 'payable' | 'receivable';
-	status: 'unpaid' | 'partial' | 'paid';
 	currency_code: string;
 	amount: string;
 	remaining_amount: string;
-	due_date: string | null;
+	paid_amount: string;
 };
 
 /** The reader's own date, `YYYY-MM-DD`, not the server's UTC one. */
@@ -28,31 +28,13 @@ export function localToday(now = new Date()): string {
 	return `${now.getFullYear()}-${month}-${day}`;
 }
 
-/** Due before today and not settled. A date compares as text: both are `YYYY-MM-DD`. */
-export function isOverdue(debt: Pick<DebtLike, 'status' | 'due_date'>, today: string): boolean {
-	return debt.status !== 'paid' && debt.due_date !== null && debt.due_date.slice(0, 10) < today;
-}
-
-/** What has been paid so far: the amount less what remains. */
-export function paidAmount(debt: Pick<DebtLike, 'amount' | 'remaining_amount'>): string {
-	return addDecimals([debt.amount, negate(debt.remaining_amount)]);
-}
-
-/** Partly paid: something paid, something left. */
-export function isPartlyPaid(debt: Pick<DebtLike, 'amount' | 'remaining_amount'>): boolean {
-	return (
-		compareDecimals(debt.remaining_amount, '0') > 0 &&
-		compareDecimals(debt.remaining_amount, debt.amount) < 0
-	);
-}
-
 /**
  * The share paid, 0 to 100, for a progress bar's width only. Geometry, so
  * a float is fine here; no label reads it (D89).
  */
-export function paidPercent(debt: Pick<DebtLike, 'amount' | 'remaining_amount'>): number {
+export function paidPercent(debt: Pick<DebtLike, 'amount' | 'paid_amount'>): number {
 	if (compareDecimals(debt.amount, '0') <= 0) return 0;
-	return Math.min(100, Math.max(0, chartValue(divideDecimals(paidAmount(debt), debt.amount, 4)) * 100));
+	return Math.min(100, Math.max(0, chartValue(divideDecimals(debt.paid_amount, debt.amount, 4)) * 100));
 }
 
 /**
@@ -63,7 +45,7 @@ export function paidPercent(debt: Pick<DebtLike, 'amount' | 'remaining_amount'>)
  * one sum this must never make, so each currency keeps its own total.
  */
 export function remainingByCurrency(
-	debts: DebtLike[],
+	debts: Pick<DebtLike, 'type' | 'currency_code' | 'remaining_amount'>[],
 	type?: 'payable' | 'receivable'
 ): Array<{ currency: string; total: string }> {
 	const totals = new Map<string, string[]>();

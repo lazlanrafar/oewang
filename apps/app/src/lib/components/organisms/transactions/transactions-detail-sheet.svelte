@@ -75,7 +75,7 @@
 	import * as Sheet from '../../atoms/sheet/index.js';
 	import { cn } from '$lib/utils.js';
 	import { formatMoney } from '$lib/money';
-	import type { TransactionDebt } from '$lib/server/debts';
+	import type { Debt, TransactionDebts } from '$lib/server/debts';
 
 	let {
 		open = $bindable(false),
@@ -89,7 +89,7 @@
 		onDeleteItem,
 		onOpenFile,
 		onAttachmentsChange,
-		debts = [],
+		debts = null,
 		debtHref,
 		onCreateDebt
 	}: {
@@ -106,13 +106,21 @@
 		onOpenFile?: (file: UploadedFile) => void;
 		/** The whole new set, saved as soon as it changes (TXN-13). */
 		onAttachmentsChange?: (files: UploadedFile[]) => void;
-		/** The debts this row made or settles (DEBT-12). */
-		debts?: TransactionDebt[];
+		/** The debts this row made, and the one it pays (DEBT-12). */
+		debts?: TransactionDebts | null;
 		/** Where one of those debts opens. */
 		debtHref?: (debtId: string) => string;
 		/** Make a debt from this row: the page opens the debt form with it as the source. */
 		onCreateDebt?: () => void;
 	} = $props();
+
+	/* The payment first, then the debts made from the row, each with the figure the row moved. */
+	const related = $derived<Array<{ key: string; debt: Debt; amount: string }>>([
+		...(debts?.payment
+			? [{ key: debts.payment.payment.id, debt: debts.payment.debt, amount: debts.payment.payment.amount }]
+			: []),
+		...(debts?.debts ?? []).map((debt) => ({ key: debt.id, debt, amount: debt.amount }))
+	]);
 
 	let pickerOpen = $state(false);
 	const tile = fileTile();
@@ -377,14 +385,14 @@
 					payment it is, with the contact and the figure, opening the
 					debt (DEBT-12). A writer may make a debt from the row.
 				-->
-				{#if debts.length > 0 || (canEdit && onCreateDebt)}
+				{#if related.length > 0 || (canEdit && onCreateDebt)}
 					<Accordion.Root type="multiple" value={['debts']}>
 						<Accordion.Item value="debts" class="border-none">
 							<Accordion.Trigger>{t('txn.related_debts')}</Accordion.Trigger>
 							<Accordion.Content class="space-y-3 pt-1">
-								{#if debts.length > 0}
+								{#if related.length > 0}
 									<div class="mb-2 grid grid-cols-1 gap-2">
-										{#each debts as item (item.payment?.id ?? item.debt.id)}
+										{#each related as item (item.key)}
 											<a
 												href={debtHref?.(item.debt.id)}
 												class="border-muted/20 bg-muted/5 flex flex-col gap-1 rounded-md border px-3 py-2.5 text-sm"
@@ -399,7 +407,7 @@
 															item.debt.type === 'payable' ? 'text-red' : 'text-green'
 														)}
 													>
-														{formatMoney(item.payment?.amount ?? item.debt.amount, item.debt.currency_code)}
+														{formatMoney(item.amount, item.debt.currency_code)}
 													</span>
 												</div>
 												{#if item.debt.description}

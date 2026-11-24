@@ -34,21 +34,26 @@ export const load: PageServerLoad = async ({ depends, locals, url }) => {
 	const order = readParam(url, 'order', ['asc', 'desc'] as const, 'asc');
 	const page = Math.max(1, Number.parseInt(url.searchParams.get('page') ?? '1', 10) || 1);
 
-	const query = new URLSearchParams({ sort, order, limit: String(PAGE_SIZE) });
+	// The reader's own date, which the page writes into the URL when it is
+	// not the server's; without one, the API's UTC date. The rows and the
+	// Overdue card are both counted against it, so they agree (DEBT-11).
+	const asked = url.searchParams.get('today') ?? '';
+	const today = /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : new Date().toISOString().slice(0, 10);
+
+	// `per_page`, not the convention's `limit`: what the debt list reads.
+	const query = new URLSearchParams({ sort, order, per_page: String(PAGE_SIZE), today });
 	if (search) query.set('search', search);
-	for (const status of statuses) query.append('status', status);
+	// One parameter, comma-separated: `status=unpaid,partial`.
+	if (statuses.length > 0) query.set('status', statuses.join(','));
 	if (type) query.set('type', type);
 	if (contactId) query.set('contact_id', contactId);
 
 	const debtId = url.searchParams.get('debt');
 	const sourceId = url.searchParams.get('source');
 
-	// shortcut: the cards count overdue against the API's UTC date; the rows
-	// mark overdue against the reader's own. Upgrade when the app learns the
-	// reader's time zone on the server.
 	const [debts, summary, open, source] = await Promise.all([
 		debtsApi.listDebts(new URLSearchParams([...query, ['page', String(page)]]), token),
-		debtsApi.debtSummary(new URLSearchParams(), token),
+		debtsApi.debtSummary(new URLSearchParams({ today }), token),
 		debtId ? debtsApi.readDebt(debtId, token).then((r) => r.data, () => null) : null,
 		sourceId ? loadSource(sourceId, token) : null
 	]);
@@ -59,6 +64,8 @@ export const load: PageServerLoad = async ({ depends, locals, url }) => {
 		summary: summary.data!,
 		open,
 		source,
+		/** The date overdue was counted against. */
+		today,
 		/** What makes this a different list rather than more of the same one. */
 		filterKey: query.toString(),
 		filtered: search !== '' || statuses.length > 0 || !!type || contactId !== ''
@@ -161,7 +168,7 @@ export const actions: Actions = {
 				{
 					amount: text(form, 'amount'),
 					wallet_id: optional(form, 'wallet_id'),
-					date: instant(text(form, 'date')),
+					date: text(form, 'date') ? instant(text(form, 'date')) : undefined,
 					exchange_rate: optional(form, 'exchange_rate')
 				},
 				locals.accessToken

@@ -5,8 +5,8 @@
 	 *
 	 * Ported from the old app's debts-columns. Each figure is the API's
 	 * decimal string, printed by `formatMoney` and never parsed (D12). A row
-	 * past its due date for the reader's own calendar carries the old red
-	 * date. It holds no data and fetches nothing (D5); the selection is the
+	 * the API marks overdue, against the reader's own date the page sent as
+	 * `?today=`, carries the old red date. It holds no data and fetches nothing (D5); the selection is the
 	 * page's, because the bulk bar acts on it.
 	 */
 	import ArrowDownLeft from '@lucide/svelte/icons/arrow-down-left';
@@ -27,7 +27,6 @@
 		DataTableSortHead,
 		type TableSort
 	} from '$lib/components/molecules/data-table';
-	import { isOverdue, isPartlyPaid } from '$lib/debts';
 	import { t } from '$lib/i18n';
 	import { formatMoney } from '$lib/money';
 	import type { Debt } from '$lib/server/debts';
@@ -37,7 +36,6 @@
 
 	let {
 		debts,
-		today,
 		sort,
 		onSortChange,
 		selection = $bindable([]),
@@ -56,8 +54,6 @@
 		class: className
 	}: {
 		debts: Debt[];
-		/** The reader's own date, for the overdue mark. */
-		today: string;
 		sort: TableSort;
 		onSortChange: (next: TableSort) => void;
 		/** The ids ticked, for the bulk bar. */
@@ -199,14 +195,14 @@
 			</span>
 		{:else if column.key === 'description'}
 			<span class="text-foreground/80 block max-w-[200px] truncate px-4 text-left text-sm">
-				{debt.description || debt.source_transaction_name || '-'}
+				{debt.description || '-'}
 			</span>
 		{:else if column.key === 'remaining'}
 			<div class="flex flex-col gap-1 px-4 text-right sm:text-left">
 				<span class="text-sm font-medium tabular-nums">
 					{formatMoney(debt.remaining_amount, debt.currency_code)}
 				</span>
-				{#if debt.status !== 'unpaid' && (isPartlyPaid(debt) || debt.status === 'paid')}
+				{#if debt.status !== 'unpaid'}
 					<span class="text-muted-foreground text-xs line-through">
 						{formatMoney(debt.amount, debt.currency_code)}
 					</span>
@@ -218,7 +214,7 @@
 			</span>
 		{:else if column.key === 'due_date'}
 			{#if debt.due_date}
-				<span class={cn('px-4 text-sm', isOverdue(debt, today) && 'text-destructive')}>
+				<span class={cn('px-4 text-sm', debt.overdue && 'text-destructive')}>
 					{dueLabel(debt.due_date)}
 				</span>
 			{:else}

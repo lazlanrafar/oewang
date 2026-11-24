@@ -40,7 +40,7 @@
 		/** Streamed: it waits on today's rates, the rest of the page does not. */
 		balance: Promise<{ totals: WalletTotals; currency: string }>;
 		/** Streamed too; null when the debt figures could not be read. */
-		debts: Promise<{ summary: DebtSummary; open: number } | null>;
+		debts: Promise<DebtSummary | null>;
 		onAsk: (message: string) => void;
 	} = $props();
 
@@ -111,10 +111,12 @@
 				label={t('overview.card_debts')}
 				icon={HandCoins}
 				value={{
-					value: resolved.summary.net,
-					format: (value) => formatMoney(value, resolved.summary.currency_code, { signed: true })
+					value: resolved.net,
+					format: (value) => formatMoney(value, resolved.currency_code, { signed: true })
 				}}
-				hint={t('overview.card_debts_hint', { count: resolved.open })}
+				hint={resolved.left_out > 0
+					? t('debts.left_out', { count: resolved.left_out })
+					: t('overview.card_debts_hint', { count: resolved.open_count })}
 				ariaLabel={t('overview.card_ask', { label: t('overview.card_debts') })}
 				onclick={() => onAsk(t('overview.ask_debts'))}
 			/>

@@ -966,7 +966,7 @@ Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13
 - [x] `/debts` ported exactly from the old page: cards, filter bar with Status and Type facets, `molecules/data-table` with bulk selection, form, detail, payment and bulk pay sheets, both empty states
 - [x] `/contacts` ported from the old page minus the invoice columns; merge dialog; detail sheet with the contact's debts
 - [x] `molecules/select-contact`, creatable (D80)
-- [ ] Transaction detail: related debts and payments, Create debt; locked fields shown read-only on a payment transaction
+- [x] Transaction detail: related debts and payments, Create debt; locked fields shown read-only on a payment transaction
 - [x] Overview Debt balance card (net from `GET /v1/debts/summary`, open count in the footer) and its prompt chip, as in the old app
 - [x] Filters, sort and page survive a reload (UI-8); every string in `en.json`
 - [x] `bun run check` and `bun run test` pass in the containers

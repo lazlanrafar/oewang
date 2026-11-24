@@ -47,7 +47,16 @@
 
 	const canEdit = $derived(data.me.role !== 'member');
 	const baseCurrency = $derived(data.me.workspace.currency_code);
-	const today = localToday();
+	/*
+	 * Overdue is counted against the date in the URL, or the server's UTC
+	 * date without one. When the reader's own calendar says otherwise (near
+	 * midnight, far from UTC), the page writes theirs, so the rows and the
+	 * Overdue card count against the day the reader is living in.
+	 */
+	$effect(() => {
+		const local = localToday();
+		if (data.today !== local) untrack(() => writeParams({ today: local }));
+	});
 
 	// ------------------------------------------------------------ the rows
 
@@ -213,7 +222,6 @@
 		loading={reloading(['search', 'status', 'type', 'contact_id', 'sort', 'order'])}
 		class="min-h-0 flex-1"
 		debts={held.rows}
-		{today}
 		{sort}
 		onSortChange={changeSort}
 		bind:selection

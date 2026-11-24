@@ -46,7 +46,8 @@
 		enhance,
 		createLabel,
 		onCreateAccount,
-		onCreateCategory
+		onCreateCategory,
+		paidDebt = null
 	}: {
 		open?: boolean;
 		/** Fires when the primitive closes itself, on Escape or the overlay. */
@@ -72,6 +73,8 @@
 		/** Override the picker's own create, as a specimen does. */
 		onCreateAccount?: (name: string) => void;
 		onCreateCategory?: (name: string) => void;
+		/** The debt the edited transaction pays, which locks its money fields (DEBT-8). */
+		paidDebt?: { id: string; contact_name: string } | null;
 	} = $props();
 
 	const editing = $derived(!!draft.id);
@@ -109,6 +112,7 @@
 				{createLabel}
 				{onCreateAccount}
 				{onCreateCategory}
+				{paidDebt}
 			/>
 		</div>
 
