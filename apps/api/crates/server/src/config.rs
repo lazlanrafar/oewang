@@ -34,6 +34,10 @@ pub struct Config {
     pub refresh_token_ttl: Duration,
 
     pub app_url: String,
+    /// The Android app's passkey origins, from `ANDROID_CERT_SHA256` (D119).
+    /// Empty until the signing fingerprint is known: the web app's origin
+    /// is then the only one a ceremony may come from.
+    pub android_origins: Vec<String>,
     pub resend_api_key: Option<Secret>,
     pub email_from: String,
     pub ai_service_url: String,
@@ -265,6 +269,13 @@ impl Config {
             refresh_token_ttl: parse_duration("REFRESH_TOKEN_TTL", REFRESH_TOKEN_TTL)?,
 
             app_url: optional("APP_URL").unwrap_or_else(|| "http://localhost:3000".into()),
+            android_origins: oewang_domain::passkeys::android_origins(
+                &optional("ANDROID_CERT_SHA256").unwrap_or_default(),
+            )
+            .map_err(|reason| ConfigError::Invalid {
+                name: "ANDROID_CERT_SHA256",
+                reason,
+            })?,
             resend_api_key: resend_api_key.map(Secret::new),
             email_from: optional("EMAIL_FROM")
                 .unwrap_or_else(|| "oewang <no-reply@localhost>".into()),

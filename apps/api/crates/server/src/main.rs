@@ -203,7 +203,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Built from APP_URL, so a deployment whose address cannot be a relying
     // party refuses to start rather than failing at the first passkey.
-    let webauthn = Arc::new(passkeys::service::relying_party(&config.app_url)?);
+    let webauthn = Arc::new(passkeys::service::relying_party(
+        &config.app_url,
+        &config.android_origins,
+    )?);
 
     let state = AppState {
         db,

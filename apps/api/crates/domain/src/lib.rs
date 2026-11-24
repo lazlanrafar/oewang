@@ -14,6 +14,7 @@ pub mod files;
 pub mod ledger;
 pub mod money;
 pub mod owe1;
+pub mod passkeys;
 pub mod receipt;
 pub mod secret;
 pub mod spreadsheet;

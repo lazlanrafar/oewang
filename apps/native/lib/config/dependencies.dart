@@ -252,7 +252,7 @@ final passkeysRepositoryProvider = Provider<PasskeysRepository>((ref) {
 });
 
 final devicePasskeysProvider = Provider<DevicePasskeys>(
-  (ref) => DevicePasskeys(),
+  (ref) => DevicePasskeys(onAndroid: ref.watch(envProvider).passkeysOnAndroid),
 );
 
 final deviceTokensRepositoryProvider = Provider<DeviceTokensRepository>((ref) {

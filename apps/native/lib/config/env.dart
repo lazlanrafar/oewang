@@ -7,6 +7,7 @@ class EnvConfig {
     required this.signingKeys,
     required this.appUrl,
     required this.sentryDsn,
+    this.passkeysOnAndroid = false,
   });
 
   factory EnvConfig.fromDefines() => const EnvConfig(
@@ -20,6 +21,7 @@ class EnvConfig {
       defaultValue: 'https://app.oewang.com',
     ),
     sentryDsn: String.fromEnvironment('SENTRY_DSN'),
+    passkeysOnAndroid: bool.fromEnvironment('PASSKEYS_ANDROID'),
   );
 
   /// The API's origin, without `/v1`.
@@ -34,4 +36,9 @@ class EnvConfig {
 
   /// Error monitoring DSN. Blank disables Sentry; debug builds never send.
   final String sentryDsn;
+
+  /// Offer passkeys on Android (D119). Off until the signing certificate's
+  /// fingerprint is in `ANDROID_CERT_SHA256` on the API and the app: before
+  /// that the site vouches for no Android app and every ceremony fails.
+  final bool passkeysOnAndroid;
 }

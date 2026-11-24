@@ -43,16 +43,22 @@ const KIND_AUTHENTICATE: &str = "authenticate";
 /// The relying party: the app's own origin, which is the only page that
 /// runs a ceremony. The API is never on the browser's path (D5), so its own
 /// address plays no part.
-pub fn relying_party(app_url: &str) -> anyhow::Result<Webauthn> {
+///
+/// `android_origins` are the native Android app's (D119). webauthn-rs
+/// matches an opaque origin like `android:apk-key-hash:…` exactly, so each
+/// one admits that signing certificate and nothing else.
+pub fn relying_party(app_url: &str, android_origins: &[String]) -> anyhow::Result<Webauthn> {
     let origin = Url::parse(app_url)?;
     let rp_id = origin
         .host_str()
         .ok_or_else(|| anyhow::anyhow!("APP_URL has no host"))?
         .to_string();
 
-    Ok(WebauthnBuilder::new(&rp_id, &origin)?
-        .rp_name("oewang")
-        .build()?)
+    let mut builder = WebauthnBuilder::new(&rp_id, &origin)?.rp_name("oewang");
+    for android in android_origins {
+        builder = builder.append_allowed_origin(&Url::parse(android)?);
+    }
+    Ok(builder.build()?)
 }
 
 /// The user handle stored on the authenticator.

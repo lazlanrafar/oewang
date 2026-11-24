@@ -23,7 +23,7 @@ const OTHER: &str = "usr_other";
 const WORKSPACE: &str = "ws_passkey";
 
 fn webauthn() -> Webauthn {
-    service::relying_party("http://localhost:3000").unwrap()
+    service::relying_party("http://localhost:3000", &[]).unwrap()
 }
 
 fn secret() -> Secret {
@@ -91,8 +91,25 @@ fn should_derive_a_stable_handle_per_user() {
 
 #[test]
 fn should_take_the_relying_party_from_the_app_url() {
-    assert!(service::relying_party("https://app.oewang.com").is_ok());
-    assert!(service::relying_party("not a url").is_err());
+    assert!(service::relying_party("https://app.oewang.com", &[]).is_ok());
+    assert!(service::relying_party("not a url", &[]).is_err());
+}
+
+/// D119: the Android app's origin is opaque, so it must survive parsing
+/// unchanged; webauthn-rs compares it to the client's as a whole URL.
+#[test]
+fn should_admit_the_android_apps_origin() {
+    let android = oewang_domain::passkeys::android_origins(
+        "14:6D:E9:83:C5:73:06:50:D8:EE:B9:95:2F:34:FC:64:16:A0:83:42:E6:1D:BE:A8:8A:04:96:B2:3F:CF:44:E5",
+    )
+    .unwrap();
+    assert_eq!(
+        webauthn_rs::prelude::Url::parse(&android[0])
+            .unwrap()
+            .as_str(),
+        android[0]
+    );
+    assert!(service::relying_party("https://app.oewang.com", &android).is_ok());
 }
 
 // ----------------------------------------------------------- registration

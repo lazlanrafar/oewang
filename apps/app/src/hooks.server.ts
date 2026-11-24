@@ -43,6 +43,8 @@ const PUBLIC_PREFIXES = [
 	'/.well-known/oauth-',
 	// Fetched by Apple for the iOS app's links and passkeys (D113).
 	'/.well-known/apple-app-site-association',
+	// Fetched by Google for the Android app's links and passkeys (D119).
+	'/.well-known/assetlinks.json',
 	'/oauth/register',
 	'/oauth/token'
 ];
