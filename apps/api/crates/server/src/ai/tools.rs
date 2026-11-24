@@ -26,7 +26,9 @@
 use chrono::{DateTime, Utc};
 use oewang_db::{
     repositories::{
-        categories, transactions as repo,
+        categories,
+        debts::{DebtFilters, DebtListRow, DebtSort},
+        transactions as repo,
         transactions::{GroupTotalRow, SummaryGroup},
         wallets,
     },
@@ -35,13 +37,13 @@ use oewang_db::{
 use oewang_domain::{
     budget::Month,
     format_money,
-    ledger::TransactionType,
+    ledger::{round_money, TransactionType},
     tools::{
-        ChoicesArgs, DeleteArgs, ItemsArgs, NewCategoryArgs, NewWalletArgs, RangeArgs, RecentArgs,
-        SearchArgs, SummaryArgs, SummaryGrouping, Tool, ToolCall, WriteTransactionArgs,
-        RESULT_BYTE_BUDGET,
+        ChoicesArgs, DeleteArgs, DeleteDebtArgs, ItemsArgs, NewCategoryArgs, NewDebtArgs,
+        NewWalletArgs, PayDebtArgs, RangeArgs, RecentArgs, SearchArgs, SplitBillArgs, SummaryArgs,
+        SummaryGrouping, Tool, ToolCall, UpdateDebtArgs, WriteTransactionArgs, RESULT_BYTE_BUDGET,
     },
-    AppError, FieldErrors, Result,
+    validate_currency_code, AppError, FieldErrors, Page, Result,
 };
 use rust_decimal::Decimal;
 use serde_json::{json, Map, Value};
@@ -50,7 +52,9 @@ use crate::{
     accounts,
     ai::turns::{Artifact, TurnStore},
     audit::{Actor, SOURCE_CHAT},
-    auth, budgets,
+    auth, budgets, contacts,
+    debts::{self, service::SplitSource},
+    fx,
     owe1::session::now_secs,
     reports::service::{self as reports, percent_change, DayRange},
     transactions,
@@ -118,10 +122,20 @@ pub async fn execute(
     let call = ToolCall::parse(tool, request.args)?;
     check_amount_ceiling(&call, max_amount)?;
 
-    // Layer 3. A delete is challenged before it costs the turn anything,
-    // so asking the user does not spend the turn's one delete (D20).
-    if let ToolCall::DeleteTransaction(args) = &call {
-        confirm_delete(pool, turns, request.workspace_id, request.session_id, args).await?;
+    // Layer 3. A delete or a split is challenged before it costs the turn
+    // anything, so asking the user does not spend the turn's budget (D20,
+    // D122).
+    if let Some((key, confirmed)) = call.confirmation() {
+        confirm(
+            pool,
+            turns,
+            request.workspace_id,
+            request.session_id,
+            &call,
+            &key,
+            confirmed,
+        )
+        .await?;
     }
 
     // Layer 2.
@@ -156,6 +170,14 @@ pub async fn execute(
         ToolCall::AddTransactionItems(args) => add_items(pool, actor, args).await,
         ToolCall::CreateWallet(args) => create_wallet(pool, actor, args).await,
         ToolCall::CreateCategory(args) => create_category(pool, actor, args).await,
+        ToolCall::GetOutstandingDebts => outstanding_debts(pool, request.workspace_id).await,
+        ToolCall::CreateDebt(args) => create_debt(pool, actor, args).await,
+        ToolCall::PayDebt(args) => pay_debt(pool, actor, max_amount, args).await,
+        ToolCall::UpdateDebt(args) => update_debt(pool, actor, args).await,
+        ToolCall::DeleteDebt(args) => {
+            delete_debt(pool, turns, actor, request.session_id, args).await
+        }
+        ToolCall::SplitBill(args) => split_bill(pool, turns, actor, request.session_id, args).await,
         ToolCall::PresentChoices(args) => present_choices(args),
     }
 }
@@ -171,6 +193,12 @@ fn check_amount_ceiling(call: &ToolCall, max_amount: Decimal) -> Result<()> {
         ToolCall::AddTransactionItems(args) => {
             args.items.iter().map(|item| Some(item.amount)).collect()
         }
+        // A payment in another currency is checked again on its wallet
+        // amount, once the rate is known (`pay_debt`).
+        ToolCall::CreateDebt(args) => vec![Some(args.amount)],
+        ToolCall::PayDebt(args) => vec![Some(args.amount)],
+        ToolCall::UpdateDebt(args) => vec![args.amount],
+        ToolCall::SplitBill(args) => vec![Some(args.amount)],
         _ => return Ok(()),
     };
 
@@ -190,39 +218,99 @@ fn check_amount_ceiling(call: &ToolCall, max_amount: Decimal) -> Result<()> {
     Ok(())
 }
 
-/// The confirmation gate (CHAT-6, D20).
+fn above_ceiling(max_amount: Decimal) -> AppError {
+    let mut fields = FieldErrors::new();
+    fields.insert(
+        "amount".to_string(),
+        format!("Above the ceiling one chat call may write ({max_amount})."),
+    );
+    AppError::ToolArgsInvalid(fields)
+}
+
+/// The confirmation gate (CHAT-6, D20, D122).
 ///
-/// `confirmed: true` is honoured only for an id this session has already
-/// been challenged on. A model that sets the flag on a first call is told to
-/// ask, and the challenge is issued at the same time, so the user sees what
-/// they are being asked about.
-async fn confirm_delete(
+/// `confirmed: true` is honoured only for a key this session has already
+/// been challenged on: a row's id, or a split's argument hash. A model that
+/// sets the flag on a first call is told to ask, and the challenge is
+/// issued at the same time, so the user sees what they are being asked
+/// about.
+async fn confirm(
     pool: &PgPool,
     turns: &TurnStore,
     workspace_id: &str,
     session_id: &str,
-    args: &DeleteArgs,
+    call: &ToolCall,
+    key: &str,
+    confirmed: bool,
 ) -> Result<()> {
-    if args.confirmed && turns.challenged(session_id, &args.transaction_id, now_secs()) {
+    if confirmed && turns.challenged(session_id, key, now_secs()) {
         return Ok(());
     }
 
     // Read it first: a challenge naming a row that does not exist would
     // teach the model nothing and leak the shape of other workspaces.
-    let row = transactions::service::find(pool, workspace_id, &args.transaction_id).await?;
-
-    turns.challenge(session_id, &args.transaction_id, now_secs());
-
-    let mut target = FieldErrors::new();
-    target.insert("date".to_string(), row.date.date_naive().to_string());
-    target.insert("name".to_string(), row.name.clone().unwrap_or_default());
-    target.insert(
-        "amount".to_string(),
-        format_money(row.amount, &row.wallet_currency_code, false),
-    );
-    target.insert("wallet".to_string(), row.wallet_name.clone());
-
+    let target = describe(pool, workspace_id, call).await?;
+    turns.challenge(session_id, key, now_secs());
     Err(AppError::ConfirmationRequired(target))
+}
+
+/// What the person is asked to agree to, every figure formatted here (D27).
+async fn describe(pool: &PgPool, workspace_id: &str, call: &ToolCall) -> Result<FieldErrors> {
+    let mut target = FieldErrors::new();
+    match call {
+        ToolCall::DeleteTransaction(args) => {
+            let row = transactions::service::find(pool, workspace_id, &args.transaction_id).await?;
+            target.insert("date".to_string(), row.date.date_naive().to_string());
+            target.insert("name".to_string(), row.name.clone().unwrap_or_default());
+            target.insert(
+                "amount".to_string(),
+                format_money(row.amount, &row.wallet_currency_code, false),
+            );
+            target.insert("wallet".to_string(), row.wallet_name.clone());
+        }
+        ToolCall::DeleteDebt(args) => {
+            let debt = debts::service::find(pool, workspace_id, &args.debt_id).await?;
+            target.insert("contact".to_string(), debt.contact_name.clone());
+            target.insert("type".to_string(), debt.r#type.clone());
+            target.insert(
+                "amount".to_string(),
+                format_money(debt.amount, &debt.currency_code, false),
+            );
+            target.insert(
+                "remaining".to_string(),
+                format_money(debt.remaining_amount, &debt.currency_code, false),
+            );
+            target.insert(
+                "description".to_string(),
+                debt.description.clone().unwrap_or_default(),
+            );
+        }
+        ToolCall::SplitBill(args) => {
+            let wallet_id =
+                wallet_or_default(pool, workspace_id, args.wallet_id.as_deref()).await?;
+            let preview = debts::service::preview_split(
+                pool,
+                workspace_id,
+                &SplitSource::New(debts::service::NewExpense {
+                    wallet_id: &wallet_id,
+                    amount: args.amount,
+                    name: &args.name,
+                    category_id: args.category_id.as_deref(),
+                    date: Utc::now(),
+                }),
+                &[],
+                &args.contact_names,
+            )
+            .await?;
+            target.insert("people".to_string(), preview.people_line());
+            target.insert("name".to_string(), args.name.clone());
+            target.insert("amount".to_string(), preview.amount_formatted);
+            target.insert("share_each".to_string(), preview.share_formatted);
+            target.insert("yours".to_string(), preview.yours_formatted);
+        }
+        _ => {}
+    }
+    Ok(target)
 }
 
 // ------------------------------------------------------------------- reads
@@ -918,6 +1006,290 @@ fn present_choices(args: ChoicesArgs) -> Result<ToolOutcome> {
     Ok(ToolOutcome {
         result: json!({ "question": args.question, "choices": args.choices }),
         summary: args.question.clone(),
+    })
+}
+
+// ------------------------------------------------------------------- debts
+
+/// The named wallet, or the workspace's default, as the old app's chat did.
+async fn wallet_or_default(
+    pool: &PgPool,
+    workspace_id: &str,
+    wallet_id: Option<&str>,
+) -> Result<String> {
+    if let Some(id) = wallet_id {
+        return Ok(id.to_string());
+    }
+    wallets::list_wallets(pool, workspace_id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .find(|wallet| wallet.is_default)
+        .map(|wallet| wallet.id)
+        .ok_or_else(|| {
+            let mut fields = FieldErrors::new();
+            fields.insert(
+                "wallet_id".to_string(),
+                "The workspace has no default wallet. Name one.".to_string(),
+            );
+            AppError::ToolArgsInvalid(fields)
+        })
+}
+
+fn debt_view(debt: &DebtListRow) -> Value {
+    json!({
+        "id": debt.id,
+        "contact": debt.contact_name,
+        "type": debt.r#type,
+        "status": debt.status,
+        "currency_code": debt.currency_code,
+        "amount": debt.amount.to_string(),
+        "amount_formatted": format_money(debt.amount, &debt.currency_code, false),
+        "remaining": debt.remaining_amount.to_string(),
+        "remaining_formatted": format_money(debt.remaining_amount, &debt.currency_code, false),
+        "due_date": debt.due_date.map(|day| day.to_string()),
+        "description": debt.description,
+    })
+}
+
+/// Unpaid and partial debts, soonest due first, with the totals the debts
+/// page shows (D27).
+async fn outstanding_debts(pool: &PgPool, workspace_id: &str) -> Result<ToolOutcome> {
+    let filters = DebtFilters {
+        statuses: vec!["unpaid".to_string(), "partial".to_string()],
+        ..Default::default()
+    };
+    let ((rows, total), summary) = tokio::try_join!(
+        debts::service::list(
+            pool,
+            workspace_id,
+            &filters,
+            DebtSort::DueDate,
+            false,
+            Page::new(Some(1), Some(100)),
+        ),
+        debts::service::summary(pool, workspace_id, Utc::now().date_naive()),
+    )?;
+
+    let (data, truncated) = bounded(rows.iter().map(debt_view).collect());
+    let returned = data.len();
+
+    Ok(ToolOutcome {
+        result: json!({
+            "debts": data,
+            "totals": {
+                "currency_code": summary.currency_code,
+                "owed_to_you": summary.owed_to_you_formatted,
+                "you_owe": summary.you_owe_formatted,
+                "net": summary.net_formatted,
+                "overdue_count": summary.overdue_count,
+                "left_out_for_want_of_a_rate": summary.left_out,
+            },
+            "meta": {
+                "returned": returned,
+                "total": total,
+                "truncated": truncated || i64::try_from(returned).unwrap_or(i64::MAX) < total,
+            },
+        }),
+        summary: format!("{total} outstanding debts."),
+    })
+}
+
+async fn create_debt(pool: &PgPool, actor: Actor<'_>, args: NewDebtArgs) -> Result<ToolOutcome> {
+    // Checked before the contact is made, so a refused debt leaves no new
+    // contact behind.
+    if args.amount <= Decimal::ZERO {
+        return Err(AppError::validation([(
+            "amount",
+            "Enter an amount above zero.",
+        )]));
+    }
+    if let Some(code) = args.currency_code.as_deref() {
+        validate_currency_code("currency_code", code)?;
+    }
+
+    let contact = contacts::service::find_or_create_named(pool, actor, &args.contact_name).await?;
+    let (debt, _) = debts::service::create_with_id(
+        pool,
+        actor,
+        None,
+        debts::service::DebtInput {
+            kind: &args.kind,
+            contact_id: &contact.id,
+            amount: args.amount,
+            currency_code: args.currency_code.as_deref(),
+            due_date: args.due_date,
+            description: args.description.as_deref(),
+            source_transaction_id: None,
+        },
+    )
+    .await?;
+
+    Ok(ToolOutcome {
+        summary: format!(
+            "Recorded a {} debt with {} of {}.",
+            debt.r#type,
+            debt.contact_name,
+            format_money(debt.amount, &debt.currency_code, false)
+        ),
+        result: debt_view(&debt),
+    })
+}
+
+/// A payment through the named wallet or the default one, dated now. In
+/// another currency the rate is resolved here, so the wallet amount can be
+/// held to the ceiling before anything is written, and the service is handed
+/// that same rate.
+async fn pay_debt(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    max_amount: Decimal,
+    args: PayDebtArgs,
+) -> Result<ToolOutcome> {
+    let debt = debts::service::find(pool, actor.workspace_id, &args.debt_id).await?;
+    let wallet_id = wallet_or_default(pool, actor.workspace_id, args.wallet_id.as_deref()).await?;
+    let wallet = wallets::find_wallet(pool, actor.workspace_id, &wallet_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::WalletNotFound)?;
+    let now = Utc::now();
+
+    let exchange_rate = if wallet.currency_code == debt.currency_code {
+        None
+    } else {
+        let rate = fx::service::resolve(
+            pool,
+            &debt.currency_code,
+            &wallet.currency_code,
+            now.date_naive(),
+            None,
+        )
+        .await?
+        .rate;
+        if round_money(args.amount * rate).abs() > max_amount {
+            return Err(above_ceiling(max_amount));
+        }
+        Some(rate)
+    };
+
+    let (paid, _) = debts::service::pay(
+        pool,
+        actor,
+        &args.debt_id,
+        None,
+        debts::service::PayInput {
+            amount: args.amount,
+            wallet_id: Some(&wallet_id),
+            date: now,
+            exchange_rate,
+        },
+    )
+    .await?;
+
+    let moved = paid
+        .transaction
+        .as_ref()
+        .map(|row| format_money(row.amount, &row.wallet_currency_code, false));
+    Ok(ToolOutcome {
+        summary: format!(
+            "Paid {} on the debt with {}; {} remains.",
+            format_money(paid.payment.amount, &paid.debt.currency_code, false),
+            paid.debt.contact_name,
+            format_money(paid.debt.remaining_amount, &paid.debt.currency_code, false)
+        ),
+        result: json!({
+            "payment_id": paid.payment.id,
+            "paid": format_money(paid.payment.amount, &paid.debt.currency_code, false),
+            "wallet": wallet.name,
+            "wallet_amount": moved,
+            "transaction_id": paid.transaction.as_ref().map(|row| row.id.clone()),
+            "debt": debt_view(&paid.debt),
+        }),
+    })
+}
+
+async fn update_debt(pool: &PgPool, actor: Actor<'_>, args: UpdateDebtArgs) -> Result<ToolOutcome> {
+    let debt = debts::service::update(
+        pool,
+        actor,
+        &args.debt_id,
+        debts::service::DebtChange {
+            amount: args.amount,
+            description: args.description.as_deref().map(Some),
+            due_date: args.due_date.map(Some),
+            ..Default::default()
+        },
+        None,
+    )
+    .await?;
+
+    Ok(ToolOutcome {
+        summary: format!("Updated the debt with {}.", debt.contact_name),
+        result: debt_view(&debt),
+    })
+}
+
+async fn delete_debt(
+    pool: &PgPool,
+    turns: &TurnStore,
+    actor: Actor<'_>,
+    session_id: &str,
+    args: DeleteDebtArgs,
+) -> Result<ToolOutcome> {
+    let debt = debts::service::find(pool, actor.workspace_id, &args.debt_id).await?;
+    debts::service::delete(pool, actor, &args.debt_id).await?;
+
+    // One confirmation answers one delete.
+    turns.clear_challenge(session_id, &format!("debt:{}", args.debt_id));
+
+    Ok(ToolOutcome {
+        result: json!({ "id": args.debt_id, "deleted": true }),
+        summary: format!(
+            "Deleted the debt with {} of {}.",
+            debt.contact_name,
+            format_money(debt.amount, &debt.currency_code, false)
+        ),
+    })
+}
+
+/// A confirmed split (D122): a new expense from the named or default wallet,
+/// dated now, and a receivable per person.
+async fn split_bill(
+    pool: &PgPool,
+    turns: &TurnStore,
+    actor: Actor<'_>,
+    session_id: &str,
+    args: SplitBillArgs,
+) -> Result<ToolOutcome> {
+    let wallet_id = wallet_or_default(pool, actor.workspace_id, args.wallet_id.as_deref()).await?;
+    let (transaction, created) = debts::service::split(
+        pool,
+        actor,
+        SplitSource::New(debts::service::NewExpense {
+            wallet_id: &wallet_id,
+            amount: args.amount,
+            name: &args.name,
+            category_id: args.category_id.as_deref(),
+            date: Utc::now(),
+        }),
+        &[],
+        &args.contact_names,
+    )
+    .await?;
+
+    turns.clear_challenge(session_id, &args.challenge_key());
+
+    let people: Vec<Value> = created.iter().map(debt_view).collect();
+    Ok(ToolOutcome {
+        summary: format!(
+            "Split {} with {} people.",
+            format_money(transaction.amount, &transaction.wallet_currency_code, false),
+            created.len()
+        ),
+        result: json!({
+            "transaction": transaction_view(&transaction),
+            "receivables": people,
+        }),
     })
 }
 

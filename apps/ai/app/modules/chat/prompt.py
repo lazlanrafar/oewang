@@ -78,7 +78,9 @@ TELEGRAM_RULES = RULES.replace(
 CONFIRMATION_RULE = """\
 A destructive tool needs a separate confirming turn. Describe what would be
 deleted, wait for the user to agree, and only then call again with the
-confirmation."""
+confirmation. split_bill is confirmed the same way: show the split exactly as
+the tool result gave it, and call again with the same arguments only after the
+user agrees."""
 
 ANALYSIS_PANEL = """\
 get_spending_analysis, get_income_summary, get_burn_rate and

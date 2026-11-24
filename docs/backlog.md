@@ -976,10 +976,10 @@ Requirements: CON-2, DEBT-11, DEBT-12, DEBT-13
 ### US-072: Debt and contact tools in chat and MCP (OEW-109)
 Requirements: DEBT-14, DEBT-15
 
-- [ ] `get_outstanding_debts`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` in the Rust and Python catalogs; `delete_debt` and `split_bill` behind a confirming turn, the split's challenge keyed by its arguments (D122, Rust and pytest tests)
-- [ ] Unknown contact names created; the tool amount cap applies to a payment's wallet amount (Rust tests)
-- [ ] MCP: the six plus `list_contacts`, `create_contact`, `update_contact`, `delete_contact`, `merge_contacts`; deletes and merge need `confirmed` (Rust tests)
-- [ ] ruff, pytest, clippy and `cargo test` pass in the containers
+- [x] `get_outstanding_debts`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` in the Rust and Python catalogs; `delete_debt` and `split_bill` behind a confirming turn, the split's challenge keyed by its arguments (D122, Rust and pytest tests)
+- [x] Unknown contact names created; the tool amount cap applies to a payment's wallet amount (Rust tests)
+- [x] MCP: the six plus `list_contacts`, `create_contact`, `update_contact`, `delete_contact`, `merge_contacts`; deletes, merge and `split_bill` need `confirmed`, and a split's first answer is the split the API computed (D122, Rust tests)
+- [x] ruff, pytest, clippy and `cargo test` pass in the containers
 - [ ] Verified locally: "Budi owes me 50k", "Budi paid 20k into BCA", "split 300k dinner with Ani and Budi" each do what they say, and the figures match the database
 
 ### US-073: Debts and contacts on mobile, offline (OEW-110)

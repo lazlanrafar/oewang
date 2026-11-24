@@ -1,6 +1,6 @@
 //! The tool catalog, as rules rather than as a dispatch table.
 //!
-//! Fifteen tools (D17, D88, D103). What lives here is everything about them that needs
+//! Twenty-one tools (D17, D88, D103, D120). What lives here is everything about them that needs
 //! no database: which exist, which write, what each one accepts, and the
 //! per-turn caps. Execution lives in the server crate, because that is where
 //! the services are.
@@ -22,6 +22,7 @@ use std::str::FromStr;
 use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone, Utc};
 use rust_decimal::Decimal;
 use serde_json::{Map, Value};
+use sha2::{Digest, Sha256};
 
 use crate::{budget::Month, AppError, FieldErrors, Role};
 
@@ -33,7 +34,8 @@ pub const MAX_WRITES_PER_TURN: u32 = 3;
 pub const MAX_DELETES_PER_TURN: u32 = 1;
 pub const MAX_CREATED_TRANSACTIONS_PER_TURN: u32 = 3;
 
-/// How long a challenge for one transaction id stays answerable (CHAT-6).
+/// How long a challenge for one row, or one split, stays answerable (CHAT-6,
+/// D122).
 pub const CONFIRMATION_TTL_SECS: i64 = 5 * 60;
 
 /// The default ceiling on an amount a tool may write, in the wallet's own
@@ -62,17 +64,23 @@ pub enum Tool {
     GetIncomeSummary,
     GetBurnRate,
     GetBudgetStatus,
+    GetOutstandingDebts,
     CreateTransaction,
     UpdateTransaction,
     DeleteTransaction,
     AddTransactionItems,
     CreateWallet,
     CreateCategory,
+    CreateDebt,
+    PayDebt,
+    UpdateDebt,
+    DeleteDebt,
+    SplitBill,
     PresentChoices,
 }
 
 impl Tool {
-    pub const ALL: [Tool; 15] = [
+    pub const ALL: [Tool; 21] = [
         Tool::GetWorkspaceContext,
         Tool::GetRecentTransactions,
         Tool::SearchTransactions,
@@ -81,12 +89,18 @@ impl Tool {
         Tool::GetIncomeSummary,
         Tool::GetBurnRate,
         Tool::GetBudgetStatus,
+        Tool::GetOutstandingDebts,
         Tool::CreateTransaction,
         Tool::UpdateTransaction,
         Tool::DeleteTransaction,
         Tool::AddTransactionItems,
         Tool::CreateWallet,
         Tool::CreateCategory,
+        Tool::CreateDebt,
+        Tool::PayDebt,
+        Tool::UpdateDebt,
+        Tool::DeleteDebt,
+        Tool::SplitBill,
         Tool::PresentChoices,
     ];
 
@@ -100,12 +114,18 @@ impl Tool {
             Tool::GetIncomeSummary => "get_income_summary",
             Tool::GetBurnRate => "get_burn_rate",
             Tool::GetBudgetStatus => "get_budget_status",
+            Tool::GetOutstandingDebts => "get_outstanding_debts",
             Tool::CreateTransaction => "create_transaction",
             Tool::UpdateTransaction => "update_transaction",
             Tool::DeleteTransaction => "delete_transaction",
             Tool::AddTransactionItems => "add_transaction_items",
             Tool::CreateWallet => "create_wallet",
             Tool::CreateCategory => "create_category",
+            Tool::CreateDebt => "create_debt",
+            Tool::PayDebt => "pay_debt",
+            Tool::UpdateDebt => "update_debt",
+            Tool::DeleteDebt => "delete_debt",
+            Tool::SplitBill => "split_bill",
             Tool::PresentChoices => "present_choices",
         }
     }
@@ -130,15 +150,36 @@ impl Tool {
                 | Tool::AddTransactionItems
                 | Tool::CreateWallet
                 | Tool::CreateCategory
+                | Tool::CreateDebt
+                | Tool::PayDebt
+                | Tool::UpdateDebt
+                | Tool::DeleteDebt
+                | Tool::SplitBill
         )
     }
 
     pub fn is_delete(self) -> bool {
-        matches!(self, Tool::DeleteTransaction)
+        matches!(self, Tool::DeleteTransaction | Tool::DeleteDebt)
     }
 
+    /// A payment writes the transaction that moves its money, and a split
+    /// writes the expense it divides, so both count against the turn's
+    /// created transactions as `create_transaction` does (D25).
     pub fn creates_transaction(self) -> bool {
-        matches!(self, Tool::CreateTransaction)
+        matches!(
+            self,
+            Tool::CreateTransaction | Tool::PayDebt | Tool::SplitBill
+        )
+    }
+
+    /// Whether a call runs only after the person agreed in a later turn
+    /// (D20). The two deletes, and `split_bill`, which writes up to
+    /// [`MAX_SPLIT_CONTACTS`] debts in one call (D122).
+    pub fn needs_confirmation(self) -> bool {
+        matches!(
+            self,
+            Tool::DeleteTransaction | Tool::DeleteDebt | Tool::SplitBill
+        )
     }
 
     /// Whether the live membership row allows this tool. A write needs
@@ -164,12 +205,19 @@ pub enum ToolCall {
     /// Budget against spending for one month, with a `budget` canvas
     /// (D103). `None` is the current month.
     GetBudgetStatus(Option<Month>),
+    /// Unpaid and partial debts (D120). No arguments, as in the old app.
+    GetOutstandingDebts,
     CreateTransaction(WriteTransactionArgs),
     UpdateTransaction(WriteTransactionArgs),
     DeleteTransaction(DeleteArgs),
     AddTransactionItems(ItemsArgs),
     CreateWallet(NewWalletArgs),
     CreateCategory(NewCategoryArgs),
+    CreateDebt(NewDebtArgs),
+    PayDebt(PayDebtArgs),
+    UpdateDebt(UpdateDebtArgs),
+    DeleteDebt(DeleteDebtArgs),
+    SplitBill(SplitBillArgs),
     PresentChoices(ChoicesArgs),
 }
 
@@ -294,6 +342,102 @@ pub struct ChoicesArgs {
     pub choices: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewDebtArgs {
+    /// `payable` or `receivable`.
+    pub kind: String,
+    /// Matched to a live contact case-insensitively, or created (DEBT-14).
+    pub contact_name: String,
+    /// In the debt's currency.
+    pub amount: Decimal,
+    /// `None` is the workspace currency.
+    pub currency_code: Option<String>,
+    pub description: Option<String>,
+    pub due_date: Option<NaiveDate>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PayDebtArgs {
+    pub debt_id: String,
+    /// In the debt's currency.
+    pub amount: Decimal,
+    /// `None` is the default wallet, as in the old app.
+    pub wallet_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateDebtArgs {
+    pub debt_id: String,
+    pub amount: Option<Decimal>,
+    pub description: Option<String>,
+    pub due_date: Option<NaiveDate>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeleteDebtArgs {
+    pub debt_id: String,
+    /// A claim, honoured only for a debt already challenged (D20).
+    pub confirmed: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SplitBillArgs {
+    /// The whole bill, in the wallet's currency.
+    pub amount: Decimal,
+    /// The expense's name.
+    pub name: String,
+    /// `None` is the default wallet.
+    pub wallet_id: Option<String>,
+    pub category_id: Option<String>,
+    /// The other people, 1 to [`MAX_SPLIT_CONTACTS`]. The person is never in
+    /// the list; their share is what is left.
+    pub contact_names: Vec<String>,
+    /// A claim, honoured only for this exact split already challenged (D122).
+    pub confirmed: bool,
+}
+
+impl SplitBillArgs {
+    /// The challenge key: a hash of what the split would write (D122).
+    ///
+    /// A split has no row yet, so the key cannot be an id. It is taken over
+    /// the parsed arguments rather than the raw JSON, so reordering keys or
+    /// names, or changing a name's case, answers the same challenge, while
+    /// any change to who or how much does not.
+    pub fn challenge_key(&self) -> String {
+        let mut names: Vec<String> = self
+            .contact_names
+            .iter()
+            .map(|name| name.to_lowercase())
+            .collect();
+        names.sort();
+        names.dedup();
+
+        let mut hasher = Sha256::new();
+        let parts = [
+            self.amount.normalize().to_string(),
+            self.name.clone(),
+            self.wallet_id.clone().unwrap_or_default(),
+            self.category_id.clone().unwrap_or_default(),
+        ];
+        // A zero byte after every part, which no cleaned argument can hold,
+        // so ("ab", "c") and ("a", "bc") never hash alike.
+        for part in parts.iter().chain(names.iter()) {
+            hasher.update(part.as_bytes());
+            hasher.update([0u8]);
+        }
+
+        let digest: String = hasher
+            .finalize()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect();
+        format!("split:{digest}")
+    }
+}
+
+/// The most people one split may name besides the person (DEBT-10).
+pub const MAX_SPLIT_CONTACTS: usize = 20;
+
 /// The most line items one call may add. A receipt longer than this is a
 /// statement, and statements have their own path.
 pub const MAX_ITEMS: usize = 50;
@@ -350,6 +494,7 @@ impl ToolCall {
             Tool::GetIncomeSummary => ToolCall::GetIncomeSummary(reader.range()),
             Tool::GetBurnRate => ToolCall::GetBurnRate(reader.range()),
             Tool::GetBudgetStatus => ToolCall::GetBudgetStatus(reader.month("month")),
+            Tool::GetOutstandingDebts => ToolCall::GetOutstandingDebts,
 
             Tool::CreateTransaction => {
                 let args = reader.transaction(false);
@@ -413,6 +558,88 @@ impl ToolCall {
                 })
             }
 
+            Tool::CreateDebt => {
+                let kind = reader.one_of("type", &["payable", "receivable"]);
+                let contact_name = reader.text("contact_name");
+                let amount = reader.amount("amount");
+                let currency_code = reader.text("currency_code");
+                let description = reader.text("description");
+                let due_date = reader.date("due_date").map(|stamp| stamp.date_naive());
+                reader.require("type", kind.is_some());
+                reader.require("contact_name", contact_name.is_some());
+                reader.require("amount", amount.is_some());
+
+                ToolCall::CreateDebt(NewDebtArgs {
+                    kind: kind.unwrap_or_default(),
+                    contact_name: contact_name.unwrap_or_default(),
+                    amount: amount.unwrap_or_default(),
+                    currency_code,
+                    description,
+                    due_date,
+                })
+            }
+
+            Tool::PayDebt => {
+                let debt_id = reader.id("debt_id");
+                let amount = reader.amount("amount");
+                let wallet_id = reader.id("wallet_id");
+                reader.require("debt_id", debt_id.is_some());
+                reader.require("amount", amount.is_some());
+
+                ToolCall::PayDebt(PayDebtArgs {
+                    debt_id: debt_id.unwrap_or_default(),
+                    amount: amount.unwrap_or_default(),
+                    wallet_id,
+                })
+            }
+
+            Tool::UpdateDebt => {
+                let debt_id = reader.id("debt_id");
+                let amount = reader.amount("amount");
+                let description = reader.text("description");
+                let due_date = reader.date("due_date").map(|stamp| stamp.date_naive());
+                reader.require("debt_id", debt_id.is_some());
+
+                ToolCall::UpdateDebt(UpdateDebtArgs {
+                    debt_id: debt_id.unwrap_or_default(),
+                    amount,
+                    description,
+                    due_date,
+                })
+            }
+
+            Tool::DeleteDebt => {
+                let debt_id = reader.id("debt_id");
+                let confirmed = reader.flag("confirmed");
+                reader.require("debt_id", debt_id.is_some());
+
+                ToolCall::DeleteDebt(DeleteDebtArgs {
+                    debt_id: debt_id.unwrap_or_default(),
+                    confirmed,
+                })
+            }
+
+            Tool::SplitBill => {
+                let amount = reader.amount("amount");
+                let name = reader.text("name");
+                let wallet_id = reader.id("wallet_id");
+                let category_id = reader.id("category_id");
+                let contact_names = reader.strings("contact_names", MAX_SPLIT_CONTACTS);
+                let confirmed = reader.flag("confirmed");
+                reader.require("amount", amount.is_some());
+                reader.require("name", name.is_some());
+                reader.require("contact_names", !contact_names.is_empty());
+
+                ToolCall::SplitBill(SplitBillArgs {
+                    amount: amount.unwrap_or_default(),
+                    name: name.unwrap_or_default(),
+                    wallet_id,
+                    category_id,
+                    contact_names,
+                    confirmed,
+                })
+            }
+
             Tool::PresentChoices => {
                 let question = reader.text("question");
                 let choices = reader.strings("choices", MAX_CHOICES);
@@ -428,6 +655,23 @@ impl ToolCall {
 
         reader.finish()?;
         Ok(call)
+    }
+
+    /// What a confirmation is keyed by, for a call that needs one (D20,
+    /// D122), with whether the model claims the person already agreed.
+    ///
+    /// A transaction's key is its bare id, as it has been since D20. A
+    /// debt's is prefixed, so a challenge on one kind of row never answers
+    /// for the other; a split's is the hash of its arguments.
+    pub fn confirmation(&self) -> Option<(String, bool)> {
+        match self {
+            ToolCall::DeleteTransaction(args) => {
+                Some((args.transaction_id.clone(), args.confirmed))
+            }
+            ToolCall::DeleteDebt(args) => Some((format!("debt:{}", args.debt_id), args.confirmed)),
+            ToolCall::SplitBill(args) => Some((args.challenge_key(), args.confirmed)),
+            _ => None,
+        }
     }
 }
 
@@ -833,8 +1077,8 @@ mod tests {
         }
         assert_eq!(
             Tool::ALL.len(),
-            15,
-            "the catalog is fifteen tools (D17, D88, D103)"
+            21,
+            "the catalog is twenty-one tools (D17, D88, D103, D120)"
         );
         assert!(matches!(
             Tool::parse("delete_wallet"),
@@ -1191,5 +1435,213 @@ mod tests {
             panic!("wrong variant")
         };
         assert_eq!(args.name, "Food");
+    }
+
+    fn split(args: Value) -> SplitBillArgs {
+        match parse(Tool::SplitBill, args).unwrap() {
+            ToolCall::SplitBill(args) => args,
+            other => panic!("wrong variant {other:?}"),
+        }
+    }
+
+    /// DEBT-14
+    #[test]
+    fn should_count_the_debt_tools_against_the_turn() {
+        assert!(!Tool::GetOutstandingDebts.is_write());
+        for tool in [
+            Tool::CreateDebt,
+            Tool::PayDebt,
+            Tool::UpdateDebt,
+            Tool::DeleteDebt,
+            Tool::SplitBill,
+        ] {
+            assert!(tool.is_write(), "{} is a write", tool.name());
+            assert!(
+                !tool.allowed_for(Role::Member),
+                "{} for a member",
+                tool.name()
+            );
+        }
+        assert!(Tool::DeleteDebt.is_delete());
+        assert!(Tool::PayDebt.creates_transaction());
+        assert!(Tool::SplitBill.creates_transaction());
+        assert!(!Tool::CreateDebt.creates_transaction());
+        assert!(!Tool::UpdateDebt.creates_transaction());
+    }
+
+    /// DEBT-14, D122
+    #[test]
+    fn should_confirm_the_deletes_and_the_split_and_nothing_else() {
+        let confirmed: Vec<&str> = Tool::ALL
+            .into_iter()
+            .filter(|tool| tool.needs_confirmation())
+            .map(Tool::name)
+            .collect();
+        assert_eq!(
+            confirmed,
+            ["delete_transaction", "delete_debt", "split_bill"]
+        );
+    }
+
+    /// DEBT-14
+    #[test]
+    fn should_take_no_arguments_for_outstanding_debts() {
+        assert_eq!(
+            parse(Tool::GetOutstandingDebts, json!({})).unwrap(),
+            ToolCall::GetOutstandingDebts
+        );
+        let error = parse(Tool::GetOutstandingDebts, json!({ "contact": "Budi" })).unwrap_err();
+        assert!(fields(error).contains_key("contact"));
+    }
+
+    /// DEBT-14
+    #[test]
+    fn should_read_a_debt_with_a_due_date_and_a_string_amount() {
+        let call = parse(
+            Tool::CreateDebt,
+            json!({
+                "type": "receivable",
+                "contact_name": " Budi ",
+                "amount": "50000",
+                "due_date": "2026-12-01"
+            }),
+        )
+        .unwrap();
+        let ToolCall::CreateDebt(args) = call else {
+            panic!("wrong variant")
+        };
+        assert_eq!(args.contact_name, "Budi");
+        assert_eq!(args.amount, Decimal::from_str("50000").unwrap());
+        assert_eq!(args.due_date.unwrap().to_string(), "2026-12-01");
+        assert_eq!(args.currency_code, None);
+    }
+
+    /// DEBT-14
+    #[test]
+    fn should_refuse_a_debt_without_what_it_needs() {
+        let missing = fields(parse(Tool::CreateDebt, json!({})).unwrap_err());
+        for key in ["type", "contact_name", "amount"] {
+            assert!(missing.contains_key(key), "{key}");
+        }
+
+        let error = parse(
+            Tool::CreateDebt,
+            json!({ "type": "loan", "contact_name": "Budi", "amount": "1" }),
+        )
+        .unwrap_err();
+        assert!(fields(error)["type"].starts_with("Expected one of"));
+
+        let error = parse(
+            Tool::PayDebt,
+            json!({ "debt_id": "debt_1", "amount": 20000 }),
+        )
+        .unwrap_err();
+        assert_eq!(
+            fields(error)["amount"],
+            "An amount is a string, never a number."
+        );
+    }
+
+    /// DEBT-14
+    #[test]
+    fn should_refuse_a_debt_argument_the_tool_does_not_take() {
+        let error = parse(
+            Tool::UpdateDebt,
+            json!({ "debt_id": "debt_1", "type": "payable" }),
+        )
+        .unwrap_err();
+        assert_eq!(
+            fields(error)["type"],
+            "This tool does not take that argument."
+        );
+
+        let error = parse(
+            Tool::PayDebt,
+            json!({ "debt_id": "debt_1", "amount": "1", "date": "2026-11-01" }),
+        )
+        .unwrap_err();
+        assert!(fields(error).contains_key("date"));
+    }
+
+    /// DEBT-14
+    #[test]
+    fn should_key_a_debt_challenge_apart_from_a_transaction_challenge() {
+        let delete_debt = parse(Tool::DeleteDebt, json!({ "debt_id": "abc" })).unwrap();
+        let delete_transaction =
+            parse(Tool::DeleteTransaction, json!({ "transaction_id": "abc" })).unwrap();
+
+        assert_eq!(delete_debt.confirmation(), Some(("debt:abc".into(), false)));
+        assert_eq!(
+            delete_transaction.confirmation(),
+            Some(("abc".into(), false))
+        );
+        assert_eq!(
+            parse(Tool::GetOutstandingDebts, json!({}))
+                .unwrap()
+                .confirmation(),
+            None
+        );
+    }
+
+    /// D122
+    #[test]
+    fn should_bound_a_split_to_one_to_twenty_people() {
+        let error = parse(
+            Tool::SplitBill,
+            json!({ "amount": "300000", "name": "Dinner", "contact_names": [] }),
+        )
+        .unwrap_err();
+        assert!(fields(error).contains_key("contact_names"));
+
+        let too_many: Vec<String> = (0..=MAX_SPLIT_CONTACTS)
+            .map(|index| format!("Friend {index}"))
+            .collect();
+        let error = parse(
+            Tool::SplitBill,
+            json!({ "amount": "300000", "name": "Dinner", "contact_names": too_many }),
+        )
+        .unwrap_err();
+        assert!(fields(error)["contact_names"].contains("At most"));
+    }
+
+    /// D122
+    #[test]
+    fn should_key_a_split_by_what_it_would_write() {
+        let base = split(json!({
+            "amount": "300000",
+            "name": "Dinner",
+            "wallet_id": "wal_bca",
+            "contact_names": ["Ani", "Budi"]
+        }));
+
+        // The same split, said differently, answers the same challenge.
+        let reordered = split(json!({
+            "contact_names": ["budi", "ANI"],
+            "wallet_id": "wal_bca",
+            "name": "Dinner",
+            "amount": "300000.00",
+            "confirmed": true
+        }));
+        assert_eq!(base.challenge_key(), reordered.challenge_key());
+        assert!(base.challenge_key().starts_with("split:"));
+
+        // Any change to who or how much is a different split.
+        for other in [
+            json!({ "amount": "300001", "name": "Dinner", "wallet_id": "wal_bca", "contact_names": ["Ani", "Budi"] }),
+            json!({ "amount": "300000", "name": "Dinner", "wallet_id": "wal_bca", "contact_names": ["Ani", "Budi", "Citra"] }),
+            json!({ "amount": "300000", "name": "Dinner", "wallet_id": "wal_cash", "contact_names": ["Ani", "Budi"] }),
+            json!({ "amount": "300000", "name": "Lunch", "wallet_id": "wal_bca", "contact_names": ["Ani", "Budi"] }),
+            json!({ "amount": "300000", "name": "Dinner", "contact_names": ["Ani", "Budi"] }),
+        ] {
+            assert_ne!(base.challenge_key(), split(other).challenge_key());
+        }
+
+        // A name boundary cannot be moved without changing the key.
+        let joined = split(json!({ "amount": "1", "name": "ab", "contact_names": ["c"] }));
+        let moved = split(json!({ "amount": "1", "name": "a", "contact_names": ["bc"] }));
+        assert_ne!(joined.challenge_key(), moved.challenge_key());
+
+        let call = ToolCall::SplitBill(reordered.clone());
+        assert_eq!(call.confirmation(), Some((reordered.challenge_key(), true)));
     }
 }
