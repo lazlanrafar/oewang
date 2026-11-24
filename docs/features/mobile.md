@@ -44,7 +44,9 @@ Set at build time with `--dart-define-from-file=env/<name>.json`, never from a b
 | `SENTRY_DSN` | Empty disables Sentry |
 | `PASSKEYS_ANDROID` | `true` shows the passkey buttons on Android. Absent or `false` (the default) hides them. Set it in `env/prod.json` only once `ANDROID_CERT_SHA256` holds the release signing key (D119, [Deployment, Mobile](../deployment.md#mobile)) |
 
-`apps/native/env/dev.json` is committed for the local stack (iOS simulator on `localhost:3002`). Its key is the one the local API generated on first start, so on another machine replace it with what `GET http://localhost:3002/.well-known/oewang-keys` answers. `apps/native/env/prod.json` is committed too and is what the store builds use; the release workflow checks it against production ([Deployment, Mobile](../deployment.md#mobile)). Other environments' files are gitignored and made where the app is built.
+`apps/native/env/dev.json` is committed for the local stack (iOS simulator on `localhost:3002`), and `apps/native/env/dev-android.json` is the same file for the Android emulator, which reaches the host at `10.0.2.2`. Their key is the one the local API generated on first start, so on another machine replace it in both with what `GET http://localhost:3002/.well-known/oewang-keys` answers.
+
+Plain HTTP to the local stack is allowed in debug builds only: `android/app/src/debug/` holds a network security config that permits cleartext to `10.0.2.2` and `localhost`, so a release build keeps Android's HTTPS-only default. Dart's own `HttpClient` does not consult that policy (the API calls worked without it); it covers anything going through the platform's network stack. `apps/native/env/prod.json` is committed too and is what the store builds use; the release workflow checks it against production ([Deployment, Mobile](../deployment.md#mobile)). Other environments' files are gitignored and made where the app is built.
 
 Public keys are not secrets. The FCM config files (`google-services.json`, `GoogleService-Info.plist`) are committed as the old app did; they identify the Firebase project and grant nothing.
 

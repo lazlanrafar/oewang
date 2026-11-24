@@ -52,6 +52,7 @@ app.*.map.json
 # it is built (docs/features/mobile.md).
 env/*.json
 !env/dev.json
+!env/dev-android.json
 !env/prod.json
 
 # Never bundle a .env: configuration comes from --dart-define-from-file.
