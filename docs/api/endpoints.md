@@ -574,6 +574,10 @@ The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, 
 | Method | Path | Permission | Purpose |
 |---|---|---|---|
 | GET | `/v1/console/me` | any operator | `{ id, email, name, role: { id, name }, permissions: string[] }`. The app builds its menu from `permissions` (CSL-2) |
+| GET | `/v1/console/users` | `console.read` | Paged. `search` (email or name), `sort` `created_at` (default, newest first) or `email`, `order`. Rows `{ id, email, name, created_at, console_role, workspaces, last_active_at }`: `workspaces` counts live memberships of live workspaces, `last_active_at` is the newest refresh token (CSL-3) |
+| GET | `/v1/console/users/{id}` | `console.read` | The row plus `memberships: [{ workspace_id, workspace_name, role, joined_at, workspace_deleted_at }]`, deleted workspaces included. 404 `NOT_FOUND` |
+| GET | `/v1/console/workspaces` | `console.read` | Paged. `search` (name or slug), `status` `active` or `deleted` (absent is both), `sort` `created_at` (default, newest first) or `name`, `order`. Rows `{ id, name, slug, currency_code, created_at, deleted_at, members, owner_email, last_activity_at }`; `last_activity_at` is the newest audit row (CSL-4) |
+| GET | `/v1/console/workspaces/{id}` | `console.read` | The row plus `member_list: [{ user_id, email, name, role, joined_at }]`, `counts: { wallets, transactions }`, `storage: { bytes, files }` and `tokens_month: { input, output }`. Counts only, never an amount (CSL-13). 404 `NOT_FOUND` |
 
 ## Internal
 

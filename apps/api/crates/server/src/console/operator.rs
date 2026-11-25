@@ -23,8 +23,6 @@ pub struct Operator {
     pub role_id: String,
     pub role_name: String,
     pub permissions: Vec<ConsolePermission>,
-    // Read by `require`, which the console's data routes call (US-081 on).
-    #[allow(dead_code)]
     request_id: String,
 }
 
@@ -47,13 +45,11 @@ impl Operator {
         }
     }
 
-    #[allow(dead_code)]
     pub fn can(&self, permission: ConsolePermission) -> bool {
         self.permissions.contains(&permission)
     }
 
     /// The guard every console handler starts with.
-    #[allow(dead_code)]
     pub fn require(&self, permission: ConsolePermission) -> Result<(), ApiError> {
         if self.can(permission) {
             Ok(())

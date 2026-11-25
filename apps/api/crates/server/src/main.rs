@@ -516,6 +516,13 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         // The operator console. Every route takes an `Operator`, read from
         // the database per request, and checks one permission (CSL, D126).
         .route("/v1/console/me", get(console::handler::me))
+        .route("/v1/console/users", get(console::handler::users))
+        .route("/v1/console/users/{id}", get(console::handler::user))
+        .route("/v1/console/workspaces", get(console::handler::workspaces))
+        .route(
+            "/v1/console/workspaces/{id}",
+            get(console::handler::workspace),
+        )
         // Feedback from settings, any role (FB-1).
         .route("/v1/feedback", post(feedback::handler::send))
         // Exchange rates. A suggestion for the form; nothing reads it on

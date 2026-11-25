@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 186 with test evidence
+- 189 with test evidence
 - 29 verified in browser only
-- 26 not done
+- 23 not done
 
 | ID | Evidence |
 |---|---|
@@ -77,8 +77,8 @@ in browser" box ticked; or a written reason it is not done.
 | CON-4 | `apps/api/crates/server/src/debts/tests.rs`, `apps/api/crates/server/src/mcp/tests.rs` |
 | CSL-1 | `apps/app/src/hooks.server.test.ts`, `apps/app/src/lib/server/console.test.ts` |
 | CSL-2 | `apps/api/crates/server/src/console/tests.rs` |
-| CSL-3 | not done: planned in US-081 (epic OEW-123), not built yet |
-| CSL-4 | not done: planned in US-081 (epic OEW-123), not built yet |
+| CSL-3 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-4 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-5 | not done: planned in US-082 (epic OEW-123), not built yet |
 | CSL-6 | not done: planned in US-082 (epic OEW-123), not built yet |
 | CSL-7 | not done: planned in US-082 (epic OEW-123), not built yet |
@@ -87,7 +87,7 @@ in browser" box ticked; or a written reason it is not done.
 | CSL-10 | not done: planned in US-084 (epic OEW-123), not built yet |
 | CSL-11 | not done: planned in US-085 (epic OEW-123), not built yet |
 | CSL-12 | not done: planned in US-085 (epic OEW-123), not built yet |
-| CSL-13 | not done: planned in US-081 (epic OEW-123), not built yet |
+| CSL-13 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-14 | not done: planned in US-082 (epic OEW-123), not built yet |
 | DEBT-1 | `apps/api/crates/server/src/debts/tests.rs` |
 | DEBT-2 | `apps/api/crates/domain/src/debt.rs`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/debts/tests.rs` |
