@@ -354,7 +354,8 @@
 		"bulk_pay_currency_mismatch": "Every debt must be in the account's currency.",
 		"split_source_not_expense": "Only an expense can be split.",
 		"payment_transaction_locked": "This transaction pays a debt. Change its amount, account or type from the debt instead.",
-		"foreign_entry_same_wallet": "That account already holds the currency this was entered in. Open the transaction to change its account."
+		"foreign_entry_same_wallet": "That account already holds the currency this was entered in. Open the transaction to change its account.",
+		"console_forbidden": "Your console role does not allow that."
 	},
 	"style": {
 		"title": "Design system",
@@ -1397,5 +1398,24 @@
 			"deleted": "Contact deleted successfully",
 			"merged": "Contacts merged"
 		}
+	},
+	"console": {
+		"title": "Console",
+		"signed_in_as": "{email}, {role}",
+		"sign_out": "Sign out",
+		"nav_overview": "Overview",
+		"nav_people_group": "People",
+		"nav_users": "Users",
+		"nav_workspaces": "Workspaces",
+		"nav_feedback": "Feedback",
+		"nav_system_group": "System",
+		"nav_usage": "Usage",
+		"nav_health": "Health",
+		"nav_access_group": "Access",
+		"nav_operators": "Operators",
+		"nav_roles": "Roles",
+		"nav_audit": "Operator audit",
+		"overview_title": "Signed in as {role}",
+		"overview_description": "What your console role allows. Screens arrive as they are built."
 	}
 }

@@ -567,6 +567,14 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 
 The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, `/oauth/token`, `/oauth/authorize`); these routes are what they relay to, over OWE1.
 
+## Console
+
+[features/console.md](../features/console.md), D124 to D126. Called by the app on `console.oewang.com` only. Every route takes the session and an operator role read from the database per request; "Permission" is the key the route checks. A person without a role, or without the permission, gets 403 `CONSOLE_FORBIDDEN`. Nothing here names a workspace through the token: the console reads across workspaces, and never returns an amount, a balance, a note or the text of a transaction (CSL-13).
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| GET | `/v1/console/me` | any operator | `{ id, email, name, role: { id, name }, permissions: string[] }`. The app builds its menu from `permissions` (CSL-2) |
+
 ## Internal
 
 Service-to-service only. Gated by `x-api-key`, bound to the internal network, never routable from the internet (OPS-6). Called by the AI service.

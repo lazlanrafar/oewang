@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.id AS user_id, u.email, u.name,\n                  r.id AS role_id, r.name AS role_name,\n                  COALESCE(\n                      array_agg(p.permission ORDER BY p.permission)\n                          FILTER (WHERE p.permission IS NOT NULL),\n                      '{}'\n                  ) AS \"permissions!\"\n           FROM users u\n           JOIN console_roles r ON r.id = u.console_role_id AND r.deleted_at IS NULL\n           LEFT JOIN console_role_permissions p ON p.role_id = r.id\n           WHERE u.id = $1\n           GROUP BY u.id, r.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "users",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "role_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "console_roles",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "role_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "console_roles",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "permissions!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "a0d2b5b78cd1e7bc7320682da111f2022110745bec37096acf35a75750b7adc9"
+}

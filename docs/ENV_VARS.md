@@ -112,6 +112,9 @@ reaches the browser (D5).
 | `API_URL` |
 | `APP_ENV` |
 | `APP_RELAY_KEY` |
+| `CF_ACCESS_AUD` |
+| `CF_ACCESS_TEAM_DOMAIN` |
+| `CONSOLE_HOST` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` |
 | `OWE1_ENABLED` |
 | `OWE1_VECTORS_PATH` |

@@ -12,6 +12,7 @@ import type { Handle } from '@sveltejs/kit/hooks';
 import { dev } from '$app/env';
 
 import { api, ApiError } from '$lib/server/api';
+import { accessAllowed, hostServes, isConsoleHost } from '$lib/server/console';
 import { isCrossSiteForm } from '$lib/server/csrf';
 import { securityHeaders } from '$lib/security-headers';
 import {
@@ -101,6 +102,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 			status: 403
 		});
 	}
+
+	// The console lives on its own host, and only there (CSL-1, D124). Both
+	// checks come before any cookie is read, so a refused request never
+	// starts a refresh.
+	const onConsole = isConsoleHost(url.host);
+	if (!hostServes(onConsole, url.pathname)) {
+		return new Response('Not found', { status: 404 });
+	}
+	if (onConsole && !(await accessAllowed(event.request.headers))) {
+		return new Response('Forbidden', { status: 403 });
+	}
+
 	let accessToken = readAccessToken(cookies);
 
 	// The access token lasts fifteen minutes, so an ordinary session spends
@@ -136,14 +149,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (accessToken && (url.pathname === '/login' || url.pathname === '/register')) {
-		redirect(303, '/sync');
+		redirect(303, onConsole ? '/console' : '/sync');
 	}
 
 	// Everything else in the app reads a workspace. A session without one
 	// goes to the check page, which sends it on to create one, and back here
 	// afterwards (D109).
+	// The console reads across workspaces and needs none of its own.
 	if (
 		accessToken &&
+		!onConsole &&
 		!isPublic(url.pathname) &&
 		!isOnboarding(url.pathname) &&
 		!tokenHasWorkspace(accessToken)

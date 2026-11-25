@@ -153,3 +153,52 @@ export const settingsNavGroups: NavGroup[] = [
 		]
 	}
 ];
+
+/**
+ * The operator console's sidebar (CSL, D125). Each row names the permission
+ * that shows it; the console layout drops the rows the operator lacks. Hiding
+ * a row is a courtesy: every console route checks the same permission in the
+ * API. Rows for screens of later stories are pending.
+ */
+export type ConsoleNavItem = NavItem & { permission: string };
+
+export const consoleNavGroups: { labelKey?: TranslationKey; items: ConsoleNavItem[] }[] = [
+	{
+		items: [
+			{ titleKey: 'console.nav_overview', href: '/console', icon: LayoutDashboard, permission: 'console.read' }
+		]
+	},
+	{
+		labelKey: 'console.nav_people_group',
+		items: [
+			{ titleKey: 'console.nav_users', href: '/console/users', icon: User, permission: 'console.read', pending: true },
+			{ titleKey: 'console.nav_workspaces', href: '/console/workspaces', icon: Users, permission: 'console.read', pending: true },
+			{ titleKey: 'console.nav_feedback', href: '/console/feedback', icon: MessageSquareWarning, permission: 'console.read', pending: true }
+		]
+	},
+	{
+		labelKey: 'console.nav_system_group',
+		items: [
+			{ titleKey: 'console.nav_usage', href: '/console/usage', icon: ChartColumn, permission: 'console.read', pending: true },
+			{ titleKey: 'console.nav_health', href: '/console/health', icon: TrendingDown, permission: 'console.read', pending: true }
+		]
+	},
+	{
+		labelKey: 'console.nav_access_group',
+		items: [
+			{ titleKey: 'console.nav_operators', href: '/console/operators', icon: Lock, permission: 'console.operators.manage', pending: true },
+			{ titleKey: 'console.nav_roles', href: '/console/roles', icon: Settings, permission: 'console.roles.manage', pending: true },
+			{ titleKey: 'console.nav_audit', href: '/console/audit', icon: Bot, permission: 'console.audit.read', pending: true }
+		]
+	}
+];
+
+/** The console sidebar as this operator may see it. */
+export function consoleNavFor(permissions: string[]): NavGroup[] {
+	return consoleNavGroups
+		.map((group) => ({
+			labelKey: group.labelKey,
+			items: group.items.filter((item) => permissions.includes(item.permission))
+		}))
+		.filter((group) => group.items.length > 0);
+}

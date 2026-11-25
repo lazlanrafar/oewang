@@ -10,6 +10,7 @@ mod audit;
 mod auth;
 mod budgets;
 mod config;
+mod console;
 mod contacts;
 mod debts;
 mod feedback;
@@ -512,6 +513,9 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/mcp/connections/{id}",
             axum::routing::delete(mcp::handler::revoke),
         )
+        // The operator console. Every route takes an `Operator`, read from
+        // the database per request, and checks one permission (CSL, D126).
+        .route("/v1/console/me", get(console::handler::me))
         // Feedback from settings, any role (FB-1).
         .route("/v1/feedback", post(feedback::handler::send))
         // Exchange rates. A suggestion for the form; nothing reads it on

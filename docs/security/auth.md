@@ -240,6 +240,16 @@ An admin cannot grant owner, nor change or remove an owner: only an owner acts o
 
 A `member` who asks the assistant to record an expense gets a refusal from the tool layer, server-side, not from the prompt (CHAT-4). A prompt instruction is guidance; the role gate is the control.
 
+## Operator console
+
+The console (D124, D125, D126) adds a second kind of permission that has nothing to do with workspace roles. A person is an operator when `users.console_role_id` is set; their console role holds permissions from the fixed `ConsolePermission` list. Workspace roles never grant a console permission, and a console role never grants anything inside a workspace.
+
+- Same sign-in, different host. An operator signs in with their ordinary password on `console.oewang.com`, which sits behind Cloudflare Access and accepts only a request carrying Access's signed token. The `__Host-` cookies keep that session off `app.oewang.com`.
+- Checked per request. The `Operator` extractor reads the role and its permissions from the database on every console call (D126); nothing about the console is in the access token. Without a role or the route's permission: `CONSOLE_FORBIDDEN`.
+- Never a user's data. No console route returns an amount, a balance, a note or a transaction's text, and there is no impersonation (CSL-13).
+
+Details and the permission matrix: [features/console.md](../features/console.md).
+
 ## Service-to-service
 
 | Direction | Mechanism |

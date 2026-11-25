@@ -39,6 +39,10 @@ pub enum AppError {
     /// A body or query named a workspace. It comes from the token (AUTH-4).
     #[error("workspace_id is taken from the token, never from the request")]
     WorkspaceIdNotAllowed,
+    /// The caller has no console role, or their role lacks the permission the
+    /// route checks (CSL-2).
+    #[error("this console action is not allowed")]
+    ConsoleForbidden,
 
     // -- validation and general
     #[error("validation failed")]
@@ -204,6 +208,7 @@ impl AppError {
             InviteInvalid => "INVITE_INVALID",
             McpTokenInvalid => "MCP_TOKEN_INVALID",
             WorkspaceIdNotAllowed => "WORKSPACE_ID_NOT_ALLOWED",
+            ConsoleForbidden => "CONSOLE_FORBIDDEN",
             ResetTokenInvalid => "RESET_TOKEN_INVALID",
             Validation(_) => "VALIDATION_FAILED",
             MalformedRequest => "MALFORMED_REQUEST",
@@ -269,7 +274,7 @@ impl AppError {
         use AppError::*;
         match self {
             Unauthenticated | InvalidCredentials | CryptoSessionUnknown | McpTokenInvalid => 401,
-            InsufficientRole | NotAMember | NoWorkspace | ToolForbidden => 403,
+            InsufficientRole | NotAMember | NoWorkspace | ToolForbidden | ConsoleForbidden => 403,
             EmailTaken
             | LastOwner
             | WalletHasTransactions
@@ -470,6 +475,7 @@ mod tests {
             AppError::ResetTokenInvalid,
             AppError::McpTokenInvalid,
             AppError::WorkspaceIdNotAllowed,
+            AppError::ConsoleForbidden,
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,
@@ -532,7 +538,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 67);
+        assert_eq!(samples.len(), 68);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

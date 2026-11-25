@@ -7,6 +7,7 @@
 
 pub mod auth;
 pub mod budget;
+pub mod console;
 pub mod csv_import;
 pub mod debt;
 pub mod envelope;
@@ -23,6 +24,7 @@ pub mod tools;
 pub mod wallet_totals;
 
 pub use auth::Role;
+pub use console::ConsolePermission;
 pub use envelope::{Envelope, Meta, Page, PageMeta};
 pub use error::{AppError, ErrorBody, FieldErrors};
 pub use money::{

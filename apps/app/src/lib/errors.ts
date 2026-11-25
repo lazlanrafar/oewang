@@ -16,6 +16,7 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	EMAIL_TAKEN: 'errors.email_taken',
 	UNAUTHENTICATED: 'errors.unauthenticated',
 	INSUFFICIENT_ROLE: 'errors.insufficient_role',
+	CONSOLE_FORBIDDEN: 'errors.console_forbidden',
 	NOT_A_MEMBER: 'errors.not_a_member',
 	NO_WORKSPACE: 'errors.no_workspace',
 	LAST_OWNER: 'errors.last_owner',

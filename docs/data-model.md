@@ -81,9 +81,10 @@ erDiagram
 | `profile_picture` | text | Nullable. The current photo's version id; the photo itself is a 256px JPEG at `usr/{user_id}/avatar` in object storage, served through the API (D94) |
 | `income_color`, `expense_color` | text | Nullable, `#rrggbb` lowercase (checked). The colours this user sees income and expense in; null is the default (D100) |
 | `password_hash` | text | Argon2id. Never returned by any endpoint (AUTH-1) |
+| `console_role_id` | text | Nullable, FK `console_roles`. The person's operator role in the console (D125); null for everyone who is not an operator. Partial index where not null |
 | `created_at`, `updated_at` | timestamp | |
 
-Dropped from the old table: `oauth_provider`, `providers` (D21), `system_role`, `workspace_id` (membership lives in `user_workspaces`), `mobile`.
+Dropped from the old table: `oauth_provider`, `providers` (D21), `system_role` (replaced by `console_role_id`, D125), `workspace_id` (membership lives in `user_workspaces`), `mobile`.
 
 #### `workspaces`
 
@@ -294,6 +295,29 @@ Migration `0015`, D104, FB-1. What a member sent from Settings → Feedback. Wri
 
 Index: `feedback_workspace_idx (workspace_id, created_at DESC) WHERE deleted_at IS NULL`. The old app's screenshot, review status and admin note are not carried: nothing here would show or change them.
 
+
+#### `console_roles`, `console_role_permissions`
+
+Migration `0022`, D125, CSL-2. The operator console's roles. Not workspace-scoped: the console works across workspaces, so its queries filter by `deleted_at` and never by `workspace_id`. That exception is the reason these tables and their queries live in their own repository, `repositories/console.rs`.
+
+`console_roles`:
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | Primary key. The seeded roles are `owner`, `support` and `viewer`; new ones get a CUID2 |
+| `name` | text | 1 to 60 characters, unique among live roles (case-insensitive) |
+| `description` | text | Nullable, at most 200 characters |
+| `is_system` | boolean | Default false. `owner` is the only system role: never edited or deleted |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | |
+
+`console_role_permissions`:
+
+| Column | Type | Notes |
+|---|---|---|
+| `role_id` | text | FK `console_roles`, cascade |
+| `permission` | text | `CHECK` against the keys of `ConsolePermission`: `console.read`, `console.feedback.write`, `console.users.disable`, `console.workspaces.suspend`, `console.workspaces.restore`, `console.operators.manage`, `console.roles.manage`, `console.audit.read` |
+
+Primary key `(role_id, permission)`. A link table: changing a role's permissions replaces its rows, which are deleted rather than soft-deleted because they hold no user data and nothing to restore. The change is recorded in the operator audit (CSL-14).
 
 #### `mcp_tokens`, `oauth_clients`, `oauth_codes`
 

@@ -38,7 +38,7 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 - ~~Vault as a browsable feature: `vault_files` exists only to back attachments and receipts.~~ The vault page came back with D90 (VLT-6 to VLT-13). Still out: document RAG and a `search_documents` tool.
 - Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow. Usage is recorded and shown (section 6.13, D92), never limited.
 - Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11, and MCP until D106 (section 6.17); nothing else on the old Apps page came with them (Gmail, Outlook).
-- The admin dashboard and the marketing website.
+- ~~The admin dashboard~~ and the marketing website. The admin dashboard came back as the operator console with D124 (CSL-1 to CSL-14, section 6.22), without impersonation and without plans or billing.
 - ~~The Flutter mobile app and offline sync.~~ The mobile app came back with D113 (MOB-1 to MOB-9, section 6.18), with offline writes for transactions, wallets and categories (D114, D115).
 - The Go background worker (D10).
 - ~~The MCP server and its OAuth client registration.~~ The MCP server came back with D106 (MCP-1 to MCP-9, section 6.17).
@@ -468,6 +468,27 @@ Added by D120. Specified in [features/debts.md](features/debts.md#the-contacts-p
 | CON-2 | The `/contacts` page has four cards (total, added this month, with email, with phone), the table, the form sheet, and a detail sheet that lists the contact's debts. |
 | CON-3 | Deleting a contact with any live debt, paid or not, is refused (`CONTACT_HAS_DEBTS`). |
 | CON-4 | Merging contact A into contact B moves A's live debts to B and soft-deletes A, in one database transaction with its audit rows. |
+
+### 6.22 Operator console (CSL)
+
+Added by D124, D125 and D126. Specified in [features/console.md](features/console.md).
+
+| ID | Requirement |
+|---|---|
+| CSL-1 | The console is served on its own host, `console.oewang.com`, behind Cloudflare Access. That host serves only the console and its sign-in; `/console` answers 404 on every other host. |
+| CSL-2 | An operator is a user with a console role. Roles are edited in the console; each holds a set of permissions from a fixed list. Every console route checks one permission against the database on every request and answers `CONSOLE_FORBIDDEN` without it. Three roles are seeded: owner, support and viewer. |
+| CSL-3 | Users: a list and a detail with email, name, sign-up date, status and workspaces with roles. |
+| CSL-4 | Workspaces: a list and a detail with name, status, members and roles, wallet and transaction counts, storage and tokens this month, and last activity. |
+| CSL-5 | An operator with `console.workspaces.suspend` suspends and unsuspends a workspace. A suspended workspace refuses every channel with `WORKSPACE_SUSPENDED`; its data is untouched. |
+| CSL-6 | An operator with `console.workspaces.restore` restores a soft-deleted workspace. |
+| CSL-7 | An operator with `console.users.disable` disables and enables a user. A disabled user cannot sign in (`USER_DISABLED`) and their sessions and Telegram links end. Nobody disables themselves or another operator. |
+| CSL-8 | Feedback: every workspace's feedback with its sender, and an open or done status with an internal note. |
+| CSL-9 | Usage: input and output tokens by workspace, model, feature and month. Tokens only, no money. |
+| CSL-10 | Health: failed receipt jobs, sign-ups per week and AI calls per day, from the database, with links to Sentry and Coolify. |
+| CSL-11 | Operators: an operator with `console.operators.manage` grants a role to a registered user or revokes it. Nobody changes their own role, the last owner stays, and a role is granted only when its permissions are all held by the granter. |
+| CSL-12 | Roles: an operator with `console.roles.manage` creates, edits and deletes roles. System roles are read-only, a role in use is not deleted (`CONSOLE_ROLE_IN_USE`), and no one adds a permission they do not hold. |
+| CSL-13 | Operators never see an amount, a balance, a note or the text of a transaction, and cannot sign in as a user. |
+| CSL-14 | Every console write records the operator, the action, the entity and the before and after in `operator_audit`, in the same database transaction. |
 
 ## 7. Success metrics
 
