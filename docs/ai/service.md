@@ -355,9 +355,9 @@ Indonesian bank statements split debit and credit into two columns, which the ol
 |---|---|---|---|
 | `POST /receipt/parse` | [ladder](#extraction-quality-ladder) | none | merchant, date, total, subtotal, tax, currency, line items, quality score |
 | `POST /import/extract` | [ladder](#extraction-quality-ladder) | none | rows of date, description, amount, direction, quality score |
-| `POST /receipt/categorize` | `AI_CHAT_MODEL`, one call | none | `{ category, model, usage }`: one of the given names exactly, or null |
+| `POST /receipt/categorize` | `AI_CHAT_MODEL`, one call | none | `{ category, items, model, usage }`. Without `per_item`: `category` is one of the given names exactly, or null, and `items` is empty. With `per_item: true`: `items` is one name or null per item sent, in order, and `category` is null (TXN-27) |
 
-The first two take the same body, because both run the same ladder over the same kind of document (`/receipt/categorize` takes `{ request_id, workspace_id, merchant, items, categories }`, strings only):
+The first two take the same body, because both run the same ladder over the same kind of document (`/receipt/categorize` takes `{ request_id, workspace_id, merchant, items, categories, per_item }`, strings only):
 
 ```json
 {

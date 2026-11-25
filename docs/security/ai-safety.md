@@ -181,6 +181,7 @@ Each case names the test that holds it. A control is tested where it is enforced
 | 25 chat turns in one minute | The 21st is rate limited | `should_refuse_the_twenty_first_chat_turn_in_a_minute` |
 | A categorize answer naming a category that does not exist | Dropped; the receipt is saved uncategorised | `test_a_category_it_was_not_shown_is_dropped` |
 | The categorize call | Passes no tools and no document | `test_a_category_it_was_shown_comes_back`, `test_the_model_sees_strings_and_no_document` |
+| The per-item categorize call (TXN-27) | Passes no tools and no document; an invented, missing or null answer leaves the item empty | `test_every_item_gets_a_category_from_the_list`, `test_the_items_reach_the_model_numbered_and_without_tools`, `test_an_unknown_a_missing_and_an_unsure_item_are_empty` |
 | A Telegram `start` value nobody minted, including the old `slug___user` shape | Refused; nothing linked | `should_refuse_a_value_nobody_minted` |
 | A link token used twice, or after ten minutes | Refused | `should_refuse_a_token_used_twice`, `should_refuse_an_expired_token` |
 | Button data the bot did not make | Not acted on | `should_refuse_callback_data_it_did_not_make` |
