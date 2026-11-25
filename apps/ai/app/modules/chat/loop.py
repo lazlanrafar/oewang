@@ -66,8 +66,12 @@ REFUSAL_CODES = frozenset(
 )
 
 #: Fixed text, because an exception string can carry anything, including the
-#: prompt (OPS-3).
-UNREACHABLE_SUMMARY = "the tool call did not reach the API"
+#: prompt (OPS-3). A lost response looks the same as a lost request, so the
+#: model is told the outcome is unknown, not that nothing happened.
+UNREACHABLE_SUMMARY = (
+    "the tool call's outcome is unknown: it may have been applied, "
+    "so check before trying it again"
+)
 
 #: What the `error` event says when the model call itself fails. Fixed text,
 #: for the same reason.
