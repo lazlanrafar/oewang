@@ -217,12 +217,17 @@ struct CategorizeRequest<'a> {
     merchant: Option<&'a str>,
     items: Vec<&'a str>,
     categories: Vec<&'a str>,
+    /// Ask for one category per item instead of one for the receipt.
+    per_item: bool,
 }
 
 #[derive(Debug, Deserialize)]
 struct CategorizeResponse {
     #[serde(default)]
     category: Option<String>,
+    /// One per item sent, in order; null where the model was unsure.
+    #[serde(default)]
+    items: Vec<Option<String>>,
     #[serde(default)]
     usage: Option<Usage>,
 }
@@ -251,6 +256,7 @@ pub async fn categorize(
         merchant,
         items: items.to_vec(),
         categories: categories.to_vec(),
+        per_item: false,
     };
 
     match ai
@@ -268,6 +274,55 @@ pub async fn categorize(
             None
         }
     }
+}
+
+/// Which of `categories` each of `items` belongs to, by name, in the order
+/// the items were given (TXN-27).
+///
+/// The same call as [`categorize`] and the same reasoning: strings only, no
+/// tools on the other side, and any failure is "no proposal", because an
+/// item without a category is a correct outcome that stays in its
+/// transaction's. The caller maps each name to an id by exact match.
+pub async fn categorize_items(
+    ai: &Owe1Client,
+    meter: Meter<'_>,
+    request_id: &str,
+    merchant: Option<&str>,
+    items: &[&str],
+    categories: &[&str],
+) -> Vec<Option<String>> {
+    let mut chosen = vec![None; items.len()];
+    if items.is_empty() || categories.is_empty() {
+        return chosen;
+    }
+
+    let body = CategorizeRequest {
+        request_id,
+        workspace_id: meter.workspace_id,
+        merchant,
+        items: items.to_vec(),
+        categories: categories.to_vec(),
+        per_item: true,
+    };
+
+    match ai
+        .post::<_, CategorizeResponse>(CATEGORIZE_PATH, &body)
+        .await
+    {
+        Ok(answer) => {
+            meter
+                .record(Feature::Categorize, answer.usage.as_ref())
+                .await;
+            for (slot, name) in chosen.iter_mut().zip(answer.items) {
+                *slot = name;
+            }
+        }
+        Err(error) => {
+            tracing::warn!(code = error.code(), "the categorize call failed");
+        }
+    }
+
+    chosen
 }
 
 async fn call<T: serde::de::DeserializeOwned>(

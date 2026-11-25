@@ -2652,3 +2652,289 @@ mod category_shares {
         );
     }
 }
+
+/// A category for every item (TXN-27, TXN-29): history first, then the
+/// model, for the receipt draft and for one transaction's items.
+mod item_categories {
+    use std::sync::Mutex;
+
+    use axum::extract::{Path, State};
+    use oewang_domain::Role;
+    use serde_json::{json, Value};
+
+    use super::*;
+    use crate::{
+        auth::extractor::AuthWrite, response::RequestId, test_support, transactions::handler,
+        transactions::service::ItemInput, usage::Meter,
+    };
+
+    fn item<'a>(name: &'a str, amount: &str, category_id: Option<&'a str>) -> ItemInput<'a> {
+        ItemInput {
+            name,
+            brand: None,
+            quantity: None,
+            unit: None,
+            unit_price: None,
+            amount: decimal(amount),
+            category_id,
+            notes: None,
+        }
+    }
+
+    /// Every item list the stub was asked to categorise, by request id, so
+    /// tests running side by side read only their own.
+    static ASKED: Mutex<Vec<(String, Value)>> = Mutex::new(Vec::new());
+
+    fn asked(request_id: &str) -> Vec<Value> {
+        ASKED
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(id, _)| id == request_id)
+            .map(|(_, items)| items.clone())
+            .collect()
+    }
+
+    /// The AI service. It reads a two-line receipt, knows that vitamin C is
+    /// health, invents a category for "Mystery" and is unsure of the rest.
+    /// The category helper names a category by its id.
+    fn model(path: &str, body: &Value) -> Value {
+        if path == "/receipt/parse" {
+            return json!({
+                "draft": {
+                    "merchant": "Superindo",
+                    "date": "2026-11-20",
+                    "currency": "IDR",
+                    "total": "70000",
+                    "line_items": [
+                        { "name": "SAMPOERNA MILD", "amount": "40000" },
+                        { "name": "Vitamin C", "amount": "30000" },
+                    ],
+                },
+                "quality": { "score": 95 },
+            });
+        }
+
+        assert_eq!(body["per_item"], true);
+        ASKED.lock().unwrap().push((
+            body["request_id"].as_str().unwrap_or_default().to_string(),
+            body["items"].clone(),
+        ));
+        let answers: Vec<Value> = body["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|name| match name.as_str() {
+                Some("Vitamin C") => json!("c_health"),
+                Some("Mystery") => json!("Not a category"),
+                _ => Value::Null,
+            })
+            .collect();
+        json!({ "category": null, "items": answers, "usage": { "input": 40, "output": 8 } })
+    }
+
+    /// A workspace that bought Sampoerna Mild once, filed under cigarettes.
+    async fn history(pool: &PgPool) -> (String, crate::state::AppState) {
+        fixture(pool, "IDR").await;
+        let cash = wallet(pool, "w_cash", "IDR").await;
+        for id in ["c_groceries", "c_cigarettes", "c_health", "c_treats"] {
+            category(pool, id, "expense").await;
+        }
+        service::create_with_items(
+            pool,
+            actor(),
+            expense(&cash, "50000"),
+            &[item("Sampoerna Mild", "40000", Some("c_cigarettes"))],
+        )
+        .await
+        .unwrap();
+
+        let ai = test_support::ai_service(pool.clone(), model).await;
+        (cash, test_support::state(pool.clone(), &ai))
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_take_the_category_last_given_to_the_same_item_without_asking_the_model(
+        pool: PgPool,
+    ) {
+        let (cash, state) = history(&pool).await;
+        // A later purchase of the same item, recategorised: the newest wins.
+        let newer = service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                date: day(5),
+                ..expense(&cash, "45000")
+            },
+            &[item(" sampoerna mild", "45000", Some("c_treats"))],
+        )
+        .await
+        .unwrap();
+        let meter = Meter::new(&pool, WORKSPACE, Some(USER));
+
+        let chosen = service::suggest_item_categories(
+            &state.ai,
+            meter,
+            "req_history",
+            "expense",
+            Some("Superindo"),
+            &["SAMPOERNA MILD ", "Vitamin C", "Mystery"],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            chosen,
+            [Some("c_treats".to_string()), Some("c_health".into()), None],
+            "history, then the model's pick from the list, and an invented name is nothing"
+        );
+        assert_eq!(
+            asked("req_history"),
+            [json!(["Vitamin C", "Mystery"])],
+            "the item history answered is not sent to the model"
+        );
+
+        // Live rows only: with the newer purchase deleted, the older answers,
+        // and nothing is left to ask.
+        service::delete(&pool, actor(), &newer.id).await.unwrap();
+        let chosen = service::suggest_item_categories(
+            &state.ai,
+            meter,
+            "req_history_deleted",
+            "expense",
+            None,
+            &["Sampoerna Mild"],
+        )
+        .await
+        .unwrap();
+        assert_eq!(chosen, [Some("c_cigarettes".to_string())]);
+        assert!(asked("req_history_deleted").is_empty());
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_hand_the_app_a_receipt_draft_with_a_category_on_every_item(pool: PgPool) {
+        let (_, state) = history(&pool).await;
+        let store = crate::vault::tests::MemoryStore::default();
+        let file_id = uploaded_file(&pool, &store).await;
+
+        let outcome = crate::ai::service::parse_receipt(
+            &pool,
+            &store,
+            &state.ai,
+            "req_receipt",
+            WORKSPACE,
+            Some(USER),
+            &file_id,
+        )
+        .await
+        .unwrap();
+
+        // The wire shape the confirmation sheet reads.
+        let items = serde_json::to_value(&outcome.draft.line_items).unwrap();
+        assert_eq!(items[0]["name"], "SAMPOERNA MILD");
+        assert_eq!(items[0]["category_id"], "c_cigarettes", "from history");
+        assert_eq!(items[1]["category_id"], "c_health", "from the model");
+        assert!(items[0]["amount"].is_string(), "money stays a string (D12)");
+        assert_eq!(asked("req_receipt"), [json!(["Vitamin C"])]);
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_categorise_the_uncategorised_items_of_one_transaction(pool: PgPool) {
+        let (cash, state) = history(&pool).await;
+        let row = service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                category_id: Some("c_groceries"),
+                // Before the history purchase, so that one is the newest.
+                date: day(1),
+                ..expense(&cash, "500000")
+            },
+            &[
+                item("Sampoerna Mild", "40000", None),
+                item("Vitamin C", "30000", None),
+                item("Mystery", "5000", None),
+                // Already categorised, and not as history would: left alone.
+                item("sampoerna mild", "41000", Some("c_treats")),
+            ],
+        )
+        .await
+        .unwrap();
+
+        let auth = AuthWrite {
+            user_id: USER.into(),
+            workspace_id: WORKSPACE.into(),
+            role: Role::Admin,
+            source: "web",
+        };
+        let Ok(axum::Json(envelope)) = handler::categorize_items(
+            State(state.clone()),
+            auth,
+            Path(row.id.clone()),
+            RequestId("req_route".into()),
+        )
+        .await
+        else {
+            panic!("categorize failed");
+        };
+
+        let items = serde_json::to_value(&envelope.data).unwrap();
+        let listed = serde_json::to_value(
+            service::list_items(&pool, WORKSPACE, &row.id)
+                .await
+                .unwrap()
+                .into_iter()
+                .map(handler::ItemView::from)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+        assert_eq!(
+            items, listed,
+            "the same shape and rows the item list answers"
+        );
+
+        let by_name = |name: &str| {
+            items
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|item| item["name"] == name)
+                .unwrap()
+                .clone()
+        };
+        assert_eq!(by_name("Sampoerna Mild")["category_id"], "c_cigarettes");
+        assert_eq!(by_name("Vitamin C")["category_id"], "c_health");
+        assert_eq!(by_name("Mystery")["category_id"], Value::Null);
+        assert_eq!(by_name("sampoerna mild")["category_id"], "c_treats");
+        assert_eq!(by_name("Sampoerna Mild")["amount"], "40000.0000");
+        assert_eq!(asked("req_route"), [json!(["Vitamin C", "Mystery"])]);
+
+        // One audit row per item that changed, none for the others.
+        let created = vec!["transaction_item.created".to_string()];
+        let updated = [
+            created.clone(),
+            vec!["transaction_item.updated".to_string()],
+        ]
+        .concat();
+        for (name, expected) in [
+            ("Sampoerna Mild", &updated),
+            ("Vitamin C", &updated),
+            ("Mystery", &created),
+            ("sampoerna mild", &created),
+        ] {
+            let id = by_name(name)["id"].as_str().unwrap().to_string();
+            assert_eq!(&audit_actions(&pool, &id).await, expected, "{name}");
+        }
+
+        // The cigarettes left the groceries share (D123).
+        let (_, shares) = service::summary(&pool, WORKSPACE, &Default::default())
+            .await
+            .unwrap();
+        let cigarettes = shares
+            .iter()
+            .find(|share| share.category_id.as_deref() == Some("c_cigarettes"))
+            .unwrap();
+        // 40,000 from the history purchase and 40,000 from this one.
+        assert_eq!(cigarettes.total, decimal("80000"));
+    }
+}

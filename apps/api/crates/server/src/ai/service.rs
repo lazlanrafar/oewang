@@ -734,6 +734,28 @@ pub async fn parse_receipt(
         return Err(AppError::ReceiptUnreadable);
     }
 
+    // A category for every line, from what the same item was filed under
+    // before and, for the rest, from the model (TXN-27, TXN-29). Proposals
+    // only: the sheet shows them and the user's confirm is what writes.
+    let mut draft = checked.draft;
+    let names: Vec<&str> = draft
+        .line_items
+        .iter()
+        .map(|item| item.name.as_str())
+        .collect();
+    let categories = crate::transactions::service::suggest_item_categories(
+        ai,
+        crate::usage::Meter::new(pool, workspace_id, user_id),
+        request_id,
+        "expense",
+        draft.merchant.as_deref(),
+        &names,
+    )
+    .await?;
+    for (item, category_id) in draft.line_items.iter_mut().zip(categories) {
+        item.category_id = category_id;
+    }
+
     let mut quality = answer.quality;
     // The ladder reports what it was unsure of; the arithmetic reports what
     // it replaced. Both reach the sheet, and they are different claims
@@ -742,7 +764,7 @@ pub async fn parse_receipt(
 
     Ok(ReceiptOutcome {
         vault_file_id: file_id.to_string(),
-        draft: checked.draft,
+        draft,
         quality,
     })
 }

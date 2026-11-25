@@ -391,8 +391,20 @@ First worksheet only. A number cell keeps the digits the file wrote; a date cell
 | POST | `/v1/transactions/{id}/items` | admin+ | Add one |
 | PUT | `/v1/transactions/{id}/items/{item_id}` | admin+ | Replace one |
 | DELETE | `/v1/transactions/{id}/items/{item_id}` | admin+ | Soft delete one |
+| POST | `/v1/transactions/{id}/items/categorize` | admin+ | Propose and write a category for each item that has none (TXN-27). No body |
 
 Line items do not affect wallet balances. Only the parent transaction's `amount` does (TXN-12).
+
+`POST …/items/categorize` fills each item that has no category: first with the category last given to an item of the same key in the workspace, the newest purchase winning (TXN-29), then, for the items history does not know, with the AI service's pick from the workspace's categories of the transaction's type. An item that already has a category is never changed, and an item the model is unsure of stays empty. The model is asked before the database transaction opens; the writes then happen in one transaction with a `transaction_item.updated` audit row per item that changed. A failed model call is not an error: the history answers are still written. The answer is the transaction's whole item list, in the shape `GET …/items` answers:
+
+```json
+{ "data": [
+    { "id": "clx…", "name": "Sampoerna Mild", "brand": null, "quantity": null, "unit": null,
+      "unit_price": null, "amount": "40000.0000", "category_id": "clx…", "notes": null },
+    { "id": "clx…", "name": "X7 PRM", "brand": null, "quantity": null, "unit": null,
+      "unit_price": null, "amount": "5000.0000", "category_id": null, "notes": null }
+] }
+```
 
 ## Items
 
@@ -508,7 +520,8 @@ The same reasoning as the statement route: the image is uploaded through the vau
     "draft": { "merchant": "Warung Tekko", "date": "2026-11-02", "currency": "IDR",
                "subtotal": "80000.0000", "tax": "7500.0000", "total": "87500.0000",
                "line_items": [ { "name": "Iga bakar", "amount": "45000.0000",
-                                 "quantity": "1", "unit_price": "45000.0000" } ] },
+                                 "quantity": "1", "unit_price": "45000.0000",
+                                 "category_id": "clx…" } ] },
     "quality": {
       "score": 62,
       "low_confidence_fields": ["date"],
@@ -516,6 +529,8 @@ The same reasoning as the statement route: the image is uploaded through the vau
     }
 } }
 ```
+
+Every line item carries `category_id`, a string or `null`: a proposal the sheet shows in the item's category picker (TXN-27). It is the category last given to an item of the same key (TXN-29), else the AI service's pick from the workspace's expense categories, else `null`. The API resolves both; the AI service answers a category name and never sees an id. The confirm sends the ids back in `items[].category_id` on `POST /v1/transactions`.
 
 Nothing is persisted (AI-2). `low_confidence_fields` is the ladder's own report of what it was unsure of; `corrected_fields` names what [cross-field consistency](../ai/service.md#cross-field-consistency) replaced by arithmetic in Rust. They are different claims and the confirmation sheet renders them differently (AI-11).
 

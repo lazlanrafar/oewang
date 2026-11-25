@@ -656,6 +656,26 @@ pub async fn list_items(
     }
 }
 
+/// Propose a category for every item that has none, and answer the items
+/// as `list_items` does (TXN-27).
+pub async fn categorize_items(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    Path(transaction_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<Vec<ItemView>>>, ApiError> {
+    let id = request_id.0;
+
+    match service::categorize_items(&state.db, &state.ai, auth.actor(), &id, &transaction_id).await
+    {
+        Ok(rows) => Ok(Json(Envelope::data(
+            rows.into_iter().map(Into::into).collect(),
+            id,
+        ))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
 pub async fn add_item(
     State(state): State<AppState>,
     auth: AuthWrite,

@@ -590,6 +590,10 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             get(transactions::handler::list_items).post(transactions::handler::add_item),
         )
         .route(
+            "/v1/transactions/{id}/items/categorize",
+            post(transactions::handler::categorize_items),
+        )
+        .route(
             "/v1/transactions/{id}/items/{item_id}",
             axum::routing::put(transactions::handler::replace_item)
                 .delete(transactions::handler::delete_item),

@@ -582,6 +582,29 @@ pub async fn replace_item(
     .await
 }
 
+/// Give a category to an item that has none. An item that got one in the
+/// meantime is left alone and answers `None` (TXN-27).
+pub async fn set_item_category(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    item_id: &str,
+    category_id: &str,
+) -> Result<Option<ItemRow>, sqlx::Error> {
+    sqlx::query_as!(
+        ItemRow,
+        r#"UPDATE transaction_items
+           SET category_id = $3, updated_at = now()
+           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+             AND category_id IS NULL
+           RETURNING id, name, brand, quantity, unit, unit_price, amount, category_id, notes"#,
+        workspace_id,
+        item_id,
+        category_id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
 pub async fn soft_delete_item(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,

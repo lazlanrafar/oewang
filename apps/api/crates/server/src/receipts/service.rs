@@ -170,7 +170,9 @@ pub async fn read_and_save(state: &AppState, actor: Actor<'_>, file_id: &str) ->
                 unit: None,
                 unit_price: item.unit_price,
                 amount,
-                category_id: None,
+                // What the same item was filed under before, or the model's
+                // pick from the workspace's own categories (TXN-27, TXN-29).
+                category_id: item.category_id.as_deref(),
                 notes: None,
             })
         })

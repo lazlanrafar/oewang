@@ -362,7 +362,9 @@ async fn should_save_a_receipt_photo_as_an_expense_with_items_and_the_file(pool:
         .as_array()
         .is_some_and(|rows| !rows.is_empty()));
 
-    // Both model calls are on the usage ledger, for the member (USG-2).
+    // Every model call is on the usage ledger, for the member (USG-2): the
+    // read, the categories of the items history did not know (TXN-27), and
+    // the receipt's own category.
     let features: Vec<(String, Option<String>)> =
         sqlx::query_as("SELECT feature, user_id FROM ai_usage ORDER BY feature")
             .fetch_all(&pool)
@@ -371,6 +373,7 @@ async fn should_save_a_receipt_photo_as_an_expense_with_items_and_the_file(pool:
     assert_eq!(
         features,
         [
+            ("categorize".to_string(), Some(USER.to_string())),
             ("categorize".to_string(), Some(USER.to_string())),
             ("receipt".to_string(), Some(USER.to_string())),
         ]

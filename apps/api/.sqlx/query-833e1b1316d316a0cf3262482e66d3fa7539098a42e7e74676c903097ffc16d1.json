@@ -1,0 +1,126 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transaction_items\n           SET category_id = $3, updated_at = now()\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL\n             AND category_id IS NULL\n           RETURNING id, name, brand, quantity, unit, unit_price, amount, category_id, notes",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "brand",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "brand"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "quantity",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "quantity"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "unit",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "unit"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "unit_price",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "unit_price"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "amount",
+        "type_info": "Numeric",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "amount"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "category_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "category_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "notes",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transaction_items",
+            "name": "notes"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "833e1b1316d316a0cf3262482e66d3fa7539098a42e7e74676c903097ffc16d1"
+}

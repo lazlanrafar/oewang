@@ -10,7 +10,9 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use oewang_db::{
-    repositories::{accounts, audit, categories, debts, transactions as repo, vault, wallets},
+    repositories::{
+        accounts, audit, categories, debts, items, transactions as repo, vault, wallets,
+    },
     PgPool,
 };
 use oewang_domain::{
@@ -1500,6 +1502,127 @@ pub async fn delete_item(
 
     tx.commit().await.map_err(internal)?;
     Ok(())
+}
+
+/// A category id for each of `names`, in the order given (TXN-27, TXN-29).
+///
+/// History answers first: an item whose key was categorised before takes
+/// that category, so a correction made once holds. The model is asked only
+/// about the names history does not know, and only for one of the
+/// workspace's own categories of `kind`; its answer comes back as a name
+/// and is kept when it is exactly one of them. No answer is `None`, which
+/// leaves the item in its transaction's category.
+pub async fn suggest_item_categories(
+    ai: &oewang_clients::Owe1Client,
+    meter: crate::usage::Meter<'_>,
+    request_id: &str,
+    kind: &str,
+    merchant: Option<&str>,
+    names: &[&str],
+) -> Result<Vec<Option<String>>> {
+    let mut chosen = items::last_categories(meter.pool, meter.workspace_id, names)
+        .await
+        .map_err(internal)?;
+
+    let unknown: Vec<usize> = (0..names.len())
+        .filter(|&index| chosen[index].is_none() && !names[index].trim().is_empty())
+        .collect();
+    if unknown.is_empty() {
+        return Ok(chosen);
+    }
+
+    let offered = categories::list_categories(meter.pool, meter.workspace_id, Some(kind))
+        .await
+        .map_err(internal)?;
+    let offered_names: Vec<&str> = offered
+        .iter()
+        .map(|category| category.name.as_str())
+        .collect();
+    let asked: Vec<&str> = unknown.iter().map(|&index| names[index]).collect();
+
+    let answers = crate::ai::extraction::categorize_items(
+        ai,
+        meter,
+        request_id,
+        merchant,
+        &asked,
+        &offered_names,
+    )
+    .await;
+
+    for (index, answer) in unknown.into_iter().zip(answers) {
+        chosen[index] = answer
+            .and_then(|name| offered.iter().find(|category| category.name == name))
+            .map(|category| category.id.clone());
+    }
+
+    Ok(chosen)
+}
+
+/// Propose and write a category for each item of one transaction that has
+/// none (TXN-27). An item that already has one is never touched.
+///
+/// The model is asked before the database transaction opens, so no row is
+/// held while a network call is in flight. The write then sets a category
+/// only where there still is none, so an edit made in between wins.
+pub async fn categorize_items(
+    pool: &PgPool,
+    ai: &oewang_clients::Owe1Client,
+    actor: Actor<'_>,
+    request_id: &str,
+    transaction_id: &str,
+) -> Result<Vec<ItemRow>> {
+    let transaction = find(pool, actor.workspace_id, transaction_id).await?;
+    let open: Vec<ItemRow> = vault::list_items(pool, actor.workspace_id, transaction_id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .filter(|item| item.category_id.is_none())
+        .collect();
+
+    let names: Vec<&str> = open.iter().map(|item| item.name.as_str()).collect();
+    let chosen = suggest_item_categories(
+        ai,
+        crate::usage::Meter::new(pool, actor.workspace_id, Some(actor.user_id)),
+        request_id,
+        &transaction.r#type,
+        transaction.name.as_deref(),
+        &names,
+    )
+    .await?;
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    require_transaction(&mut tx, actor.workspace_id, transaction_id).await?;
+
+    for (before, category_id) in open.iter().zip(chosen) {
+        let Some(category_id) = category_id else {
+            continue;
+        };
+        let Some(after) =
+            vault::set_item_category(&mut *tx, actor.workspace_id, &before.id, &category_id)
+                .await
+                .map_err(internal)?
+        else {
+            continue;
+        };
+
+        log(
+            &mut tx,
+            actor,
+            "transaction_item.updated",
+            ITEM_ENTITY,
+            &before.id,
+            snapshot(before)?,
+            snapshot(&after)?,
+        )
+        .await?;
+    }
+
+    tx.commit().await.map_err(internal)?;
+
+    vault::list_items(pool, actor.workspace_id, transaction_id)
+        .await
+        .map_err(internal)
 }
 
 fn validate_item(input: &ItemInput<'_>) -> Result<()> {

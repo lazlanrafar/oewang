@@ -1018,12 +1018,12 @@ Requirements: TXN-24, TXN-25, TXN-26, BUD-6
 ### US-076: A category for every receipt item (OEW-114)
 Requirements: TXN-27, TXN-29
 
-- [ ] An item whose key was categorised before takes that category, the newest purchase winning, and is not sent to the model (Rust test)
+- [x] An item whose key was categorised before takes that category, the newest purchase winning, and is not sent to the model (Rust test)
 
-- [ ] The categorise call answers one category per item, from the list it was given; an unknown or missing answer becomes empty (pytest)
-- [ ] The extraction call still passes no tools (D24, pytest)
-- [ ] `POST /v1/transactions/{id}/items/categorize` proposes categories for one transaction's uncategorised items and writes them, with an audit row (Rust test)
-- [ ] ruff, pytest, clippy and `cargo test` pass in the containers
+- [x] The categorise call answers one category per item, from the list it was given; an unknown or missing answer becomes empty (pytest)
+- [x] The extraction call still passes no tools (D24, pytest)
+- [x] `POST /v1/transactions/{id}/items/categorize` proposes categories for one transaction's uncategorised items and writes them, with an audit row (Rust test)
+- [x] ruff, pytest, clippy and `cargo test` pass in the containers
 
 ### US-077: Item categories in the web app (OEW-115)
 Requirements: TXN-25, TXN-26, TXN-27
