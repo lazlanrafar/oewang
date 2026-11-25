@@ -107,6 +107,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// checks come before any cookie is read, so a refused request never
 	// starts a refresh.
 	const onConsole = isConsoleHost(url.host);
+	// The console host's front door is the console itself.
+	if (onConsole && url.pathname === '/') redirect(303, '/console');
 	if (!hostServes(onConsole, url.pathname)) {
 		return new Response('Not found', { status: 404 });
 	}
