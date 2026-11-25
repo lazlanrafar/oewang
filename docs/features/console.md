@@ -21,6 +21,7 @@ The console is the same SvelteKit app, reached as `console.oewang.com`.
 | Request | On the console host | On any other host |
 |---|---|---|
 | `/console/...` | Served, after the checks below | 404 |
+| `/` | Redirects to `/console`, where Cloudflare Access lands an operator | Served as usual |
 | `/login`, `/logout`, `/health` | Served | Served |
 | Anything else | 404 | Served as usual |
 

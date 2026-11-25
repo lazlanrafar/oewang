@@ -79,6 +79,11 @@ describe('handle on two hosts', () => {
 			expect((await request('http://app.oewang.test/console')).status).toBe(404);
 			expect((await request('http://console.oewang.test/transactions')).status).toBe(404);
 			expect((await request('http://console.oewang.test/health')).status).toBe(200);
+			// The bare host is where Cloudflare Access lands an operator.
+			await expect(request('http://console.oewang.test/')).rejects.toMatchObject({
+				status: 303,
+				location: '/console'
+			});
 		} finally {
 			vi.unstubAllEnvs();
 		}
