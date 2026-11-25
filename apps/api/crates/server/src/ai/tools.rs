@@ -85,7 +85,7 @@ pub struct ToolRequest<'a> {
 }
 
 /// What the AI service hands back to the model.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ToolOutcome {
     pub result: Value,
     /// One line the UI can show on a collapsed tool card, and the model can
@@ -122,6 +122,28 @@ pub async fn execute(
     let call = ToolCall::parse(tool, request.args)?;
     check_amount_ceiling(&call, max_amount)?;
 
+    // The AI service retries a call once after a transport error, and a
+    // timed-out write may have landed. The same call id in the same turn
+    // gets the first outcome back instead of writing twice.
+    let Some(call_id) = request.call_id.filter(|_| tool.is_write()) else {
+        return run(pool, turns, max_amount, &request, tool, call).await;
+    };
+    if let Some(done) = turns.begin_write(request.turn_id, call_id)? {
+        return Ok(done);
+    }
+    let outcome = run(pool, turns, max_amount, &request, tool, call).await;
+    turns.finish_write(request.turn_id, call_id, outcome.as_ref().ok());
+    outcome
+}
+
+async fn run(
+    pool: &PgPool,
+    turns: &TurnStore,
+    max_amount: Decimal,
+    request: &ToolRequest<'_>,
+    tool: Tool,
+    call: ToolCall,
+) -> Result<ToolOutcome> {
     // Layer 3. A delete or a split is challenged before it costs the turn
     // anything, so asking the user does not spend the turn's budget (D20,
     // D122).
@@ -154,15 +176,15 @@ pub async fn execute(
         ToolCall::SearchTransactions(args) => search(pool, request.workspace_id, args).await,
         ToolCall::GetSpendingSummary(args) => summary(pool, request.workspace_id, args).await,
         ToolCall::GetSpendingAnalysis(args) => {
-            analysis(pool, turns, &request, Analysis::Spending, args).await
+            analysis(pool, turns, request, Analysis::Spending, args).await
         }
         ToolCall::GetIncomeSummary(args) => {
-            analysis(pool, turns, &request, Analysis::Income, args).await
+            analysis(pool, turns, request, Analysis::Income, args).await
         }
         ToolCall::GetBurnRate(args) => {
-            analysis(pool, turns, &request, Analysis::BurnRate, args).await
+            analysis(pool, turns, request, Analysis::BurnRate, args).await
         }
-        ToolCall::GetBudgetStatus(month) => budget_status(pool, turns, &request, month).await,
+        ToolCall::GetBudgetStatus(month) => budget_status(pool, turns, request, month).await,
         ToolCall::CreateTransaction(args) => create_transaction(pool, actor, args).await,
         ToolCall::UpdateTransaction(args) => update_transaction(pool, actor, args).await,
         ToolCall::DeleteTransaction(args) => {

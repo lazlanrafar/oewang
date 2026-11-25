@@ -182,6 +182,43 @@ async fn an_expense(pool: &PgPool, turns: &TurnStore, amount: &str, name: &str) 
 
 // -------------------------------------------------------------- the gates
 
+/// The AI service retries a call once after a transport error, with a fresh
+/// request id. A write that already landed must not land twice.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_answer_a_repeated_write_call_with_its_first_outcome(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+    let args = json!({
+        "type": "expense", "amount": "1000", "wallet_id": "wal_cash",
+        "category_id": "cat_food", "date": "2026-11-03", "name": "Lunch"
+    });
+    let request = || ToolRequest {
+        workspace_id: WORKSPACE,
+        user_id: OWNER,
+        claimed_role: "owner",
+        session_id: SESSION,
+        turn_id: TURN,
+        call_id: Some("call_1"),
+        tool: "create_transaction",
+        args: &args,
+    };
+
+    let first = tools::execute(&pool, &turns, ceiling(), request())
+        .await
+        .unwrap();
+    let again = tools::execute(&pool, &turns, ceiling(), request())
+        .await
+        .unwrap();
+
+    assert_eq!(again.result, first.result);
+    let rows = count(
+        &pool,
+        "SELECT count(*) FROM transactions WHERE deleted_at IS NULL",
+    )
+    .await;
+    assert_eq!(rows, 1, "one write, not two");
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_a_tool_that_does_not_exist(pool: PgPool) {
     fixture(&pool).await;

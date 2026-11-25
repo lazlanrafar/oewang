@@ -21,6 +21,8 @@ use std::{
 
 use serde_json::Value;
 
+use super::tools::ToolOutcome;
+
 use oewang_domain::{
     tools::{
         Tool, CONFIRMATION_TTL_SECS, MAX_CREATED_TRANSACTIONS_PER_TURN, MAX_DELETES_PER_TURN,
@@ -44,6 +46,9 @@ struct Counters {
     /// Keyed by the model's tool call id. Taken, not read, so one artifact
     /// reaches the stream once.
     artifacts: HashMap<String, Artifact>,
+    /// Write calls by the model's call id: `None` while it runs, then its
+    /// outcome, so a transport retry of the same call is not a second write.
+    writes_seen: HashMap<String, Option<ToolOutcome>>,
 }
 
 /// One canvas artifact, built by the API from the database (D88).
@@ -132,6 +137,43 @@ impl TurnStore {
         counters.created = would_create;
 
         Ok(())
+    }
+
+    /// Claim a write call id for this turn. A repeat of a finished call gets
+    /// its first outcome; a repeat while the first still runs is refused,
+    /// because its outcome is not known yet. An unknown turn claims nothing
+    /// and is refused by `reserve`.
+    pub fn begin_write(&self, turn_id: &str, call_id: &str) -> Result<Option<ToolOutcome>> {
+        let mut guard = self.inner.write().expect("turn store poisoned");
+        let Some(counters) = guard.turns.get_mut(turn_id) else {
+            return Ok(None);
+        };
+        match counters.writes_seen.get(call_id) {
+            Some(Some(done)) => Ok(Some(done.clone())),
+            Some(None) => Err(AppError::Stale(None)),
+            None => {
+                counters.writes_seen.insert(call_id.to_string(), None);
+                Ok(None)
+            }
+        }
+    }
+
+    /// Settle a claimed write: keep a success for a repeat to read, forget a
+    /// failure so the call can be tried again.
+    pub fn finish_write(&self, turn_id: &str, call_id: &str, outcome: Option<&ToolOutcome>) {
+        let mut guard = self.inner.write().expect("turn store poisoned");
+        if let Some(counters) = guard.turns.get_mut(turn_id) {
+            match outcome {
+                Some(done) => {
+                    counters
+                        .writes_seen
+                        .insert(call_id.to_string(), Some(done.clone()));
+                }
+                None => {
+                    counters.writes_seen.remove(call_id);
+                }
+            }
+        }
     }
 
     /// Hold an artifact until the stream picks it up.

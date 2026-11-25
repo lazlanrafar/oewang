@@ -65,6 +65,8 @@ A cap needs something to count against, and that unit is a `turn_id`. The API mi
 
 The AI service does not mint it, for the same reason the `role` in the body is a claim rather than a fact. A service that produced a fresh id per call would hand itself an untouched budget on every call, and the three per-turn caps above would bound nothing. The party being counted cannot also be the party that decides what counts as one turn.
 
+A write is also remembered by its `call_id` within the turn. The AI service retries a call once after a transport error, and a write that timed out may have landed, so a repeat of a finished write gets the first outcome back rather than writing again; a repeat while the first still runs is refused with `STALE`, because its outcome is not known yet. A failed write is forgotten, so it can be tried again.
+
 `split_bill` is the one tool that writes many rows (up to 20 receivables and the contacts it creates). It is not capped per row; it is confirmed instead, like a delete, and counts as one write once confirmed (D122).
 
 Bulk paths deliberately do not exist as tools. There is no `bulk_delete_transactions`, no `delete_wallet`, no `delete_category`, no membership tool, no settings tool. Those operations exist only in the UI, where a human clicked them. The tool catalog is small on purpose (D17).
