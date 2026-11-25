@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                  original_amount, original_currency_code, exchange_rate,\n                  base_amount, base_rate, base_rate_source, base_rate_date,\n                  date, type AS \"type!\", name, description, is_exported,\n                  source, fingerprint, created_at, updated_at\n           FROM transactions\n           WHERE workspace_id = $1 AND id = ANY($2) AND deleted_at IS NULL\n           ORDER BY id",
+  "query": "SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                  original_amount, original_currency_code, exchange_rate,\n                  base_amount, base_rate, base_rate_source, base_rate_date,\n                  date, type AS \"type!\", name, description, is_exported,\n                  source, fingerprint, created_at, updated_at\n           FROM transactions\n           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL\n           FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -249,7 +249,7 @@
     "parameters": {
       "Left": [
         "Text",
-        "TextArray"
+        "Text"
       ]
     },
     "nullable": [
@@ -277,5 +277,5 @@
       false
     ]
   },
-  "hash": "483eb74f6070e776389de19a9ca52062a0325c61c9ac0e550a8c0a876b4fdd5a"
+  "hash": "25b159fa3cf0e5546efa3e3b9304f2b3015b32d0e7bf80fa899f0a04b263a9cf"
 }

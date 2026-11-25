@@ -547,6 +547,33 @@ pub async fn find(
     .await
 }
 
+/// `find`, with the row locked until the caller's transaction ends.
+///
+/// Every edit and delete reads the row it reverses through this, before it
+/// locks any wallet, so a concurrent edit waits and then reverses the
+/// amount the first one wrote rather than a stale one.
+pub async fn find_for_update(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    id: &str,
+) -> Result<Option<TransactionRow>, sqlx::Error> {
+    sqlx::query_as!(
+        TransactionRow,
+        r#"SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,
+                  original_amount, original_currency_code, exchange_rate,
+                  base_amount, base_rate, base_rate_source, base_rate_date,
+                  date, type AS "type!", name, description, is_exported,
+                  source, fingerprint, created_at, updated_at
+           FROM transactions
+           WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+           FOR UPDATE"#,
+        workspace_id,
+        id
+    )
+    .fetch_optional(executor)
+    .await
+}
+
 /// One row with the same joined names the list carries.
 ///
 /// Its own statement rather than the list with an id filter, because the
@@ -753,7 +780,8 @@ pub async fn bulk_update(
     .map(|result| result.rows_affected())
 }
 
-/// Every live row in a selection, locked for the balance reversal.
+/// Every live row in a selection, locked in ascending ID order for the
+/// balance reversal, before any wallet is.
 pub async fn find_many(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
@@ -768,7 +796,8 @@ pub async fn find_many(
                   source, fingerprint, created_at, updated_at
            FROM transactions
            WHERE workspace_id = $1 AND id = ANY($2) AND deleted_at IS NULL
-           ORDER BY id"#,
+           ORDER BY id
+           FOR UPDATE"#,
         workspace_id,
         ids
     )

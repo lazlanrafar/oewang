@@ -366,6 +366,27 @@ pub fn fingerprint(
     hex(&hasher.finalize()[..12])
 }
 
+/// The print of the `occurrence`th row in one import that has the same
+/// `base` print, counted from 1.
+///
+/// A statement can hold two identical rows (two Rp 15,000 GOPAY debits on
+/// one day), and one print for both imported only the first. The first
+/// occurrence keeps the plain print, so files imported before this rule
+/// still dedupe; each later one hashes its type and number in, so it has
+/// its own print and a re-import of the same file stays a no-op.
+pub fn nth_fingerprint(base: &str, kind: &str, occurrence: usize) -> String {
+    if occurrence <= 1 {
+        return base.to_string();
+    }
+    let mut hasher = Sha256::new();
+    hasher.update(base);
+    hasher.update(b"|");
+    hasher.update(normalize(kind));
+    hasher.update(b"|");
+    hasher.update(occurrence.to_string());
+    hex(&hasher.finalize()[..12])
+}
+
 /// Lowercase, trimmed, runs of whitespace collapsed to one space.
 fn normalize(value: &str) -> String {
     value
@@ -702,6 +723,25 @@ mod tests {
             base,
             fingerprint("w_a", "2026-11-02", decimal("50000"), "IDR", "Dinner", "")
         );
+    }
+
+    #[test]
+    fn should_give_a_repeated_row_its_own_stable_print() {
+        let base = fingerprint("w_a", "2026-11-02", decimal("15000"), "IDR", "GOPAY", "");
+        assert_eq!(
+            nth_fingerprint(&base, "expense", 1),
+            base,
+            "first stays as stored"
+        );
+        let second = nth_fingerprint(&base, "expense", 2);
+        assert_ne!(second, base);
+        assert_eq!(
+            second,
+            nth_fingerprint(&base, "expense", 2),
+            "stable across imports"
+        );
+        assert_ne!(second, nth_fingerprint(&base, "expense", 3));
+        assert_ne!(second, nth_fingerprint(&base, "income", 2));
     }
 
     // -------------------------------------------------------- rounding

@@ -755,6 +755,38 @@ async fn should_give_the_exact_balance_when_two_writes_race(pool: PgPool) {
     assert_eq!(balance(&pool, &cash).await, decimal("-8000"));
 }
 
+/// Parallel edits of one row leave the balance the row's final amount says.
+///
+/// Each edit reverses the amount it read. Read without the row lock, two
+/// edits reverse the same old amount and the wallet drifts for good.
+/// TXN-4, TXN-6
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_reverse_the_current_amount_when_two_edits_race(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let id = service::create(&pool, actor(), expense(&cash, "1000"))
+        .await
+        .unwrap()
+        .id;
+
+    let mut handles = Vec::new();
+    for step in 2..10 {
+        let (pool, cash, id) = (pool.clone(), cash.clone(), id.clone());
+        handles.push(tokio::spawn(async move {
+            let amount = format!("{step}000");
+            service::update(&pool, actor(), &id, expense(&cash, &amount), None)
+                .await
+                .unwrap();
+        }));
+    }
+    for handle in handles {
+        handle.await.unwrap();
+    }
+
+    let amount = service::find(&pool, WORKSPACE, &id).await.unwrap().amount;
+    assert_eq!(balance(&pool, &cash).await, -amount);
+}
+
 /// Two transfers in opposite directions cannot deadlock, because both lock
 /// their wallets in ascending ID order (D13).
 /// TXN-6
@@ -801,27 +833,35 @@ async fn should_not_deadlock_on_opposite_transfers(pool: PgPool) {
 
 // -------------------------------------------------------------------- bulk
 
+/// Two identical rows in one file are two transactions (two Rp 15,000
+/// GOPAY debits on one day); the same file again is all duplicates.
+/// TXN-16
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_skip_a_duplicate_rather_than_fail_the_import(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
 
-    let rows = vec![
-        expense(&cash, "50000"),
-        // Identical to the first, which is what a re-imported statement
-        // looks like.
-        expense(&cash, "50000"),
-        expense(&cash, "87500"),
-    ];
+    let rows = || {
+        vec![
+            expense(&cash, "50000"),
+            expense(&cash, "50000"),
+            expense(&cash, "87500"),
+        ]
+    };
 
-    let outcome = service::bulk_create(&pool, actor(), rows, IMPORT_LIMIT)
+    let outcome = service::bulk_create(&pool, actor(), rows(), IMPORT_LIMIT)
         .await
         .unwrap();
-
-    assert_eq!(outcome.created, 2);
-    assert_eq!(outcome.duplicates, 1);
+    assert_eq!((outcome.created, outcome.duplicates), (3, 0));
     assert!(outcome.skipped.is_empty());
-    assert_eq!(balance(&pool, &cash).await, decimal("-137500"));
+
+    // A re-imported statement: every row, the repeated one included, is
+    // a duplicate rather than a failed statement.
+    let again = service::bulk_create(&pool, actor(), rows(), IMPORT_LIMIT)
+        .await
+        .unwrap();
+    assert_eq!((again.created, again.duplicates), (0, 3));
+    assert_eq!(balance(&pool, &cash).await, decimal("-187500"));
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -1547,7 +1587,7 @@ async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPoo
         row("01/11/2026", "GAJI", "", "9.500.000", ""),
         // Unreadable: reported, not fatal.
         row("whenever", "BROKEN", "1.000", "", ""),
-        // A duplicate of the first, which is what a re-upload looks like.
+        // The same row again in one file is a second purchase (TXN-16).
         row("02/11/2026", "WARUNG TEKKO", "50.000", "", "Food"),
     ];
 
@@ -1565,11 +1605,8 @@ async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPoo
     .await
     .unwrap();
 
-    assert_eq!(outcome.created, 2);
-    assert_eq!(
-        outcome.duplicates, 1,
-        "the same row twice is counted, not failed"
-    );
+    assert_eq!(outcome.created, 3);
+    assert_eq!(outcome.duplicates, 0);
     assert_eq!(outcome.skipped.len(), 1);
     assert_eq!(
         outcome.skipped[0].index, 2,
@@ -1578,7 +1615,7 @@ async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPoo
 
     // The debit became an expense and the credit an income, and the sign
     // rule is in code rather than in the model (D28).
-    assert_eq!(balance(&pool, &cash).await, decimal("9450000"));
+    assert_eq!(balance(&pool, &cash).await, decimal("9400000"));
 
     let categorised: Option<String> =
         sqlx::query_scalar("SELECT category_id FROM transactions WHERE name = 'WARUNG TEKKO'")

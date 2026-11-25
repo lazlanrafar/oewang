@@ -18,8 +18,8 @@ use oewang_db::{
 use oewang_domain::{
     csv_import::{transform, ColumnMapping, RawRow},
     ledger::{
-        fingerprint, net, reverse, round_money, BalanceDelta, ForeignEntry, ProposedShape,
-        TransactionShape, TransactionType,
+        fingerprint, net, nth_fingerprint, reverse, round_money, BalanceDelta, ForeignEntry,
+        ProposedShape, TransactionShape, TransactionType,
     },
     AppError, Result,
 };
@@ -356,9 +356,12 @@ pub(crate) async fn write_created(
 /// reversal is the negation of an effect and nothing else.
 ///
 /// `if_match` is the `updated_at` the client last read (D115). It is checked
-/// on the row read here and again by the update statement under its row
-/// lock, which also proves the balance reversed below is the row's current
-/// effect. Without it the edit is last-write-wins, as it always was.
+/// on the row read here and again by the update statement. Without it the
+/// edit is last-write-wins, as it always was.
+///
+/// The row is locked before any wallet, so a concurrent edit or delete of it
+/// waits here and then reverses what the first one wrote, never a stale
+/// amount. Lock order is always transaction rows, then wallets ascending.
 pub async fn update(
     pool: &PgPool,
     actor: Actor<'_>,
@@ -372,7 +375,7 @@ pub async fn update(
     let mut tx = pool.begin().await.map_err(internal)?;
     ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
 
-    let Some(before) = repo::find(&mut *tx, actor.workspace_id, id)
+    let Some(before) = repo::find_for_update(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
     else {
@@ -542,7 +545,7 @@ pub(crate) async fn delete_in(
     actor: Actor<'_>,
     id: &str,
 ) -> Result<()> {
-    let before = repo::find(&mut **tx, actor.workspace_id, id)
+    let before = repo::find_for_update(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
         .ok_or(AppError::TransactionNotFound)?;
@@ -550,8 +553,8 @@ pub(crate) async fn delete_in(
     let moves = net(reverse(&effect_of(&before)?));
     apply_moves(tx, actor.workspace_id, &moves).await?;
 
-    // A second delete of the same row waited on the wallet lock and finds it
-    // already gone: refusing here rolls back the balance it just reversed.
+    // Unreachable while the read above holds the row lock; kept so a row
+    // that is somehow already gone rolls back the balance just reversed.
     let deleted = repo::soft_delete(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?;
@@ -645,11 +648,18 @@ pub async fn bulk_create(
     let mut tx = pool.begin().await.map_err(internal)?;
     ensure_currency(&mut tx, actor.workspace_id, &workspace.currency_code).await?;
 
+    // How often each plain print has come up in this batch, so identical rows
+    // in one file each get their own print instead of collapsing into one.
+    let mut occurrences = std::collections::HashMap::<String, usize>::new();
+
     for (index, input) in inputs.iter().enumerate() {
         match prepare_import_row(&mut tx, actor.workspace_id, &workspace.currency_code, input).await
         {
             Ok(prepared) => {
-                let print = fingerprint_for(input, &prepared);
+                let base = fingerprint_for(input, &prepared);
+                let occurrence = occurrences.entry(base.clone()).or_default();
+                *occurrence += 1;
+                let print = nth_fingerprint(&base, input.kind.as_str(), *occurrence);
 
                 // The unique index is the real guard; this read makes a
                 // duplicate a counted outcome instead of a failed statement
@@ -913,8 +923,8 @@ pub async fn bulk_delete(pool: &PgPool, actor: Actor<'_>, ids: &[String]) -> Res
     let moves = net(all);
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
 
-    // Rows another delete took while this one waited on the wallet locks
-    // were reversed twice above; refusing rolls the whole selection back.
+    // The rows are locked by the read above, so this should not trip; if it
+    // does, refusing rolls the whole selection back rather than reverse twice.
     let deleted = repo::soft_delete_many(&mut *tx, actor.workspace_id, ids)
         .await
         .map_err(internal)?;

@@ -234,6 +234,8 @@ So "a review list with low confidence rows flagged" has nothing to render. The c
 
 Both paths compute a content fingerprint per row and store it ([data model](../data-model.md#import-fingerprint)). A row whose fingerprint already exists in the workspace is counted as a duplicate and skipped, enforced by a unique index rather than by a dialog.
 
+Two identical rows inside one file are two transactions, not one and a duplicate: the nth repeat in an import hashes its type and its number into its print, so it has its own stable print ([data model](../data-model.md#import-fingerprint)).
+
 So re-uploading last month's statement imports only the rows that are new. The user never has to remember what they already imported, and a partially failed import is safe to retry whole.
 
 #### Failure handling

@@ -401,12 +401,17 @@ fingerprint = sha256(
     normalize(name)        || "|" ||
     normalize(counterparty)
   ) truncated to 24 hex characters
+
+-- the nth row in one import with the same fingerprint, n >= 2
+fingerprint_n = sha256(fingerprint || "|" || normalize(type) || "|" || n)
+  truncated to 24 hex characters
 ```
 
 Rules:
 
 - Set on `import` and `receipt` rows. Null for manual and chat entry, where a user creating two identical expenses on purpose is legitimate.
 - Computed from the **transformed** values, after date parsing and sign normalization, so two files with different date formats produce the same hash for the same transaction.
+- Identical rows in one file are separate transactions (two Rp 15,000 GOPAY debits on one day). The first keeps the plain fingerprint, so files imported before this rule still dedupe; the nth repeat in the same import gets `fingerprint_n`, so re-importing the file is still a no-op.
 - A collision on insert is counted as `skipped`, not as an error.
 - The index is partial on `deleted_at IS NULL`, so deleting an imported row makes it importable again.
 
