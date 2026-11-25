@@ -107,6 +107,10 @@ pub struct Config {
     /// puts a proxy in front: anyone can send that header, and a limiter
     /// that believes it is one anyone can step around.
     pub trust_proxy_headers: bool,
+    /// How many proxies in front append to `X-Forwarded-For`; the source is
+    /// that many entries from the right. 1 behind one proxy; 2 behind
+    /// Cloudflare and Traefik, where the last entry is Cloudflare's edge.
+    pub trusted_proxy_hops: usize,
     /// The key the app presents with `x-client-ip`, so the API believes
     /// the address it names (D112). Required in production: without it
     /// every browser counts as the app's one address.
@@ -365,6 +369,15 @@ impl Config {
             trust_proxy_headers: optional("TRUST_PROXY_HEADERS")
                 .map(|value| value == "true")
                 .unwrap_or(false),
+            trusted_proxy_hops: match parse_or("TRUSTED_PROXY_HOPS", 1)? {
+                0 => {
+                    return Err(ConfigError::Invalid {
+                        name: "TRUSTED_PROXY_HOPS",
+                        reason: "must be at least 1".into(),
+                    })
+                }
+                hops => hops,
+            },
             app_relay_key: app_relay_key.map(Secret::new),
         })
     }
