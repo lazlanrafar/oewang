@@ -284,7 +284,7 @@ Index: `budget_alerts_once_idx` unique on `(budget_id, month, threshold)`. After
 
 #### `feedback`
 
-Migration `0015`, D104, FB-1. What a member sent from Settings → Feedback. Written once, read in the database; nothing in the product lists it.
+Migration `0015`, D104, FB-1. What a member sent from Settings → Feedback. Operators read and answer it in the console since migration `0024` (CSL-8); the member's own app never lists it.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -293,6 +293,9 @@ Migration `0015`, D104, FB-1. What a member sent from Settings → Feedback. Wri
 | `user_id` | text | FK users, cascade. Who sent it |
 | `type` | text | `bug`, `feature` or `other` |
 | `message` | text | `CHECK` 1 to 5000 characters, trimmed by the service |
+| `status` | text | `open` (default) or `done`, set by an operator (CSL-8) |
+| `operator_note` | text | Nullable, at most 2000 characters. Seen only in the console |
+| `resolved_at` | timestamptz | Nullable. When it first became `done`; cleared when reopened |
 | `created_at`, `deleted_at` | timestamptz | |
 
 Index: `feedback_workspace_idx (workspace_id, created_at DESC) WHERE deleted_at IS NULL`. The old app's screenshot, review status and admin note are not carried: nothing here would show or change them.

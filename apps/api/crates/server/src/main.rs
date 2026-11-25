@@ -543,6 +543,14 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/console/users/{id}/enable",
             post(console::handler::enable),
         )
+        .route("/v1/console/feedback", get(console::handler::feedback))
+        .route(
+            "/v1/console/feedback/{id}",
+            axum::routing::patch(console::handler::update_feedback),
+        )
+        .route("/v1/console/overview", get(console::handler::overview))
+        .route("/v1/console/usage", get(console::handler::usage))
+        .route("/v1/console/health", get(console::handler::health))
         // Feedback from settings, any role (FB-1).
         .route("/v1/feedback", post(feedback::handler::send))
         // Exchange rates. A suggestion for the form; nothing reads it on

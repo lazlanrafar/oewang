@@ -1,5 +1,6 @@
 //! Console roles and the operator lookup (CSL-2, D125, D126).
 
+use chrono::Datelike;
 use oewang_domain::{AppError, ConsolePermission};
 use sqlx::PgPool;
 
@@ -444,4 +445,146 @@ async fn should_shut_a_suspended_workspace_and_a_disabled_user_out(pool: PgPool)
     assert!(matches!(error, AppError::UserDisabled), "{error:?}");
     let error = current_role(&pool, WORKSPACE, OWNER).await.unwrap_err();
     assert!(matches!(error, AppError::UserDisabled), "{error:?}");
+}
+
+// --------------------------------------------- feedback, overview, usage
+
+async fn some_feedback(pool: &PgPool) -> String {
+    let row = crate::feedback::service::send(
+        pool,
+        crate::audit::Actor::web(WORKSPACE, OWNER),
+        "bug",
+        "The chart is empty.",
+    )
+    .await
+    .unwrap();
+    row.id
+}
+
+/// CSL-8, CSL-14
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_list_and_answer_feedback(pool: PgPool) {
+    user(&pool, Some("support")).await;
+    customers(&pool).await;
+    let id = some_feedback(&pool).await;
+    let page = oewang_domain::Page::new(None, None);
+
+    let open = oewang_db::repositories::console::FeedbackFilter {
+        search: Some("chart"),
+        status: Some("open"),
+        kind: Some("bug"),
+    };
+    let (rows, total) = service::feedback(&pool, &open, page).await.unwrap();
+    assert_eq!(total, 1);
+    assert_eq!(rows[0].user_email, "rina@example.com");
+    assert_eq!(rows[0].workspace_name, "Rina Home");
+
+    let row = service::update_feedback(
+        &pool,
+        USER,
+        &id,
+        Some("done"),
+        Some(Some("  Fixed in 1.2  ")),
+    )
+    .await
+    .unwrap();
+    assert_eq!(row.status, "done");
+    assert_eq!(row.operator_note.as_deref(), Some("Fixed in 1.2"));
+    assert!(row.resolved_at.is_some());
+
+    // The note alone, left as it is: no change, no second audit row.
+    service::update_feedback(&pool, USER, &id, None, None)
+        .await
+        .unwrap();
+    let row = service::update_feedback(&pool, USER, &id, Some("open"), Some(Some("")))
+        .await
+        .unwrap();
+    assert_eq!(
+        (row.status.as_str(), row.operator_note, row.resolved_at),
+        ("open", None, None)
+    );
+
+    let actions: Vec<String> = operator_audit(&pool)
+        .await
+        .into_iter()
+        .map(|(a, _)| a)
+        .collect();
+    assert_eq!(actions, ["feedback.updated", "feedback.updated"]);
+
+    let error = service::update_feedback(&pool, USER, &id, Some("closed"), None)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+}
+
+/// CSL-9, CSL-10: the front page and the usage page add up, without money.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_count_the_overview_usage_and_health(pool: PgPool) {
+    customers(&pool).await;
+    some_feedback(&pool).await;
+    for (feature, model, input) in [
+        ("chat", "m-1", 100),
+        ("chat", "m-2", 50),
+        ("receipt", "m-1", 7),
+    ] {
+        sqlx::query(
+            "INSERT INTO ai_usage (id, workspace_id, user_id, feature, model, input_tokens, output_tokens)
+             VALUES ($1, $2, $3, $4, $5, $6, 1)",
+        )
+        .bind(format!("use_{feature}_{model}"))
+        .bind(WORKSPACE)
+        .bind(OWNER)
+        .bind(feature)
+        .bind(model)
+        .bind(input)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+
+    let overview = service::overview(&pool).await.unwrap();
+    assert_eq!(overview.users.total, 1);
+    assert_eq!(
+        (
+            overview.workspaces.total,
+            overview.workspaces.active,
+            overview.workspaces.deleted
+        ),
+        (2, 1, 1)
+    );
+    assert_eq!(overview.feedback_open, 1);
+    assert_eq!(overview.tokens_month.input, 157);
+    assert_eq!(overview.signups_by_week.len(), 12);
+    assert_eq!(
+        overview
+            .signups_by_week
+            .iter()
+            .map(|w| w.count)
+            .sum::<i64>(),
+        1
+    );
+
+    let month = chrono::Utc::now().date_naive().with_day(1).unwrap();
+    let report = service::usage(&pool, month).await.unwrap();
+    assert_eq!((report.totals.input, report.totals.calls), (157, 3));
+    assert_eq!(
+        report.by_workspace[0].workspace_name.as_deref(),
+        Some("Rina Home")
+    );
+    assert_eq!(report.by_model[0].model.as_deref(), Some("m-1"));
+    assert_eq!(report.by_model[0].input, 107);
+    let last_month = month.checked_sub_months(chrono::Months::new(1)).unwrap();
+    assert_eq!(
+        service::usage(&pool, last_month)
+            .await
+            .unwrap()
+            .totals
+            .calls,
+        0
+    );
+
+    let health = service::health(&pool).await.unwrap();
+    assert_eq!(health.ai_calls_by_day.len(), 14);
+    assert_eq!(health.ai_calls_by_day.last().unwrap().calls, 3);
+    assert_eq!(health.receipt_jobs.failed_7d, 0);
 }

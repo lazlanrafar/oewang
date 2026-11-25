@@ -4,8 +4,10 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
+use chrono::Datelike;
 use oewang_db::repositories::console::{
-    ConsoleUserRow, ConsoleWorkspaceRow, UserSort, WorkspaceSort, WorkspaceStatus,
+    ConsoleFeedbackRow, ConsoleUserRow, ConsoleWorkspaceRow, FeedbackFilter, UserSort,
+    WorkspaceSort, WorkspaceStatus,
 };
 use oewang_domain::{AppError, ConsolePermission, Envelope, Page, PageMeta};
 use serde::{Deserialize, Serialize};
@@ -262,6 +264,141 @@ async fn set_disabled(
     operator.require(ConsolePermission::UsersDisable)?;
     match service::set_disabled(&state.db, &operator.user_id, &user_id, disable).await {
         Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FeedbackQuery {
+    pub search: Option<String>,
+    pub status: Option<String>,
+    #[serde(rename = "type")]
+    pub kind: Option<String>,
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+}
+
+/// `GET /v1/console/feedback` (CSL-8). Newest first.
+pub async fn feedback(
+    State(state): State<AppState>,
+    operator: Operator,
+    Query(query): Query<FeedbackQuery>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<Vec<ConsoleFeedbackRow>>>, ApiError> {
+    operator.require(ConsolePermission::Read)?;
+    let id = request_id.0;
+    let result = async {
+        let status = non_empty(&query.status);
+        if status.is_some_and(|status| !service::FEEDBACK_STATUSES.contains(&status)) {
+            return Err(AppError::validation([("status", "Use open or done.")]));
+        }
+        let kind = non_empty(&query.kind);
+        if kind.is_some_and(|kind| !crate::feedback::service::KINDS.contains(&kind)) {
+            return Err(AppError::validation([(
+                "type",
+                "Use bug, feature or other.",
+            )]));
+        }
+        let filter = FeedbackFilter {
+            search: non_empty(&query.search),
+            status,
+            kind,
+        };
+        let page = Page::new(query.page, query.per_page);
+        let (rows, total) = service::feedback(&state.db, &filter, page).await?;
+        Ok((rows, total, page))
+    }
+    .await;
+    paged(result, id)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FeedbackPatch {
+    pub status: Option<String>,
+    #[serde(default, deserialize_with = "crate::contacts::handler::explicit_null")]
+    pub operator_note: Option<Option<String>>,
+}
+
+/// `PATCH /v1/console/feedback/{id}` (CSL-8).
+pub async fn update_feedback(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(feedback_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<FeedbackPatch>,
+) -> std::result::Result<Json<Envelope<ConsoleFeedbackRow>>, ApiError> {
+    operator.require(ConsolePermission::FeedbackWrite)?;
+    match service::update_feedback(
+        &state.db,
+        &operator.user_id,
+        &feedback_id,
+        body.status.as_deref(),
+        body.operator_note.as_ref().map(|note| note.as_deref()),
+    )
+    .await
+    {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `GET /v1/console/overview` (CSL-10).
+pub async fn overview(
+    State(state): State<AppState>,
+    operator: Operator,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<service::Overview>>, ApiError> {
+    operator.require(ConsolePermission::Read)?;
+    match service::overview(&state.db).await {
+        Ok(view) => Ok(Json(Envelope::data(view, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UsageQuery {
+    /// `YYYY-MM`; the current month (UTC) when absent.
+    pub month: Option<String>,
+}
+
+/// `GET /v1/console/usage` (CSL-9).
+pub async fn usage(
+    State(state): State<AppState>,
+    operator: Operator,
+    Query(query): Query<UsageQuery>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<service::UsageReport>>, ApiError> {
+    operator.require(ConsolePermission::Read)?;
+    let month = match non_empty(&query.month) {
+        None => {
+            let today = chrono::Utc::now().date_naive();
+            today.with_day(1).expect("the first exists")
+        }
+        Some(text) => match chrono::NaiveDate::parse_from_str(&format!("{text}-01"), "%Y-%m-%d") {
+            Ok(month) => month,
+            Err(_) => {
+                return Err(ApiError::new(
+                    AppError::validation([("month", "Use YYYY-MM.")]),
+                    request_id.0,
+                ))
+            }
+        },
+    };
+    match service::usage(&state.db, month).await {
+        Ok(view) => Ok(Json(Envelope::data(view, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `GET /v1/console/health` (CSL-10).
+pub async fn health(
+    State(state): State<AppState>,
+    operator: Operator,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<service::Health>>, ApiError> {
+    operator.require(ConsolePermission::Read)?;
+    match service::health(&state.db).await {
+        Ok(view) => Ok(Json(Envelope::data(view, request_id.0))),
         Err(error) => Err(ApiError::new(error, request_id.0)),
     }
 }

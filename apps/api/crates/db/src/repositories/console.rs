@@ -413,3 +413,298 @@ pub async fn insert_operator_audit(
     .await
     .map(|_| ())
 }
+
+// --------------------------------------------------------------- feedback
+
+/// Feedback as the console lists it (CSL-8). The message is what the person
+/// chose to send to oewang, so it is shown in full.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct ConsoleFeedbackRow {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub message: String,
+    pub status: String,
+    pub operator_note: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub user_id: String,
+    pub user_email: String,
+    pub workspace_id: String,
+    pub workspace_name: String,
+}
+
+const FEEDBACK_SELECT: &str = "SELECT f.id, f.type AS kind, f.message, f.status, f.operator_note,
+        f.created_at, f.resolved_at, f.user_id, u.email AS user_email,
+        f.workspace_id, w.name AS workspace_name
+   FROM feedback f
+   JOIN users u ON u.id = f.user_id
+   JOIN workspaces w ON w.id = f.workspace_id
+  WHERE f.deleted_at IS NULL";
+
+pub struct FeedbackFilter<'a> {
+    pub search: Option<&'a str>,
+    pub status: Option<&'a str>,
+    pub kind: Option<&'a str>,
+}
+
+fn push_feedback_filters(builder: &mut QueryBuilder<sqlx::Postgres>, filter: &FeedbackFilter<'_>) {
+    if let Some(search) = filter.search {
+        let pattern = super::contains_pattern(search);
+        builder
+            .push(" AND (f.message ILIKE ")
+            .push_bind(pattern.clone())
+            .push(" OR u.email ILIKE ")
+            .push_bind(pattern.clone())
+            .push(" OR w.name ILIKE ")
+            .push_bind(pattern)
+            .push(")");
+    }
+    if let Some(status) = filter.status {
+        builder
+            .push(" AND f.status = ")
+            .push_bind(status.to_string());
+    }
+    if let Some(kind) = filter.kind {
+        builder.push(" AND f.type = ").push_bind(kind.to_string());
+    }
+}
+
+pub async fn list_feedback(
+    executor: impl PgExecutor<'_>,
+    filter: &FeedbackFilter<'_>,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ConsoleFeedbackRow>, sqlx::Error> {
+    let mut builder = QueryBuilder::new(FEEDBACK_SELECT);
+    push_feedback_filters(&mut builder, filter);
+    builder.push(" ORDER BY f.created_at DESC, f.id");
+    builder.push(" LIMIT ").push_bind(limit);
+    builder.push(" OFFSET ").push_bind(offset);
+    builder.build_query_as().fetch_all(executor).await
+}
+
+pub async fn count_feedback(
+    executor: impl PgExecutor<'_>,
+    filter: &FeedbackFilter<'_>,
+) -> Result<i64, sqlx::Error> {
+    let mut builder = QueryBuilder::new(
+        "SELECT count(*) FROM feedback f
+           JOIN users u ON u.id = f.user_id
+           JOIN workspaces w ON w.id = f.workspace_id
+          WHERE f.deleted_at IS NULL",
+    );
+    push_feedback_filters(&mut builder, filter);
+    builder.build_query_scalar().fetch_one(executor).await
+}
+
+pub async fn find_feedback(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<ConsoleFeedbackRow>, sqlx::Error> {
+    let mut builder = QueryBuilder::new(FEEDBACK_SELECT);
+    builder.push(" AND f.id = ").push_bind(id.to_string());
+    builder.build_query_as().fetch_optional(executor).await
+}
+
+/// Lock a live feedback row; false when there is none.
+pub async fn lock_feedback(executor: impl PgExecutor<'_>, id: &str) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT id FROM feedback WHERE id = $1 AND deleted_at IS NULL FOR UPDATE",
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await
+    .map(|row| row.is_some())
+}
+
+/// Set the status and note. `resolved_at` is when it first became done, and
+/// clears when it is reopened.
+pub async fn update_feedback(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    status: &str,
+    note: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE feedback
+            SET status = $2,
+                operator_note = $3,
+                resolved_at = CASE WHEN $2 = 'done' THEN COALESCE(resolved_at, now()) END
+          WHERE id = $1",
+    )
+    .bind(id)
+    .bind(status)
+    .bind(note)
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+// ---------------------------------------------------- overview and usage
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct OverviewCounts {
+    pub users_total: i64,
+    pub users_new_7d: i64,
+    pub workspaces_total: i64,
+    pub workspaces_active: i64,
+    pub workspaces_suspended: i64,
+    pub workspaces_deleted: i64,
+    pub feedback_open: i64,
+    pub tokens_month_input: i64,
+    pub tokens_month_output: i64,
+}
+
+pub async fn overview_counts(executor: impl PgExecutor<'_>) -> Result<OverviewCounts, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT
+           (SELECT count(*) FROM users) AS users_total,
+           (SELECT count(*) FROM users WHERE created_at >= now() - interval '7 days') AS users_new_7d,
+           (SELECT count(*) FROM workspaces) AS workspaces_total,
+           (SELECT count(*) FROM workspaces
+             WHERE deleted_at IS NULL AND suspended_at IS NULL) AS workspaces_active,
+           (SELECT count(*) FROM workspaces
+             WHERE deleted_at IS NULL AND suspended_at IS NOT NULL) AS workspaces_suspended,
+           (SELECT count(*) FROM workspaces WHERE deleted_at IS NOT NULL) AS workspaces_deleted,
+           (SELECT count(*) FROM feedback
+             WHERE deleted_at IS NULL AND status = 'open') AS feedback_open,
+           (SELECT COALESCE(sum(input_tokens), 0)::bigint FROM ai_usage
+             WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+             AS tokens_month_input,
+           (SELECT COALESCE(sum(output_tokens), 0)::bigint FROM ai_usage
+             WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
+             AS tokens_month_output",
+    )
+    .fetch_one(executor)
+    .await
+}
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct WeekCount {
+    pub week_start: chrono::NaiveDate,
+    pub count: i64,
+}
+
+/// Sign-ups per ISO week (UTC), the last twelve, empty weeks included.
+pub async fn signups_by_week(executor: impl PgExecutor<'_>) -> Result<Vec<WeekCount>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT week::date AS week_start, count(u.id) AS count
+           FROM generate_series(
+                  date_trunc('week', now() AT TIME ZONE 'UTC') - interval '11 weeks',
+                  date_trunc('week', now() AT TIME ZONE 'UTC'),
+                  interval '1 week') AS week
+           LEFT JOIN users u
+             ON u.created_at AT TIME ZONE 'UTC' >= week
+            AND u.created_at AT TIME ZONE 'UTC' < week + interval '1 week'
+          GROUP BY week
+          ORDER BY week",
+    )
+    .fetch_all(executor)
+    .await
+}
+
+/// Token use grouped one way, within `[from, to)`.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct UsageGroup {
+    pub key: Option<String>,
+    pub label: Option<String>,
+    pub input: i64,
+    pub output: i64,
+    pub calls: i64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UsageBy {
+    Workspace,
+    Model,
+    Feature,
+}
+
+pub async fn usage_grouped(
+    executor: impl PgExecutor<'_>,
+    by: UsageBy,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> Result<Vec<UsageGroup>, sqlx::Error> {
+    let (key, label, join, limit) = match by {
+        UsageBy::Workspace => (
+            "a.workspace_id",
+            "w.name",
+            " JOIN workspaces w ON w.id = a.workspace_id",
+            " LIMIT 50",
+        ),
+        UsageBy::Model => ("a.model", "a.model", "", ""),
+        UsageBy::Feature => ("a.feature", "a.feature", "", ""),
+    };
+    let sql = format!(
+        "SELECT {key} AS key, {label} AS label,
+                COALESCE(sum(a.input_tokens), 0)::bigint AS input,
+                COALESCE(sum(a.output_tokens), 0)::bigint AS output,
+                count(*) AS calls
+           FROM ai_usage a{join}
+          WHERE a.created_at >= $1 AND a.created_at < $2
+          GROUP BY {key}, {label}
+          ORDER BY sum(a.input_tokens) + sum(a.output_tokens) DESC, {key}{limit}"
+    );
+    // Safe: every piece formatted in comes from the `match` above, static
+    // strings chosen by an enum; the dates are bound.
+    sqlx::query_as(sqlx::AssertSqlSafe(sql))
+        .bind(from)
+        .bind(to)
+        .fetch_all(executor)
+        .await
+}
+
+// ---------------------------------------------------------------- health
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct ReceiptJobCounts {
+    pub pending: i64,
+    pub failed_24h: i64,
+    pub failed_7d: i64,
+}
+
+pub async fn receipt_job_counts(
+    executor: impl PgExecutor<'_>,
+) -> Result<ReceiptJobCounts, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT
+           count(*) FILTER (WHERE status IN ('pending', 'processing')) AS pending,
+           count(*) FILTER (WHERE status = 'failed'
+                              AND updated_at >= now() - interval '24 hours') AS failed_24h,
+           count(*) FILTER (WHERE status = 'failed'
+                              AND updated_at >= now() - interval '7 days') AS failed_7d
+           FROM receipt_jobs",
+    )
+    .fetch_one(executor)
+    .await
+}
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct DayUsage {
+    pub day: chrono::NaiveDate,
+    pub calls: i64,
+    pub input: i64,
+    pub output: i64,
+}
+
+/// Model calls per UTC day, the last fourteen, empty days included.
+pub async fn ai_calls_by_day(executor: impl PgExecutor<'_>) -> Result<Vec<DayUsage>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT day::date AS day, count(a.id) AS calls,
+                COALESCE(sum(a.input_tokens), 0)::bigint AS input,
+                COALESCE(sum(a.output_tokens), 0)::bigint AS output
+           FROM generate_series(
+                  date_trunc('day', now() AT TIME ZONE 'UTC') - interval '13 days',
+                  date_trunc('day', now() AT TIME ZONE 'UTC'),
+                  interval '1 day') AS day
+           LEFT JOIN ai_usage a
+             ON a.created_at AT TIME ZONE 'UTC' >= day
+            AND a.created_at AT TIME ZONE 'UTC' < day + interval '1 day'
+          GROUP BY day
+          ORDER BY day",
+    )
+    .fetch_all(executor)
+    .await
+}

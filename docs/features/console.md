@@ -67,6 +67,13 @@ UPDATE users SET console_role_id = 'owner' WHERE lower(email) = lower('<the owne
 
 Repeating an action changes nothing and writes no audit row. The buttons sit in the sheet header, shown only to an operator with the permission, each behind a confirmation that says what it does. A member who opens a suspended workspace sees a page saying so, with the way to another workspace (`/workspaces`, which stays open) and to sign out. Every change writes one `operator_audit` row with the entity's console row before and after (CSL-14). Where each check sits is in [security/auth.md](../security/auth.md#disabled-users-and-suspended-workspaces-d127).
 
+## Feedback, usage and health (CSL-8 to CSL-10)
+
+- **Feedback.** Every workspace's feedback, newest first, with its sender and workspace. An operator with `console.feedback.write` marks it done or reopens it and keeps an internal note, which the sender never sees. The message is shown in full: it is what the person chose to send to oewang.
+- **Overview.** Users (and new this week), workspaces by status, open feedback, tokens this month, and sign-ups per week for twelve weeks.
+- **Usage.** One calendar month in UTC, `?month=YYYY-MM`: totals, the top fifty workspaces, and each model and feature, in tokens. A price per token would need a table kept in step with every provider, so money is out (CSL-9).
+- **Health.** Receipt jobs waiting and failed, and model calls per day for fourteen days, from the database. Errors and deploys stay in Sentry and Coolify; the page links to them when `CONSOLE_SENTRY_URL` and `CONSOLE_COOLIFY_URL` are set.
+
 ## Screens
 
 | Screen | Permission | Story |
