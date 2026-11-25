@@ -196,8 +196,8 @@ pub fn parse_amount(raw: &str) -> Option<Decimal> {
     }
 
     // The trailing run of letters, so `IDR` is a currency and not a debit.
-    let tail = body.trim_end();
-    let marker = &tail[tail.trim_end_matches(|c: char| c.is_ascii_alphabetic()).len()..];
+    let mut letters = body.trim_end().rsplit(|c: char| !c.is_ascii_alphabetic());
+    let marker = letters.next().unwrap_or_default();
     let debit = marker.eq_ignore_ascii_case("DB") || marker.eq_ignore_ascii_case("DR");
     let negative = bracketed || debit || cleaned.starts_with('-') || cleaned.ends_with('-');
     let digits: String = cleaned.chars().filter(|c| *c != '-' && *c != '+').collect();
