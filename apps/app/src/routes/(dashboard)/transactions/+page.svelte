@@ -583,6 +583,9 @@
 			unit: string | null;
 			amount: string;
 			category_id: string | null;
+			brand?: string | null;
+			unit_price?: string | null;
+			notes?: string | null;
 		} | null;
 	}>({ open: false, item: null });
 	let deletingItem = $state('');
@@ -1087,9 +1090,12 @@
 			<input type="hidden" name="transaction_id" value={detailParam} />
 			{#if itemDialog.item}
 				<input type="hidden" name="item_id" value={itemDialog.item.id} />
-				<!-- A save replaces the item whole: without this the dialog
-				     would clear the category picked on the row. -->
+				<!-- A save replaces the item whole: without these the dialog
+				     would clear every field it has no input for. -->
 				<input type="hidden" name="category_id" value={itemDialog.item.category_id ?? ''} />
+				<input type="hidden" name="brand" value={itemDialog.item.brand ?? ''} />
+				<input type="hidden" name="unit_price" value={itemDialog.item.unit_price ?? ''} />
+				<input type="hidden" name="notes" value={itemDialog.item.notes ?? ''} />
 			{/if}
 
 			<div class="space-y-4 py-4">
