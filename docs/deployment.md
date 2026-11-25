@@ -368,13 +368,22 @@ Off until the signing fingerprint is known (D119). When it is:
 
 Invitation links on Android become verified app links at step 2 as well; until then they open in the browser.
 
+## Backups
+
+Configured in Coolify on the shared PostgreSQL instance (project `infrastructure`), not in this repository:
+
+- **Daily, `oewang_v2` only**, at 18:00 UTC (01:00 WIB), to the R2 storage Coolify already uses. Seven dumps kept on the server, thirty days in R2. Added on 2026-11-25; the first run succeeded.
+- **Weekly, every database** (`pg-dump-all`), to the same storage, from the instance's own schedule.
+
+The daily schedule that existed before covers only another project's database, so until 2026-11-25 `oewang_v2` was in the weekly dump alone. Uploaded files live in R2 and are not part of either dump.
+
 ## Open questions
 
 Each of these needs the repository owner's decision. None of them is a value this document should guess.
 
 - **A private R2 bucket.** Production uses the old app's bucket `oewang` and its access key, because no other key exists yet. That bucket has a public custom domain (`cdn.oewang.com`), which breaks [the rule above](#object-storage-cloudflare-r2): an object's bytes are reachable by anyone who learns its key. The fix is a new bucket with no custom domain and a token scoped to it, created in the Cloudflare dashboard.
 - **A second copy of the signing keys.** The only copy outside Coolify is on the owner's laptop. A password manager entry would survive losing it.
-- **Database backup and restore.** Nothing in the repository covers backup schedule, retention or a tested restore. A finance app without a tested restore is an open risk, not a detail.
+- **A tested restore.** Backups run in Coolify on the shared instance (see [Backups](#backups)); no restore has been rehearsed yet. A finance app without a tested restore is an open risk, not a detail.
 - **`bun audit` is gated at `--audit-level=high` in CI**, not at any advisory. [Hardening](security/hardening.md#dependencies) says a known vulnerability fails the build. Today the tree carries one low-severity advisory, `GHSA-gcqx-w48m-w2h4` in `deepmerge`, reached through `@sveltejs/vite-plugin-svelte`, a build-time dependency. Either the threshold stays and hardening is amended to say so, or the threshold comes off and that advisory gets resolved first.
 - **`cargo audit` ignores RUSTSEC-2023-0071** (Marvin attack, `rsa`, medium). Since sqlx 0.9 the only path left is `rsa` 0.10.0-rc.19 through `webauthn-rs` -> `crypto-glue`, which is compiled and used to verify passkey RS256 signatures with public keys. The attack needs an RSA private key to time, and the API holds none. The fix is `rsa` 0.10.0, which `crypto-glue` 0.2.2 cannot resolve to; the ignore is written into `.github/workflows/ci.yml` with its reason and should come off when webauthn-rs moves to `rsa` 0.10.0. (`libsqlite3-sys`, RUSTSEC-2026-0459, was fixed by the same sqlx upgrade: it is 0.40 in `Cargo.lock` and never compiled, since sqlx 0.9 no longer pulls the SQLite or MySQL drivers into a PostgreSQL-only build.)
 - **Log destination and retention.** The API emits structured JSON in production. Nothing says where it goes or how long it is kept, and [hardening](security/hardening.md#logging) sets rules about what must never appear in it.
