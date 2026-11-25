@@ -28,7 +28,7 @@ The console is the same SvelteKit app, reached as `console.oewang.com`.
 
 In front of the host, Cloudflare Access admits only the email addresses on its policy. Cloudflare then adds a signed `Cf-Access-Jwt-Assertion` header, and `hooks.server.ts` verifies it (signature against the team's published keys, audience `CF_ACCESS_AUD`, expiry) before anything else, so a request that reaches the origin directly is refused with 403. Outside production the check is skipped, because there is no Cloudflare in front of a laptop.
 
-After Access, the operator signs in with their ordinary oewang email and password. A sign-in on the console host lands on `/console`, not on the workspace check page, and the console never requires a workspace.
+After Access, the operator signs in with their ordinary oewang email and password. A sign-in on the console host lands on `/console`, not on the workspace check page, and the console never requires a workspace. The console's sign-in page shows the form alone: registering, password reset and passkeys live on the app host, and a passkey is bound to the app's origin. A person signed in on the console host without a role gets a 403 page whose only way forward is signing out, because `/login` sends a signed-in session back to `/console`.
 
 ## Operators, roles and permissions (CSL-2, D125, D126)
 

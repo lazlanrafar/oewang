@@ -612,6 +612,7 @@ export type TranslationKey =
 	| 'debts.types.you_are_owed'
 	| 'debts.types.you_owe'
 	| 'debts.you_owe_card'
+	| 'error_page.console_forbidden_description'
 	| 'error_page.eyebrow'
 	| 'error_page.forbidden_description'
 	| 'error_page.forbidden_emphasis'

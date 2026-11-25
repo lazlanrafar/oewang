@@ -306,7 +306,8 @@
 		"go_home": "Go to overview",
 		"go_back": "Go back",
 		"try_again": "Try again",
-		"sign_in": "Sign in"
+		"sign_in": "Sign in",
+		"console_forbidden_description": "Your console role cannot open this page. Ask a console owner if you need it."
 	},
 	"errors": {
 		"invalid_credentials": "That email and password do not match.",

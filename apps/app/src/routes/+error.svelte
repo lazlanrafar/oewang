@@ -32,8 +32,13 @@
 							: 'other'
 	);
 
+	/** The console is its own home, and its 403 is about a console role (D125). */
+	const inConsole = $derived(page.url.pathname.startsWith('/console'));
+
 	const key = (part: 'lead' | 'emphasis' | 'description') =>
-		`error_page.${kind}_${part}` as TranslationKey;
+		(inConsole && kind === 'forbidden' && part === 'description'
+			? 'error_page.console_forbidden_description'
+			: `error_page.${kind}_${part}`) as TranslationKey;
 
 	/** A failure worth repeating gets "try again"; a missing page does not. */
 	const retryable = $derived(kind === 'server' || kind === 'unavailable');
@@ -68,8 +73,14 @@
 		<div class="mt-8 flex flex-wrap items-center justify-center gap-2">
 			{#if kind === 'unauthorized'}
 				<Button href="/login">{t('error_page.sign_in')}</Button>
+			{:else if inConsole && kind === 'forbidden'}
+				<!-- Signed in without a console role: the way out is to sign out,
+				     because /login sends a session straight back to /console. -->
+				<form method="POST" action="/logout">
+					<Button type="submit">{t('console.sign_out')}</Button>
+				</form>
 			{:else}
-				<Button href="/overview">{t('error_page.go_home')}</Button>
+				<Button href={inConsole ? '/console' : '/overview'}>{t('error_page.go_home')}</Button>
 			{/if}
 
 			{#if retryable}
