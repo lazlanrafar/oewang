@@ -118,6 +118,10 @@ class SyncService {
     // network error is shown.
     final canQueue = _canWrite();
     final busy = (await db.entries(ws)).any((e) => e.isPending);
+    // Switched during the awaits above: the token is the other workspace's.
+    if (workspaceId != ws) {
+      return const Failure(UnknownError('The workspace changed; not saved'));
+    }
     if (!canQueue || (_online && !busy)) {
       final outcome = await _send(entry, ifMatch: false);
       switch (outcome) {
@@ -195,6 +199,12 @@ class SyncService {
       }
 
       await db.setEntry(next.id, status: QueueStatus.sending);
+      // A switch swaps the bearer token: what is left of this workspace's
+      // queue waits for it, rather than going out as the other workspace.
+      if (workspaceId != ws) {
+        await db.setEntry(next.id, status: QueueStatus.queued);
+        return;
+      }
       final outcome = await _send(next, ifMatch: true);
       switch (outcome) {
         case _Done(:final row):
