@@ -148,17 +148,7 @@ async fn run(
     // anything, so asking the user does not spend the turn's budget (D20,
     // D122).
     if let Some((key, confirmed)) = call.confirmation() {
-        confirm(
-            pool,
-            turns,
-            request.workspace_id,
-            request.session_id,
-            request.turn_id,
-            &call,
-            &key,
-            confirmed,
-        )
-        .await?;
+        confirm(pool, turns, request, &call, &key, confirmed).await?;
     }
 
     // Layer 2.
@@ -262,13 +252,17 @@ fn above_ceiling(max_amount: Decimal) -> AppError {
 async fn confirm(
     pool: &PgPool,
     turns: &TurnStore,
-    workspace_id: &str,
-    session_id: &str,
-    turn_id: &str,
+    request: &ToolRequest<'_>,
     call: &ToolCall,
     key: &str,
     confirmed: bool,
 ) -> Result<()> {
+    let ToolRequest {
+        workspace_id,
+        session_id,
+        turn_id,
+        ..
+    } = *request;
     if confirmed && turns.challenged(session_id, key, turn_id, now_secs()) {
         return Ok(());
     }
