@@ -59,8 +59,16 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
   }) => _dio.get<dynamic>(path, queryParameters: queryParameters);
 
-  Future<Response<dynamic>> post(String path, {Object? data}) =>
-      _dio.post<dynamic>(path, data: data);
+  /// [extra] carries [AuthInterceptor.workspace] for a queued write.
+  Future<Response<dynamic>> post(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? extra,
+  }) => _dio.post<dynamic>(
+    path,
+    data: data,
+    options: extra == null ? null : Options(extra: extra),
+  );
 
   Future<Response<dynamic>> put(String path, {Object? data}) =>
       _dio.put<dynamic>(path, data: data);
@@ -70,14 +78,24 @@ class ApiClient {
     String path, {
     Object? data,
     Map<String, String>? headers,
+    Map<String, dynamic>? extra,
   }) => _dio.patch<dynamic>(
     path,
     data: data,
-    options: headers == null ? null : Options(headers: headers),
+    options: headers == null && extra == null
+        ? null
+        : Options(headers: headers, extra: extra),
   );
 
-  Future<Response<dynamic>> delete(String path, {Object? data}) =>
-      _dio.delete<dynamic>(path, data: data);
+  Future<Response<dynamic>> delete(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? extra,
+  }) => _dio.delete<dynamic>(
+    path,
+    data: data,
+    options: extra == null ? null : Options(extra: extra),
+  );
 
   /// A `POST` answered with `text/event-stream`, each event opened in order.
   ///

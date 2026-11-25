@@ -10,6 +10,7 @@ import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/api/auth_interceptor.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 
 typedef Json = Map<String, dynamic>;
@@ -251,15 +252,17 @@ class SyncService {
         ? '/${e.kind}'
         : '/${e.kind}/${e.entityId}';
     final base = e.baseUpdatedAt;
+    final extra = {AuthInterceptor.workspace: e.workspaceId};
     try {
       final res = await switch (e.op) {
-        QueueOp.create => _api.post(path, data: e.payload),
+        QueueOp.create => _api.post(path, data: e.payload, extra: extra),
         QueueOp.update => _api.patch(
           path,
           data: e.payload,
           headers: ifMatch && base != null ? {'If-Match': base} : null,
+          extra: extra,
         ),
-        QueueOp.delete => _api.delete(path),
+        QueueOp.delete => _api.delete(path, extra: extra),
       };
       return _Done(envelopeData(res) as Json?);
     } on DioException catch (ex) {
