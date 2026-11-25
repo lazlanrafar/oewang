@@ -1063,8 +1063,8 @@ Requirements: CSL-1, CSL-2
 - [x] `GET /v1/console/me`
 - [x] `hooks.server.ts` serves the console only on `CONSOLE_HOST`, and verifies the Cloudflare Access token there
 - [x] The console layout and a sidebar built from the operator's permissions
-- [ ] `console.oewang.com` on Coolify and Cloudflare, behind Cloudflare Access; the first owner set by SQL
-- [ ] Verify in browser
+- [x] `console.oewang.com` on Coolify and Cloudflare, behind Cloudflare Access; the first owner set by SQL
+- [x] Verify in browser
 
 ### US-081: Users and workspaces (OEW-125)
 Requirements: CSL-3, CSL-4, CSL-13

@@ -79,9 +79,9 @@ in browser" box ticked; or a written reason it is not done.
 | CSL-2 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-3 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-4 | `apps/api/crates/server/src/console/tests.rs` |
-| CSL-5 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-5 | `apps/api/crates/server/src/console/tests.rs`, `apps/native/test/unit/dio_error_mapper_test.dart` |
 | CSL-6 | `apps/api/crates/server/src/console/tests.rs` |
-| CSL-7 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-7 | `apps/api/crates/server/src/console/tests.rs`, `apps/native/test/unit/dio_error_mapper_test.dart` |
 | CSL-8 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-9 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-10 | `apps/api/crates/server/src/console/tests.rs` |
