@@ -2459,3 +2459,196 @@ mod offline_writes {
         assert_eq!(balance(&pool, &cash).await, decimal("-60000"));
     }
 }
+
+/// Category shares (D123): an item with its own category counts under it.
+mod category_shares {
+    use std::collections::BTreeMap;
+
+    use super::*;
+    use crate::{
+        budgets,
+        transactions::service::{ItemInput, TransactionFilters},
+    };
+
+    fn item<'a>(name: &'a str, amount: &str, category_id: Option<&'a str>) -> ItemInput<'a> {
+        ItemInput {
+            name,
+            brand: None,
+            quantity: None,
+            unit: None,
+            unit_price: None,
+            amount: decimal(amount),
+            category_id,
+            notes: None,
+        }
+    }
+
+    /// Expense totals by category id; `-` is the uncategorised group.
+    async fn by_category(
+        pool: &PgPool,
+        filters: &TransactionFilters<'_>,
+    ) -> BTreeMap<String, Decimal> {
+        let (_, rows) = service::summary(pool, WORKSPACE, filters).await.unwrap();
+        rows.into_iter()
+            .map(|row| (row.category_id.unwrap_or_else(|| "-".into()), row.total))
+            .collect()
+    }
+
+    fn totals(pairs: &[(&str, &str)]) -> BTreeMap<String, Decimal> {
+        pairs
+            .iter()
+            .map(|(id, total)| ((*id).to_string(), decimal(total)))
+            .collect()
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_count_an_item_under_its_own_category(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let groceries = category(&pool, "c_groceries", "expense").await;
+        let cigarettes = category(&pool, "c_cigarettes", "expense").await;
+        let health = category(&pool, "c_health", "expense").await;
+
+        let row = service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                category_id: Some(&groceries),
+                ..expense(&cash, "500000")
+            },
+            &[
+                item("Sampoerna Mild", "40000", Some(&cigarettes)),
+                item("Vitamin C", "30000", Some(&health)),
+                item("Plaster", "20000", Some(&health)),
+                // Its own category and no category both stay with the row.
+                item("Beras", "150000", Some(&groceries)),
+                item("Telur", "60000", None),
+                // A discount line is in no share.
+                item("Diskon", "-10000", Some(&cigarettes)),
+            ],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            by_category(&pool, &Default::default()).await,
+            totals(&[
+                ("c_groceries", "410000"),
+                ("c_cigarettes", "40000"),
+                ("c_health", "50000"),
+            ]),
+        );
+
+        // The row still reads as one transaction, with a count of the others.
+        let detail = service::find(&pool, WORKSPACE, &row.id).await.unwrap();
+        assert_eq!(detail.other_category_count, 2);
+        assert_eq!(detail.amount, decimal("500000"));
+
+        // The filter matches through the item; the totals count the portion.
+        let ids = [cigarettes.clone()];
+        let filters = TransactionFilters {
+            category_ids: Some(&ids),
+            ..Default::default()
+        };
+        let (rows, total) = service::list(
+            &pool,
+            WORKSPACE,
+            &filters,
+            Default::default(),
+            Default::default(),
+            Page::new(None, None),
+        )
+        .await
+        .unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(rows[0].amount, decimal("500000"));
+        assert_eq!(rows[0].matched_amount, Some(decimal("40000")));
+
+        let (by_type, _) = service::summary(&pool, WORKSPACE, &filters).await.unwrap();
+        assert_eq!(by_type[0].total, decimal("40000"));
+        assert_eq!(
+            by_category(&pool, &filters).await,
+            totals(&[("c_cigarettes", "40000")]),
+            "the other shares of a matched row are not what was asked for"
+        );
+
+        // Budgets read the same shares (BUD-6).
+        for id in [&groceries, &cigarettes] {
+            budgets::service::create(&pool, actor(), id, decimal("1000000"))
+                .await
+                .unwrap();
+        }
+        let status = budgets::service::status(
+            &pool,
+            WORKSPACE,
+            oewang_domain::budget::Month::parse("2026-11").unwrap(),
+            None,
+            budgets::service::Sort::default(),
+        )
+        .await
+        .unwrap();
+        let spent: BTreeMap<_, _> = status
+            .budgets
+            .iter()
+            .map(|line| (line.category_id.clone(), line.spent))
+            .collect();
+        assert_eq!(
+            spent,
+            totals(&[("c_groceries", "410000"), ("c_cigarettes", "40000")])
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_floor_the_remainder_at_zero_and_keep_the_items_as_written(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let groceries = category(&pool, "c_groceries", "expense").await;
+        let cigarettes = category(&pool, "c_cigarettes", "expense").await;
+
+        service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                category_id: Some(&groceries),
+                ..expense(&cash, "500000")
+            },
+            &[item("Rokok", "520000", Some(&cigarettes))],
+        )
+        .await
+        .unwrap();
+
+        // Nothing is prorated, and the emptied own share is not listed.
+        assert_eq!(
+            by_category(&pool, &Default::default()).await,
+            totals(&[("c_cigarettes", "520000")]),
+        );
+        // The by-type total stays the wallet movement.
+        assert_eq!(total_expense(&pool).await, decimal("500000"));
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_convert_a_share_at_the_transactions_own_ratio(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        cache_rate(&pool, "USD", "IDR", "2026-11-02", "16000").await;
+        let usd = wallet(&pool, "w_usd", "USD").await;
+        let cigarettes = category(&pool, "c_cigarettes", "expense").await;
+
+        let row = service::create_with_items(
+            &pool,
+            actor(),
+            expense(&usd, "10"),
+            &[item("Rokok", "3.33", Some(&cigarettes))],
+        )
+        .await
+        .unwrap();
+        assert_eq!(row.base_amount, decimal("160000"));
+
+        let shares = by_category(&pool, &Default::default()).await;
+        assert_eq!(shares["c_cigarettes"], decimal("53280"));
+        assert_eq!(
+            shares.values().sum::<Decimal>(),
+            row.base_amount,
+            "the shares add up to the stored base amount"
+        );
+    }
+}

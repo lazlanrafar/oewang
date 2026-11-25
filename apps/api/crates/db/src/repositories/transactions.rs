@@ -68,6 +68,11 @@ pub struct TransactionListRow {
     pub created_at: DateTime<Utc>,
     /// The version a client sends back in `If-Match` (D115).
     pub updated_at: DateTime<Utc>,
+    /// How many categories other than its own the items span (TXN-26).
+    pub other_category_count: i64,
+    /// The part of `amount` in the filtered categories; `None` when no
+    /// category filter is set (TXN-25).
+    pub matched_amount: Option<Decimal>,
 }
 
 /// Every filter the list accepts (docs/api/endpoints.md).
@@ -76,9 +81,9 @@ pub struct TransactionFilters<'a> {
     /// Matches either leg, so a transfer shows under both wallets, and
     /// several ids are a union: a row sitting in any one of them is kept.
     pub wallet_ids: Option<&'a [String]>,
-    /// Several ids are a union, as above. An uncategorized row matches none
-    /// of them, which is what `category_id = ANY(...)` already answers for a
-    /// `NULL` column.
+    /// Several ids are a union, as above. A row matches through any of its
+    /// category shares, so through an item's category too (TXN-25, D123). An
+    /// uncategorized row matches none of them.
     pub category_ids: Option<&'a [String]>,
     pub kind: Option<&'a str>,
     pub start_date: Option<DateTime<Utc>>,
@@ -172,9 +177,12 @@ fn push_filters<'a>(
     }
     if let Some(category_ids) = selected(filters.category_ids) {
         builder
-            .push(" AND t.category_id = ANY(")
+            .push(
+                " AND EXISTS (SELECT 1 FROM transaction_category_shares fs
+                   WHERE fs.transaction_id = t.id AND fs.category_id = ANY(",
+            )
             .push_bind(category_ids)
-            .push(")");
+            .push("))");
     }
     if let Some(kind) = filters.kind {
         builder.push(" AND t.type = ").push_bind(kind);
@@ -205,14 +213,56 @@ fn push_filters<'a>(
     }
 }
 
-const LIST_SELECT: &str = r#"
+/// What a row counts for in a total, in `column` (`amount` or `base_amount`).
+///
+/// The whole row with no category filter, and only its shares in the
+/// filtered categories with one, so a filtered total does not count the
+/// groceries bought beside the cigarettes (TXN-25).
+fn push_matched<'a>(
+    builder: &mut QueryBuilder<sqlx::Postgres>,
+    filters: &TransactionFilters<'a>,
+    column: &'static str,
+    unfiltered: &'static str,
+) {
+    match selected(filters.category_ids) {
+        Some(category_ids) => {
+            builder
+                .push("(SELECT COALESCE(sum(ms.")
+                .push(column)
+                .push(
+                    "), 0) FROM transaction_category_shares ms
+                      WHERE ms.transaction_id = t.id AND ms.category_id = ANY(",
+                )
+                .push_bind(category_ids)
+                .push("))");
+        }
+        None => {
+            builder.push(unfiltered);
+        }
+    }
+}
+
+/// The list's columns and joins, with the filter-dependent column in between.
+fn list_select<'a>(filters: &TransactionFilters<'a>) -> QueryBuilder<sqlx::Postgres> {
+    let mut builder = QueryBuilder::new(LIST_COLUMNS);
+    push_matched(&mut builder, filters, "amount", "NULL::numeric");
+    builder.push(" AS matched_amount").push(LIST_FROM);
+    builder
+}
+
+const LIST_COLUMNS: &str = r#"
     SELECT t.id, t.wallet_id, w.name AS wallet_name, w.currency_code AS wallet_currency_code,
            t.to_wallet_id, tw.name AS to_wallet_name,
            t.category_id, c.name AS category_name,
            t.amount, t.to_amount, t.original_amount, t.original_currency_code, t.exchange_rate,
            t.base_amount, t.base_rate, t.base_rate_source, t.base_rate_date,
            t.date, t.type, t.name, t.description, t.is_exported, t.source,
-           t.created_at, t.updated_at
+           t.created_at, t.updated_at,
+           (SELECT count(*) FROM transaction_category_shares os
+             WHERE os.transaction_id = t.id AND NOT os.is_own) AS other_category_count,
+"#;
+
+const LIST_FROM: &str = r#"
     FROM transactions t
     JOIN wallets w ON w.id = t.wallet_id
     LEFT JOIN wallets tw ON tw.id = t.to_wallet_id
@@ -228,7 +278,7 @@ pub async fn list(
     limit: i64,
     offset: i64,
 ) -> Result<Vec<TransactionListRow>, sqlx::Error> {
-    let mut builder = QueryBuilder::new(LIST_SELECT);
+    let mut builder = list_select(filters);
     push_filters(&mut builder, workspace_id, filters);
     builder.push(" ORDER BY ").push(sort.fragment(order));
     builder.push(" LIMIT ").push_bind(limit);
@@ -251,7 +301,7 @@ pub async fn list_all(
     sort: SortField,
     order: SortOrder,
 ) -> Result<Vec<TransactionListRow>, sqlx::Error> {
-    let mut builder = QueryBuilder::new(LIST_SELECT);
+    let mut builder = list_select(filters);
     push_filters(&mut builder, workspace_id, filters);
     builder.push(" ORDER BY ").push(sort.fragment(order));
 
@@ -291,10 +341,9 @@ pub async fn summary(
     workspace_id: &str,
     filters: &TransactionFilters<'_>,
 ) -> Result<Vec<SummaryRow>, sqlx::Error> {
-    let mut builder = QueryBuilder::new(
-        "SELECT t.type, COALESCE(sum(t.base_amount), 0) AS total, count(*) AS count
-         FROM transactions t",
-    );
+    let mut builder = QueryBuilder::new("SELECT t.type, COALESCE(sum(");
+    push_matched(&mut builder, filters, "base_amount", "t.base_amount");
+    builder.push("), 0) AS total, count(*) AS count FROM transactions t");
     push_filters(&mut builder, workspace_id, filters);
     builder.push(" GROUP BY t.type ORDER BY t.type");
 
@@ -319,18 +368,40 @@ pub async fn summary_by_category(
     filters: &TransactionFilters<'_>,
 ) -> Result<Vec<CategoryTotalRow>, sqlx::Error> {
     let mut builder = QueryBuilder::new(
-        "SELECT t.category_id, c.name AS category_name, t.type,
-                COALESCE(sum(t.base_amount), 0) AS total
-         FROM transactions t
-         LEFT JOIN categories c ON c.id = t.category_id",
+        "SELECT s.category_id, c.name AS category_name, t.type,
+                COALESCE(sum(s.base_amount), 0) AS total
+         FROM transactions t",
     );
+    builder.push(SHARES_JOIN);
     push_filters(&mut builder, workspace_id, filters);
-    builder.push(" GROUP BY t.category_id, c.name, t.type ORDER BY total DESC");
+    push_share_filter(&mut builder, filters);
+    builder.push(" GROUP BY s.category_id, c.name, t.type ORDER BY total DESC");
 
     builder
         .build_query_as::<CategoryTotalRow>()
         .fetch_all(executor)
         .await
+}
+
+/// A category figure reads the shares, never `transactions.category_id`
+/// (D123). A share that holds nothing is left out, so a transaction whose
+/// items took all of it does not count under its own category.
+const SHARES_JOIN: &str = " JOIN transaction_category_shares s
+       ON s.transaction_id = t.id AND (s.base_amount > 0 OR NOT s.is_own)
+     LEFT JOIN categories c ON c.id = s.category_id";
+
+/// With a category filter, only the shares in it: the row matched through
+/// one share and its others belong to categories nobody asked for.
+fn push_share_filter<'a>(
+    builder: &mut QueryBuilder<sqlx::Postgres>,
+    filters: &TransactionFilters<'a>,
+) {
+    if let Some(category_ids) = selected(filters.category_ids) {
+        builder
+            .push(" AND s.category_id = ANY(")
+            .push_bind(category_ids)
+            .push(")");
+    }
 }
 
 /// The groupings a summary may be asked for.
@@ -351,9 +422,9 @@ impl SummaryGroup {
     fn fragments(self) -> (&'static str, &'static str, &'static str) {
         match self {
             SummaryGroup::Category => (
-                "t.category_id AS key, c.name AS label",
-                " LEFT JOIN categories c ON c.id = t.category_id",
-                " GROUP BY t.category_id, c.name",
+                "s.category_id AS key, c.name AS label",
+                SHARES_JOIN,
+                " GROUP BY s.category_id, c.name",
             ),
             SummaryGroup::Wallet => (
                 "t.wallet_id AS key, w.name AS label",
@@ -395,12 +466,22 @@ pub async fn summary_grouped(
 ) -> Result<Vec<GroupTotalRow>, sqlx::Error> {
     let (select, join, group_by) = group.fragments();
 
+    let by_category = group == SummaryGroup::Category;
+
     let mut builder = QueryBuilder::new("SELECT ");
     builder.push(select);
-    builder.push(", COALESCE(sum(t.base_amount), 0) AS total, count(*) AS count");
-    builder.push(" FROM transactions t");
+    builder.push(", COALESCE(sum(");
+    if by_category {
+        builder.push("s.base_amount");
+    } else {
+        push_matched(&mut builder, filters, "base_amount", "t.base_amount");
+    }
+    builder.push("), 0) AS total, count(*) AS count FROM transactions t");
     builder.push(join);
     push_filters(&mut builder, workspace_id, filters);
+    if by_category {
+        push_share_filter(&mut builder, filters);
+    }
     builder.push(group_by);
     builder.push(" ORDER BY total DESC");
 
@@ -432,11 +513,10 @@ pub async fn monthly_totals(
     workspace_id: &str,
     filters: &TransactionFilters<'_>,
 ) -> Result<Vec<MonthTotalRow>, sqlx::Error> {
-    let mut builder = QueryBuilder::new(
-        "SELECT to_char(t.date, 'YYYY-MM') AS month, t.type,
-                COALESCE(sum(t.base_amount), 0) AS total, count(*) AS count
-         FROM transactions t",
-    );
+    let mut builder =
+        QueryBuilder::new("SELECT to_char(t.date, 'YYYY-MM') AS month, t.type, COALESCE(sum(");
+    push_matched(&mut builder, filters, "base_amount", "t.base_amount");
+    builder.push("), 0) AS total, count(*) AS count FROM transactions t");
     push_filters(&mut builder, workspace_id, filters);
     builder.push(" GROUP BY to_char(t.date, 'YYYY-MM'), t.type ORDER BY month");
 
@@ -489,7 +569,11 @@ pub async fn find_detail(
                   t.amount, t.to_amount, t.original_amount, t.original_currency_code,
                   t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,
                   t.base_rate_date, t.date, t.type AS "type!", t.name, t.description,
-                  t.is_exported, t.source, t.created_at, t.updated_at
+                  t.is_exported, t.source, t.created_at, t.updated_at,
+                  (SELECT count(*) FROM transaction_category_shares os
+                    WHERE os.transaction_id = t.id AND NOT os.is_own)
+                      AS "other_category_count!",
+                  NULL::numeric AS matched_amount
            FROM transactions t
            JOIN wallets w ON w.id = t.wallet_id
            LEFT JOIN wallets tw ON tw.id = t.to_wallet_id

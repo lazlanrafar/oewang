@@ -248,7 +248,7 @@ Either `{ "transaction_id" }`, a live `expense` (otherwise `SPLIT_SOURCE_NOT_EXP
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/transactions` | any | Paginated list (TXN-8) |
+| GET | `/v1/transactions` | any | Paginated list (TXN-8). Each row carries `other_category_count`, the categories other than its own that its items span (TXN-26), and under a `category_id` filter `matched_amount`, the part of `amount` in those categories, null when that is all of it (TXN-25) |
 | GET | `/v1/transactions/summary` | any | Totals by category, wallet and type for a date range |
 | GET | `/v1/overview` | any | The overview's figures for `?from&to` (both required, days, at most 60 months): income, expense and net with the previous equal-length period, zero-filled months, monthly averages, top categories per type. Built by the same report module as the analysis canvases (D87, D88) |
 | GET | `/v1/transactions/export` | any | CSV download honouring the active filters (TXN-10) |
@@ -272,7 +272,7 @@ Either `{ "transaction_id" }`, a live `expense` (otherwise `SPLIT_SOURCE_NOT_EXP
 | Parameter | Type | Notes |
 |---|---|---|
 | `wallet_id` | string, repeatable | Matches `wallet_id` or `to_wallet_id`, so a transfer shows under both of its wallets. May repeat: `?wallet_id=a&wallet_id=b` is the union, a row in either wallet. Omitted, empty and no values at all mean no filter |
-| `category_id` | string, repeatable | May repeat: `?category_id=a&category_id=b` is the union, a row in either category. Omitted, empty and no values at all mean no filter |
+| `category_id` | string, repeatable | May repeat: `?category_id=a&category_id=b` is the union, a row in either category. A row matches through any of its [category shares](../data-model.md#category-shares), so through an item's category too, and every total then counts only the matched shares (TXN-25). Omitted, empty and no values at all mean no filter |
 | `type` | enum | `income`, `expense`, `transfer` |
 | `start_date` | date | Inclusive |
 | `end_date` | date | Inclusive |

@@ -433,7 +433,7 @@ Item totals are not forced to match the transaction amount. A mismatch raises a 
 
 ##### Category shares
 
-`transaction_category_shares` is a view, not a table (D123, TXN-24). It answers `(workspace_id, transaction_id, category_id, amount, base_amount)`, over live rows only:
+`transaction_category_shares` is a view, not a table (D123, TXN-24, migration 0021). It answers `(workspace_id, transaction_id, category_id, is_own, amount, base_amount)`, over live rows only. An item with a negative amount (a discount line) is in no share.
 
 - One row per item category that differs from the transaction's own: the sum of those items' `amount`.
 - One row for the transaction's own category: `greatest(amount - sum of the rows above, 0)`. Always present, so a transaction with no categorised item has exactly this row, equal to itself.

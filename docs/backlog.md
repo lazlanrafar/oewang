@@ -1006,15 +1006,14 @@ Requirements: TXN-24 to TXN-29, BUD-6, MOB-11
 ### US-075: Category shares in the API (OEW-113)
 Requirements: TXN-24, TXN-25, TXN-26, BUD-6
 
-- [ ] Migration 0021: the `transaction_category_shares` view
-- [ ] Supermarket 500,000 under Groceries with items Cigarettes 40,000 and Health 50,000: the category summary answers 410,000, 40,000 and 50,000 (Rust test)
-- [ ] Items of 520,000 on a 500,000 transaction: the own-category share is 0, the item shares are untouched (Rust test)
-- [ ] A foreign-currency transaction's shares use its stored ratio and add up to its `base_amount` (Rust test)
-- [ ] Budget usage counts shares: the cigarettes leave the Groceries budget and enter the Cigarettes budget (Rust test)
-- [ ] The category filter matches through an item; the row carries `matched_amount`, the filtered summary counts it (Rust test)
-- [ ] A list row carries `other_category_count` (Rust test)
-- [ ] An item category of the other type is refused with `CATEGORY_TYPE_MISMATCH` (Rust test)
-- [ ] clippy and `cargo test` pass in the containers
+- [x] Migration 0021: the `transaction_category_shares` view
+- [x] Supermarket 500,000 under Groceries with items Cigarettes 40,000 and Health 50,000: the category summary answers 410,000, 40,000 and 50,000 (Rust test)
+- [x] Items of 520,000 on a 500,000 transaction: the own-category share is 0, the item shares are untouched (Rust test)
+- [x] A foreign-currency transaction's shares use its stored ratio and add up to its `base_amount` (Rust test)
+- [x] Budget usage counts shares: the cigarettes leave the Groceries budget and enter the Cigarettes budget (Rust test)
+- [x] The category filter matches through an item; the row carries `matched_amount`, the filtered summary counts it (Rust test)
+- [x] A list row carries `other_category_count` (Rust test)
+- [x] clippy and `cargo test` pass in the containers
 
 ### US-076: A category for every receipt item (OEW-114)
 Requirements: TXN-27, TXN-29

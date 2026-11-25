@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT t.id, t.wallet_id, w.name AS wallet_name,\n                  w.currency_code AS wallet_currency_code,\n                  t.to_wallet_id, tw.name AS \"to_wallet_name?\",\n                  t.category_id, c.name AS \"category_name?\",\n                  t.amount, t.to_amount, t.original_amount, t.original_currency_code,\n                  t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,\n                  t.base_rate_date, t.date, t.type AS \"type!\", t.name, t.description,\n                  t.is_exported, t.source, t.created_at, t.updated_at\n           FROM transactions t\n           JOIN wallets w ON w.id = t.wallet_id\n           LEFT JOIN wallets tw ON tw.id = t.to_wallet_id\n           LEFT JOIN categories c ON c.id = t.category_id\n           WHERE t.workspace_id = $1 AND t.id = $2 AND (t.deleted_at IS NULL OR $3)",
+  "query": "SELECT t.id, t.wallet_id, w.name AS wallet_name,\n                  w.currency_code AS wallet_currency_code,\n                  t.to_wallet_id, tw.name AS \"to_wallet_name?\",\n                  t.category_id, c.name AS \"category_name?\",\n                  t.amount, t.to_amount, t.original_amount, t.original_currency_code,\n                  t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,\n                  t.base_rate_date, t.date, t.type AS \"type!\", t.name, t.description,\n                  t.is_exported, t.source, t.created_at, t.updated_at,\n                  (SELECT count(*) FROM transaction_category_shares os\n                    WHERE os.transaction_id = t.id AND NOT os.is_own)\n                      AS \"other_category_count!\",\n                  NULL::numeric AS matched_amount\n           FROM transactions t\n           JOIN wallets w ON w.id = t.wallet_id\n           LEFT JOIN wallets tw ON tw.id = t.to_wallet_id\n           LEFT JOIN categories c ON c.id = t.category_id\n           WHERE t.workspace_id = $1 AND t.id = $2 AND (t.deleted_at IS NULL OR $3)",
   "describe": {
     "columns": [
       {
@@ -277,6 +277,18 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 25,
+        "name": "other_category_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 26,
+        "name": "matched_amount",
+        "type_info": "Numeric",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -311,8 +323,10 @@
       false,
       false,
       false,
-      false
+      false,
+      null,
+      null
     ]
   },
-  "hash": "08fe417d5abfbe867a455187ef1ba6bc3706b734a9d17eb69c3c9e421e39caae"
+  "hash": "f81f4a8c98405730bb8a6f11296f20f3ed31c29eea7c6d2ec25c819e3b086367"
 }

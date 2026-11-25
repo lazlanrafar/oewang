@@ -122,7 +122,8 @@ pub async fn soft_delete(
 
 /// Every live budget with what its category spent in `[start, end)`.
 ///
-/// Expenses only, live transactions only, summed in the workspace currency.
+/// Expenses only, live transactions only, summed in the workspace currency
+/// from the category's shares, so an item counts under its own (BUD-6).
 /// Ordered as the category list is, so an unsorted page reads the way the
 /// settings page orders categories.
 pub async fn usage(
@@ -135,12 +136,12 @@ pub async fn usage(
         BudgetUsageRow,
         r#"SELECT b.id, b.category_id, c.name AS category_name, b.amount,
                   COALESCE((
-                      SELECT sum(t.base_amount)
-                      FROM transactions t
-                      WHERE t.workspace_id = b.workspace_id
-                        AND t.category_id = b.category_id
+                      SELECT sum(s.base_amount)
+                      FROM transaction_category_shares s
+                      JOIN transactions t ON t.id = s.transaction_id
+                      WHERE s.workspace_id = b.workspace_id
+                        AND s.category_id = b.category_id
                         AND t.type = 'expense'
-                        AND t.deleted_at IS NULL
                         AND t.date >= $2 AND t.date < $3
                   ), 0) AS "spent!"
            FROM budgets b
