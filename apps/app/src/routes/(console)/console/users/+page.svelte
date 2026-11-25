@@ -69,7 +69,7 @@
 				return;
 			}
 			if (result.type === 'success' && action) toast.success(t(`console.actions.${action}.done` as const));
-			await update();
+			await update({ navigate: false });
 		};
 	};
 </script>

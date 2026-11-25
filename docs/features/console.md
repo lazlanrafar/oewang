@@ -84,6 +84,10 @@ Three rules keep the roles from being a way up:
 
 A role somebody holds cannot be deleted (`CONSOLE_ROLE_IN_USE`); deleting is soft, so the audit trail can still name it. A disabled user is enabled before being made an operator. Every change is an `operator_audit` row, and owners read the trail on the operator audit screen.
 
+## The shell
+
+The console is drawn in the app's own shell, not a look of its own: `organisms/layouts/layouts-app-shell.svelte` is the dashboard's sidebar, header and content area, shared by both. The console passes its own sidebar groups (`consoleNavFor`, filtered by the operator's permissions) and a brand row in place of the workspace switcher; the account menu shows the role and has no account links, because `/account` is not served on the console host. Every console table is `molecules/data-table` with a column file per D81, and list screens carry no visible title. Overview, usage and health are stat cards and hatched charts (D93), as the app's overview is.
+
 ## Screens
 
 | Screen | Permission | Story |
@@ -91,6 +95,6 @@ A role somebody holds cannot be deleted (`CONSOLE_ROLE_IN_USE`); deleting is sof
 | Users, a user | `console.read` | US-081. `/console/users`, the user's sheet at `?user=`: email, name, status, joined, last active, console role and memberships |
 | Workspaces, a workspace | `console.read` | US-081. `/console/workspaces` with an Active, Suspended or Deleted facet, the sheet at `?workspace=`: owner, members, counts, storage, tokens this month |
 | Suspend, restore, disable | the matching write permission | US-082 |
-| Feedback | `console.read`, `console.feedback.write` to change status | US-083 |
+| Feedback | `console.read`, `console.feedback.write` to change status | US-083. `/console/feedback`, the sheet at `?feedback=`, read on its own so it stays open when the filter hides the row |
 | Usage, health, overview | `console.read` | US-084 |
 | Operators, roles, operator audit | `console.operators.manage`, `console.roles.manage`, `console.audit.read` | US-085 |

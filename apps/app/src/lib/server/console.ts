@@ -257,3 +257,176 @@ export function actOnUser(id: string, action: UserAction, token?: string) {
 		token
 	});
 }
+
+/*
+ * The feedback inbox (CSL-8, US-083). A member's own words, which an
+ * operator reads to act on them; the note is the operators' own.
+ */
+
+export type ConsoleFeedback = {
+	id: string;
+	type: 'bug' | 'feature' | 'other';
+	message: string;
+	status: 'open' | 'done';
+	operator_note: string | null;
+	created_at: string;
+	resolved_at: string | null;
+	user_id: string;
+	user_email: string;
+	workspace_id: string;
+	workspace_name: string;
+};
+
+export type FeedbackPatch = { status?: ConsoleFeedback['status']; operator_note?: string | null };
+
+/** `search`, `status`, `type`, `page` and `per_page`, passed straight through. Newest first. */
+export function listConsoleFeedback(
+	query: URLSearchParams,
+	token?: string
+): Promise<Envelope<ConsoleFeedback[]>> {
+	return consoleRead('/v1/console/feedback', token, query);
+}
+
+/** One item for the sheet; null when the id names nothing. */
+export function consoleFeedbackItem(id: string, token?: string): Promise<ConsoleFeedback | null> {
+	return consoleRecord(`/v1/console/feedback/${encodeURIComponent(id)}`, token);
+}
+
+/** Needs `console.feedback.write`; answers the updated row. */
+export function updateConsoleFeedback(id: string, body: FeedbackPatch, token?: string) {
+	return api<ConsoleFeedback>({
+		method: 'PATCH',
+		path: `/v1/console/feedback/${encodeURIComponent(id)}`,
+		body,
+		token
+	});
+}
+
+/*
+ * Overview, usage and health (CSL-9 to CSL-11, US-084). Counts and token
+ * totals only: plain numbers, never money.
+ */
+
+export type TokenPair = { input: number; output: number };
+
+export type ConsoleOverview = {
+	users: { total: number; new_7d: number };
+	workspaces: { total: number; active: number; suspended: number; deleted: number };
+	feedback_open: number;
+	tokens_month: TokenPair;
+	/** Twelve weeks, oldest first, empty weeks as 0. */
+	signups_by_week: { week_start: string; count: number }[];
+};
+
+export type UsageRow = TokenPair & { calls: number };
+
+export type ConsoleUsage = {
+	month: string;
+	totals: UsageRow;
+	/** The top 50 by input plus output. */
+	by_workspace: (UsageRow & { workspace_id: string; workspace_name: string })[];
+	by_model: (UsageRow & { model: string | null })[];
+	by_feature: (UsageRow & { feature: string })[];
+};
+
+export type ConsoleHealth = {
+	receipt_jobs: { pending: number; failed_24h: number; failed_7d: number };
+	/** Fourteen days, oldest first, empty days as 0. */
+	ai_calls_by_day: (UsageRow & { day: string })[];
+};
+
+export async function consoleOverview(token?: string): Promise<ConsoleOverview> {
+	return (await consoleRead<ConsoleOverview>('/v1/console/overview', token)).data!;
+}
+
+/** `month` is `YYYY-MM`; absent, the API's current month (UTC). */
+export async function consoleUsage(month: string | null, token?: string): Promise<ConsoleUsage> {
+	const query = month ? new URLSearchParams({ month }) : undefined;
+	return (await consoleRead<ConsoleUsage>('/v1/console/usage', token, query)).data!;
+}
+
+export async function consoleHealth(token?: string): Promise<ConsoleHealth> {
+	return (await consoleRead<ConsoleHealth>('/v1/console/health', token)).data!;
+}
+
+/*
+ * Roles, operators and the operator audit (CSL-2, CSL-12, US-085). An
+ * operator can only hand out what they hold themselves; the API enforces
+ * it and answers CONSOLE_FORBIDDEN otherwise.
+ */
+
+export type ConsoleRole = {
+	id: string;
+	name: string;
+	description: string | null;
+	is_system: boolean;
+	permissions: string[];
+	/** How many operators hold it. */
+	operators: number;
+	created_at: string;
+};
+
+export type ConsoleRoleBody = { name?: string; description?: string | null; permissions?: string[] };
+
+export type ConsoleOperator = {
+	user_id: string;
+	email: string;
+	name: string | null;
+	role_id: string;
+	role_name: string;
+	last_active_at: string | null;
+};
+
+export type ConsoleAuditEntry = {
+	id: string;
+	operator_id: string;
+	operator_email: string;
+	action: string;
+	entity: string;
+	entity_id: string;
+	before: Record<string, unknown> | null;
+	after: Record<string, unknown> | null;
+	created_at: string;
+};
+
+/** Every role, the system role first. */
+export async function listConsoleRoles(token?: string): Promise<ConsoleRole[]> {
+	return (await consoleRead<ConsoleRole[]>('/v1/console/roles', token)).data ?? [];
+}
+
+export function createConsoleRole(body: ConsoleRoleBody, token?: string) {
+	return api<ConsoleRole>({ method: 'POST', path: '/v1/console/roles', body, token });
+}
+
+/** `permissions`, when sent, replaces the whole set. */
+export function updateConsoleRole(id: string, body: ConsoleRoleBody, token?: string) {
+	return api<ConsoleRole>({ method: 'PATCH', path: `/v1/console/roles/${encodeURIComponent(id)}`, body, token });
+}
+
+/** 409 CONSOLE_ROLE_IN_USE while anyone holds it. */
+export function deleteConsoleRole(id: string, token?: string) {
+	return api<null>({ method: 'DELETE', path: `/v1/console/roles/${encodeURIComponent(id)}`, token });
+}
+
+export async function listConsoleOperators(token?: string): Promise<ConsoleOperator[]> {
+	return (await consoleRead<ConsoleOperator[]>('/v1/console/operators', token)).data ?? [];
+}
+
+/** Grant a role, or change the one held. */
+export function setConsoleOperator(userId: string, roleId: string, token?: string) {
+	return api<ConsoleOperator>({
+		method: 'PUT',
+		path: `/v1/console/operators/${encodeURIComponent(userId)}`,
+		body: { role_id: roleId },
+		token
+	});
+}
+
+export function revokeConsoleOperator(userId: string, token?: string) {
+	return api<null>({ method: 'DELETE', path: `/v1/console/operators/${encodeURIComponent(userId)}`, token });
+}
+
+/** `page` and `per_page`; newest first. */
+export function listConsoleAudit(query: URLSearchParams, token?: string): Promise<Envelope<ConsoleAuditEntry[]>> {
+	return consoleRead('/v1/console/audit', token, query);
+}

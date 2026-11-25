@@ -1085,20 +1085,20 @@ Requirements: CSL-5, CSL-6, CSL-7, CSL-14
 ### US-083: Feedback inbox (OEW-127)
 Requirements: CSL-8
 
-- [ ] Every workspace's feedback, filtered by status and type; status and internal note
-- [ ] Verify in browser
+- [x] Every workspace's feedback, filtered by status and type; status and internal note
+- [x] Verify in browser
 
 ### US-084: Usage and health (OEW-128)
 Requirements: CSL-9, CSL-10
 
-- [ ] Tokens by workspace, model, feature and month; overview counts
-- [ ] Failed receipt jobs, sign-ups per week, AI calls per day
-- [ ] Verify in browser
+- [x] Tokens by workspace, model, feature and month; overview counts
+- [x] Failed receipt jobs, sign-ups per week, AI calls per day
+- [x] Verify in browser
 
 ### US-085: Operators and roles (OEW-129)
 Requirements: CSL-11, CSL-12
 
-- [ ] Grant and revoke a role; create, edit and delete roles
-- [ ] Guards: own role, last owner, permissions the granter lacks, a role in use
-- [ ] Operator audit screen
-- [ ] Verify in browser
+- [x] Grant and revoke a role; create, edit and delete roles
+- [x] Guards: own role, last owner, permissions the granter lacks, a role in use
+- [x] Operator audit screen
+- [x] Verify in browser

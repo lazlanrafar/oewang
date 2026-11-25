@@ -1,16 +1,14 @@
 <script lang="ts">
 	/**
-	 * The operator console (CSL, D124), laid out as the account area is: the
-	 * sidebar at a fifth of the width and the section beside it, under a bar
-	 * with the product's mark and the operator. Wider than the account area,
-	 * because console screens are tables. The page is the viewport's height
-	 * and the section scrolls, so a table's own scroller has a bounded box
-	 * to scroll in and its load-more fires on scroll, not all at once.
+	 * The operator console (CSL, D124) in the app's own shell (`AppShell`):
+	 * the same collapsible sidebar, header and scrolling content as the
+	 * dashboard. The sidebar opens with the console's mark where the app has
+	 * its workspace switcher, then the rows this operator's permissions show;
+	 * the account menu names the operator and their role.
 	 */
-	import { Logo } from '$lib/components/atoms/logo';
-	import { Button } from '$lib/components/atoms/button';
-	import { Toaster } from '$lib/components/atoms/sonner';
-	import { SettingsSidebar } from '$lib/components/organisms/settings';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+
+	import { AccountMenu, AppShell, AppSidebar, SidebarBrand } from '$lib/components/organisms/layouts';
 	import { t } from '$lib/i18n';
 	import { consoleNavFor } from '$lib/nav';
 
@@ -19,27 +17,29 @@
 	const groups = $derived(consoleNavFor(data.operator.permissions));
 </script>
 
-<Toaster />
-<main class="bg-background mx-auto flex h-dvh w-full max-w-7xl flex-col gap-8 p-4 md:p-6">
-	<div class="flex shrink-0 items-center justify-between gap-4">
-		<div class="flex items-center gap-2">
-			<Logo class="size-6" />
-			<span class="font-serif text-lg tracking-tight">{t('console.title')}</span>
-		</div>
-		<form method="POST" action="/logout" class="flex items-center gap-3">
-			<span class="text-muted-foreground truncate text-xs">
-				{t('console.signed_in_as', { email: data.operator.email, role: data.operator.role.name })}
-			</span>
-			<Button type="submit" variant="outline" size="sm">{t('console.sign_out')}</Button>
-		</form>
-	</div>
+<AppShell sidebarOpen={data.sidebarOpen}>
+	{#snippet sidebar(props)}
+		<AppSidebar {groups} {...props}>
+			{#snippet top(collapsed)}
+				<SidebarBrand
+					title={t('console.title')}
+					subtitle={data.operator.role.name}
+					icon={ShieldCheck}
+					{collapsed}
+				/>
+			{/snippet}
+		</AppSidebar>
+	{/snippet}
 
-	<div class="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:gap-12">
-		<aside class="shrink-0 lg:w-1/5">
-			<SettingsSidebar {groups} label={t('console.title')} />
-		</aside>
-		<div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-			{@render children()}
-		</div>
-	</div>
-</main>
+	{#snippet account()}
+		<AccountMenu
+			name={data.operator.name}
+			email={data.operator.email}
+			photo={null}
+			subtitle={data.operator.role.name}
+			accountLinks={false}
+		/>
+	{/snippet}
+
+	{@render children()}
+</AppShell>

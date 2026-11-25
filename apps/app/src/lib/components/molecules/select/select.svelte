@@ -72,6 +72,7 @@
 		value = $bindable(),
 		onChange,
 		onCreate,
+		onSearch,
 		createLabel = (typed: string) => `Create "${typed}"`,
 		placeholder,
 		searchPlaceholder,
@@ -91,6 +92,8 @@
 		onChange?: (value: string) => void;
 		/** Offers a row that makes a new entry from what was typed. */
 		onCreate?: (label: string) => void;
+		/** What is typed in the search box, for a caller that fetches its matches. */
+		onSearch?: (term: string) => void;
 		/** The create row's text. Passed in, never invented here (UI-1). */
 		createLabel?: (typed: string) => string;
 		placeholder?: string;
@@ -189,6 +192,7 @@
 		bind:value
 		onSelect={onChange}
 		{onCreate}
+		{onSearch}
 		{placeholder}
 		{searchPlaceholder}
 		disabled={disabled || updating}

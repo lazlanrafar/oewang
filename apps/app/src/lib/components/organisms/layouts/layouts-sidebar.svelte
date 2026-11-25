@@ -7,20 +7,35 @@
 	 * labels gone and the icons centred. The rule lives on this wrapper, not
 	 * on the panel inside it, so the panel's translucency does not wash it
 	 * out.
+	 *
+	 * The app's sidebar opens with the workspace switcher over the app's
+	 * rows. The console passes its own `top` and `groups` instead, so both
+	 * shells are this one sidebar.
 	 */
+	import type { Snippet } from 'svelte';
+
+	import type { NavGroup } from '$lib/nav';
+
 	import SidebarNav from './layouts-sidebar-nav.svelte';
 	import WorkspaceSwitcher from './layouts-workspace-switcher.svelte';
 	import { cn } from '$lib/utils';
 
 	let {
-		workspaces,
-		activeId,
+		workspaces = [],
+		activeId = '',
+		groups,
+		top,
 		collapsed = false,
 		onNavigate,
 		class: className
 	}: {
-		workspaces: { id: string; name: string; role: string }[];
-		activeId: string;
+		/** The switcher's list; unused when `top` replaces the switcher. */
+		workspaces?: { id: string; name: string; role: string }[];
+		activeId?: string;
+		/** The rows; the app's own when omitted. */
+		groups?: NavGroup[];
+		/** Drawn in place of the workspace switcher, told whether the rail is collapsed. */
+		top?: Snippet<[boolean]>;
 		/** Icon rail instead of the full panel. Ignored in the mobile sheet. */
 		collapsed?: boolean;
 		onNavigate?: () => void;
@@ -39,9 +54,13 @@
 	<div
 		class="bg-sidebar/70 text-sidebar-foreground sticky top-0 flex h-svh flex-col overflow-hidden backdrop-blur-md"
 	>
-		<WorkspaceSwitcher {workspaces} {activeId} {collapsed} />
+		{#if top}
+			{@render top(collapsed)}
+		{:else}
+			<WorkspaceSwitcher {workspaces} {activeId} {collapsed} />
+		{/if}
 		<div class="flex-1 overflow-x-hidden overflow-y-auto">
-			<SidebarNav {collapsed} {onNavigate} />
+			<SidebarNav {groups} {collapsed} {onNavigate} />
 		</div>
 	</div>
 </div>

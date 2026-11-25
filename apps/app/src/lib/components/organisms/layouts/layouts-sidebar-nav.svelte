@@ -4,23 +4,25 @@
 	 * label 30 high (`h-8`), 11.25px, weight 500, `sidebar-foreground/70`;
 	 * 3.75px between items and 7.5px between groups; the list padded
 	 * `px-2 pb-2`. The row itself, and its active hatch, is
-	 * `layouts-sidebar-item`, which the settings sidebar shares.
+	 * `layouts-sidebar-item`, which the settings sidebar shares. The rows are
+	 * the app's unless a caller passes its own, as the console does.
 	 */
 	import { page } from '$app/state';
 
-	import { navGroups } from '$lib/nav';
+	import { navActive, navGroups, type NavGroup } from '$lib/nav';
 	import { t } from '$lib/i18n';
 
 	import SidebarItem from './layouts-sidebar-item.svelte';
 
 	let {
+		groups = navGroups,
 		collapsed = false,
 		onNavigate
-	}: { collapsed?: boolean; onNavigate?: () => void } = $props();
+	}: { groups?: NavGroup[]; collapsed?: boolean; onNavigate?: () => void } = $props();
 </script>
 
 <nav class="flex flex-col gap-2 px-2 pb-2" aria-label={t('nav.toggle_sidebar')}>
-	{#each navGroups as group, index (index)}
+	{#each groups as group, index (index)}
 		<div class="flex flex-col gap-1">
 			{#if group.labelKey && !collapsed}
 				<p class="text-sidebar-foreground/70 flex h-8 shrink-0 items-center px-2 text-xs font-medium">
@@ -36,7 +38,7 @@
 					href={item.href}
 					title={t(item.titleKey)}
 					icon={item.icon}
-					active={page.url.pathname.startsWith(item.href)}
+					active={navActive(item, page.url.pathname)}
 					pending={item.pending}
 					{collapsed}
 					{onNavigate}

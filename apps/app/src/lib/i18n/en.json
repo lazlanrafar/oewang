@@ -362,7 +362,8 @@
 		"foreign_entry_same_wallet": "That account already holds the currency this was entered in. Open the transaction to change its account.",
 		"console_forbidden": "Your console role does not allow that.",
 		"user_disabled": "This account is disabled. Contact oewang support.",
-		"workspace_suspended": "This workspace is suspended. Contact oewang support."
+		"workspace_suspended": "This workspace is suspended. Contact oewang support.",
+		"console_role_in_use": "Operators still hold this role. Give them another role first."
 	},
 	"style": {
 		"title": "Design system",
@@ -1409,7 +1410,6 @@
 	},
 	"console": {
 		"title": "Console",
-		"signed_in_as": "{email}, {role}",
 		"sign_out": "Sign out",
 		"nav_overview": "Overview",
 		"nav_people_group": "People",
@@ -1423,8 +1423,6 @@
 		"nav_operators": "Operators",
 		"nav_roles": "Roles",
 		"nav_audit": "Operator audit",
-		"overview_title": "Signed in as {role}",
-		"overview_description": "What your console role allows. Screens arrive as they are built.",
 		"never": "Never",
 		"users": {
 			"search_placeholder": "Search by email or name",
@@ -1535,6 +1533,258 @@
 				"title": "Enable this user?",
 				"description": "They can sign in again. Sessions ended by the disable stay ended.",
 				"done": "User enabled"
+			}
+		},
+		"overview": {
+			"description": "Accounts, workspaces and AI use across oewang. Counts only, never anyone's money.",
+			"users": "Users",
+			"users_new": "{count} new in the last 7 days",
+			"workspaces": "Workspaces",
+			"workspaces_detail": "{active} active, {suspended} suspended, {deleted} deleted",
+			"feedback_open": "Open feedback",
+			"feedback_open_hint": "Waiting for an operator",
+			"tokens_month": "Tokens this month",
+			"tokens_detail": "{input} in, {output} out",
+			"signups_chart": "Sign-ups per week",
+			"signups_series": "Sign-ups",
+			"signups_empty": "No sign-ups in the last 12 weeks."
+		},
+		"feedback": {
+			"search_placeholder": "Search message, email or workspace",
+			"status_label": "Status",
+			"type_label": "Type",
+			"status_open": "Open",
+			"status_done": "Done",
+			"columns": {
+				"type": "Type",
+				"message": "Message",
+				"from": "From",
+				"workspace": "Workspace",
+				"status": "Status",
+				"received": "Received"
+			},
+			"empty": {
+				"title": "No feedback yet",
+				"description": "Messages members send from Settings, Feedback land here."
+			},
+			"empty_filtered": {
+				"title": "No feedback matches",
+				"description": "Try another word, status or type, or clear the filters.",
+				"action": "Clear filters"
+			},
+			"sheet": {
+				"message": "Message",
+				"from": "From",
+				"workspace": "Workspace",
+				"received": "Received",
+				"resolved": "Resolved",
+				"mark_done": "Mark done",
+				"reopen": "Reopen",
+				"note_label": "Internal note",
+				"note_help": "Seen by operators only, never by the member.",
+				"note_placeholder": "What was done, or who is on it",
+				"no_note": "No note.",
+				"save_note": "Save note"
+			},
+			"toasts": {
+				"done": "Marked done",
+				"reopened": "Reopened",
+				"note_saved": "Note saved"
+			}
+		},
+		"usage": {
+			"description": "AI tokens and calls across every workspace, by month.",
+			"previous_month": "Previous month",
+			"next_month": "Next month",
+			"tokens": "Tokens",
+			"tokens_detail": "{input} in, {output} out",
+			"calls": "AI calls",
+			"by_workspace": "By workspace",
+			"by_workspace_hint": "The top 50 by tokens.",
+			"by_model": "By model",
+			"by_feature": "By feature",
+			"columns": {
+				"workspace": "Workspace",
+				"model": "Model",
+				"feature": "Feature",
+				"input": "Input",
+				"output": "Output",
+				"calls": "Calls"
+			},
+			"unknown_model": "Unknown",
+			"empty": "No AI use in this month."
+		},
+		"health": {
+			"description": "Background work and AI calls, and where to look when something is wrong.",
+			"receipts_pending": "Receipts waiting",
+			"receipts_failed_24h": "Receipts failed, 24 hours",
+			"receipts_failed_7d": "Receipts failed, 7 days",
+			"ai_chart": "AI calls per day",
+			"ai_series": "Calls",
+			"ai_empty": "No AI calls in the last 14 days.",
+			"links": "Elsewhere",
+			"sentry": "Sentry",
+			"coolify": "Coolify"
+		},
+		"permissions": {
+			"read": {
+				"label": "Read the console",
+				"description": "See users, workspaces, feedback, usage and health. Every role holds it."
+			},
+			"feedback_write": {
+				"label": "Handle feedback",
+				"description": "Mark feedback done or reopen it, and keep the internal note."
+			},
+			"users_disable": {
+				"label": "Disable users",
+				"description": "Disable or enable an account; disabling signs the person out everywhere."
+			},
+			"workspaces_suspend": {
+				"label": "Suspend workspaces",
+				"description": "Suspend or unsuspend a workspace on every channel; its data is kept."
+			},
+			"workspaces_restore": {
+				"label": "Restore workspaces",
+				"description": "Bring a deleted workspace back with its data."
+			},
+			"operators_manage": {
+				"label": "Manage operators",
+				"description": "Give a registered user a console role, change it or take it away."
+			},
+			"roles_manage": {
+				"label": "Manage roles",
+				"description": "Create, edit and delete console roles, within the permissions you hold."
+			},
+			"audit_read": {
+				"label": "Read the audit",
+				"description": "See every change an operator made, with its before and after."
+			}
+		},
+		"operators": {
+			"add": "Add operator",
+			"columns": {
+				"email": "Email",
+				"name": "Name",
+				"role": "Role",
+				"last_active": "Last active",
+				"actions": "Actions"
+			},
+			"empty": {
+				"title": "No operators",
+				"description": "Give a registered user a console role to add one."
+			},
+			"you": "You",
+			"open_menu": "Open operator menu",
+			"change_role": "Change role",
+			"revoke": "Revoke access",
+			"form": {
+				"add_title": "Add an operator",
+				"add_description": "A registered user, by email, and the console role they get.",
+				"change_title": "Change role",
+				"user_label": "User",
+				"user_placeholder": "Find a user by email",
+				"user_search": "Type an email or a name",
+				"user_empty": "No user matches.",
+				"role_label": "Role",
+				"role_placeholder": "Choose a role",
+				"role_search": "Search roles",
+				"role_empty": "No role matches.",
+				"save": "Save"
+			},
+			"revoke_confirm": {
+				"title": "Revoke console access?",
+				"description": "{email} loses the console at once. Their oewang account and workspaces are not touched.",
+				"confirm": "Revoke"
+			},
+			"last_owner": "The console must keep at least one operator with the owner role.",
+			"toasts": {
+				"added": "Operator added",
+				"changed": "Role changed",
+				"revoked": "Access revoked"
+			}
+		},
+		"roles": {
+			"add": "New role",
+			"columns": {
+				"name": "Name",
+				"description": "Description",
+				"permissions": "Permissions",
+				"operators": "Operators",
+				"actions": "Actions"
+			},
+			"empty": {
+				"title": "No roles",
+				"description": "Create a role to give operators a set of permissions."
+			},
+			"system": "System",
+			"yours": "Your role",
+			"open_menu": "Open role menu",
+			"edit": "Edit role",
+			"delete": "Delete role",
+			"form": {
+				"create_title": "New role",
+				"edit_title": "Edit role",
+				"view_title": "Role",
+				"system_note": "The system role cannot be changed or deleted.",
+				"yours_note": "You hold this role, so another operator has to change it.",
+				"name_label": "Name",
+				"description_label": "Description",
+				"description_placeholder": "Who this role is for",
+				"permissions_label": "Permissions",
+				"permissions_hint": "You can only grant permissions you hold yourself.",
+				"save": "Save role"
+			},
+			"delete_confirm": {
+				"title": "Delete this role?",
+				"description": "{name} goes for good. A role an operator still holds cannot be deleted.",
+				"confirm": "Delete"
+			},
+			"toasts": {
+				"created": "Role created",
+				"updated": "Role updated",
+				"deleted": "Role deleted"
+			}
+		},
+		"audit": {
+			"columns": {
+				"when": "When",
+				"operator": "Operator",
+				"action": "Action",
+				"entity": "Changed"
+			},
+			"empty": {
+				"title": "Nothing audited yet",
+				"description": "Every change an operator makes is recorded here."
+			},
+			"entities": {
+				"user": "User",
+				"workspace": "Workspace",
+				"feedback": "Feedback",
+				"console_role": "Role"
+			},
+			"actions": {
+				"workspace_suspended": "Suspended a workspace",
+				"workspace_unsuspended": "Unsuspended a workspace",
+				"workspace_restored": "Restored a workspace",
+				"user_disabled": "Disabled a user",
+				"user_enabled": "Enabled a user",
+				"feedback_updated": "Updated feedback",
+				"role_created": "Created a role",
+				"role_updated": "Updated a role",
+				"role_deleted": "Deleted a role",
+				"operator_granted": "Granted console access",
+				"operator_changed": "Changed an operator's role",
+				"operator_revoked": "Revoked console access"
+			},
+			"sheet": {
+				"by": "By",
+				"when": "When",
+				"entity": "Changed",
+				"field": "Field",
+				"before": "Before",
+				"after": "After",
+				"no_fields": "No fields recorded.",
+				"open_entity": "Open"
 			}
 		}
 	}
