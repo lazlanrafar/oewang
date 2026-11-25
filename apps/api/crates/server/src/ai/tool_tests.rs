@@ -1554,3 +1554,145 @@ async fn should_show_a_split_before_writing_it(pool: PgPool) {
         .unwrap_err();
     assert_eq!(error.code(), "CONFIRMATION_REQUIRED");
 }
+
+// ------------------------------------------------------------------ TXN-28
+
+/// "500k at the supermarket, 40k of it cigarettes" is one transaction with
+/// one categorised item, and the read tools answer from its shares (D123).
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_create_a_transaction_with_categorised_items_and_report_its_shares(pool: PgPool) {
+    fixture(&pool).await;
+    sqlx::query(
+        "INSERT INTO categories (id, workspace_id, name, type)
+         VALUES ('cat_smoke', $1, 'Cigarettes', 'expense')",
+    )
+    .bind(WORKSPACE)
+    .execute(&pool)
+    .await
+    .unwrap();
+    for (id, category) in [("bud_food", "cat_food"), ("bud_smoke", "cat_smoke")] {
+        sqlx::query(
+            "INSERT INTO budgets (id, workspace_id, category_id, amount)
+             VALUES ($1, $2, $3, 1000000)",
+        )
+        .bind(id)
+        .bind(WORKSPACE)
+        .bind(category)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    let turns = store();
+
+    let created = run(
+        &pool,
+        &turns,
+        "create_transaction",
+        json!({
+            "type": "expense",
+            "amount": "500000",
+            "wallet_id": "wal_cash",
+            "category_id": "cat_food",
+            "date": "2026-11-10",
+            "name": "Superindo",
+            "items": [{ "name": "Rokok", "amount": "40000", "category_id": "cat_smoke" }]
+        }),
+    )
+    .await
+    .unwrap();
+    let id = created.result["id"].as_str().unwrap().to_string();
+
+    // One row, one wallet movement, one item with its own category and the
+    // amount exactly as it was sent.
+    let items: Vec<(String, String, Option<String>)> = sqlx::query_as(
+        "SELECT name, amount::text, category_id FROM transaction_items WHERE transaction_id = $1",
+    )
+    .bind(&id)
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        items,
+        [(
+            "Rokok".to_string(),
+            "40000.0000".to_string(),
+            Some("cat_smoke".to_string())
+        )]
+    );
+    let balance: Decimal = sqlx::query_scalar("SELECT balance FROM wallets WHERE id = 'wal_cash'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        balance,
+        Decimal::ZERO,
+        "the items moved no money of their own"
+    );
+
+    let summary = run(
+        &pool,
+        &turns,
+        "get_spending_summary",
+        json!({ "from": "2026-11-01", "to": "2026-11-30", "group_by": "category" }),
+    )
+    .await
+    .unwrap();
+    let group = |label: &str| {
+        summary.result["groups"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|group| group["label"] == label)
+            .unwrap_or_else(|| panic!("no {label} group"))
+            .clone()
+    };
+    assert_eq!(summary.result["spent_formatted"], "Rp 500.000");
+    assert_eq!(group("Food")["total_formatted"], "Rp 460.000");
+    assert_eq!(group("Cigarettes")["total_formatted"], "Rp 40.000");
+
+    let status = run(
+        &pool,
+        &turns,
+        "get_budget_status",
+        json!({ "month": "2026-11" }),
+    )
+    .await
+    .unwrap();
+    let budget = |category: &str| {
+        status.result["budgets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|line| line["category_id"] == category)
+            .unwrap_or_else(|| panic!("no {category} budget"))
+            .clone()
+    };
+    assert_eq!(budget("cat_food")["spent_formatted"], "Rp 460.000");
+    assert_eq!(budget("cat_smoke")["spent_formatted"], "Rp 40.000");
+}
+
+/// An item's category is checked like the transaction's own: one from
+/// another workspace, or one that does not exist, writes nothing.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_an_item_category_the_workspace_does_not_have(pool: PgPool) {
+    fixture(&pool).await;
+
+    let error = run(
+        &pool,
+        &store(),
+        "create_transaction",
+        json!({
+            "type": "expense", "amount": "500000", "wallet_id": "wal_cash",
+            "items": [{ "name": "Rokok", "amount": "40000", "category_id": "cat_elsewhere" }]
+        }),
+    )
+    .await
+    .unwrap_err();
+
+    assert_eq!(error.code(), "CATEGORY_NOT_FOUND");
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM transactions")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(rows, 0);
+}

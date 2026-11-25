@@ -200,10 +200,40 @@ CREATE_TRANSACTION = {
         "Record one transaction. Needs type, amount and wallet_id; a transfer also "
         "needs to_wallet_id and to_amount. Ask with present_choices rather than "
         "guessing a wallet or a category. One call records one transaction: never "
-        "fold several of the user's into one."
+        "fold several of the user's into one. When the user says part of it was "
+        "something else (\"500k at the supermarket, 40k of it cigarettes\"), that is "
+        "still one transaction: put the part in items with its own category_id. Send "
+        "only the parts the user named, with the amounts they gave. Do not add an "
+        "item for the rest and do not subtract anything: the API works out what is "
+        "left for the transaction's own category."
     ),
     "input_schema": _schema(
-        _transaction_fields(),
+        {
+            **_transaction_fields(),
+            "items": {
+                "type": "array",
+                "maxItems": MAX_ITEMS,
+                "description": (
+                    "Line items the user named, written with the transaction. Optional. "
+                    "They need not add up to the amount."
+                ),
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": _text("What the line is."),
+                        "amount": _money("The line total, as the user gave it."),
+                        "quantity": _money("How many, when the user said so."),
+                        "category_id": _id(
+                            "The line's own category, when it differs from the "
+                            "transaction's. Use an id from the prompt. Omit it rather "
+                            "than guessing one."
+                        ),
+                    },
+                    "required": ["name", "amount"],
+                    "additionalProperties": False,
+                },
+            },
+        },
         required=["type", "amount", "wallet_id"],
     ),
 }

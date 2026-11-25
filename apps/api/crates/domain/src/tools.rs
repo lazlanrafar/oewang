@@ -300,6 +300,9 @@ pub struct WriteTransactionArgs {
     pub date: Option<DateTime<Utc>>,
     pub name: Option<String>,
     pub description: Option<String>,
+    /// Line items written with a create, each with its own category when
+    /// it differs from the transaction's (TXN-28). Never read on an update.
+    pub items: Vec<ItemArg>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -315,6 +318,8 @@ pub struct ItemArg {
     pub name: String,
     pub amount: Decimal,
     pub quantity: Option<Decimal>,
+    /// Only `create_transaction` reads one (TXN-28).
+    pub category_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -523,7 +528,7 @@ impl ToolCall {
 
             Tool::AddTransactionItems => {
                 let transaction_id = reader.id("transaction_id");
-                let items = reader.items("items");
+                let items = reader.items("items", false);
                 reader.require("transaction_id", transaction_id.is_some());
                 reader.require("items", !items.is_empty());
 
@@ -953,7 +958,7 @@ impl<'a> Reader<'a> {
         out
     }
 
-    fn items(&mut self, name: &'static str) -> Vec<ItemArg> {
+    fn items(&mut self, name: &'static str, with_category: bool) -> Vec<ItemArg> {
         let Some(value) = self.get(name) else {
             return Vec::new();
         };
@@ -979,13 +984,32 @@ impl<'a> Reader<'a> {
 
             // An item's keys are checked like the call's own: a stray key
             // means the model meant something this tool cannot do.
-            if fields
-                .keys()
-                .any(|key| !matches!(key.as_str(), "name" | "amount" | "quantity"))
-            {
-                self.reject(name, "An item takes only name, amount and quantity.");
+            if fields.keys().any(|key| {
+                !matches!(key.as_str(), "name" | "amount" | "quantity")
+                    && !(with_category && key == "category_id")
+            }) {
+                self.reject(
+                    name,
+                    if with_category {
+                        "An item takes only name, amount, quantity and category_id."
+                    } else {
+                        "An item takes only name, amount and quantity."
+                    },
+                );
                 continue;
             }
+
+            // Read like the transaction's own: an id, and blank is absent.
+            let category_id = match fields.get("category_id") {
+                None | Some(Value::Null) => None,
+                Some(Value::String(raw)) if raw.trim().chars().count() <= MAX_ID => {
+                    Some(raw.trim().to_string()).filter(|id| !id.is_empty())
+                }
+                Some(_) => {
+                    self.reject(name, "An item's category_id is a category id, as a string.");
+                    continue;
+                }
+            };
 
             let item_name = fields.get("name").and_then(Value::as_str).map(str::trim);
             let amount = fields.get("amount").and_then(Value::as_str);
@@ -1008,6 +1032,7 @@ impl<'a> Reader<'a> {
                             .collect(),
                         amount,
                         quantity,
+                        category_id,
                     })
                 }
                 _ => self.reject(
@@ -1034,6 +1059,13 @@ impl<'a> Reader<'a> {
             date: self.date("date"),
             name: self.text("name"),
             description: self.text("description"),
+            // Not read on an update, so `items` there is an unknown key and
+            // is refused: items change through their own tool.
+            items: if is_update {
+                Vec::new()
+            } else {
+                self.items("items", true)
+            },
         }
     }
 
@@ -1391,6 +1423,54 @@ mod tests {
         )
         .unwrap_err();
         assert!(fields(error)["items"].contains("strings"));
+    }
+
+    #[test]
+    fn should_read_categorised_items_on_a_create_with_string_amounts() {
+        let call = parse(
+            Tool::CreateTransaction,
+            json!({
+                "type": "expense", "amount": "500000", "wallet_id": "wal_1",
+                "category_id": "cat_groceries",
+                "items": [
+                    { "name": "Rokok", "amount": "40000", "category_id": "cat_cigarettes" },
+                    { "name": "Beras", "amount": "75000.50", "category_id": " " }
+                ]
+            }),
+        )
+        .unwrap();
+
+        let ToolCall::CreateTransaction(args) = call else {
+            panic!("expected a create");
+        };
+        assert_eq!(args.items.len(), 2);
+        assert_eq!(args.items[0].amount, Decimal::from_str("40000").unwrap());
+        assert_eq!(args.items[0].category_id.as_deref(), Some("cat_cigarettes"));
+        assert_eq!(args.items[1].amount, Decimal::from_str("75000.50").unwrap());
+        assert_eq!(args.items[1].category_id, None);
+    }
+
+    #[test]
+    fn should_refuse_a_create_item_whose_amount_is_a_number() {
+        let error = parse(
+            Tool::CreateTransaction,
+            json!({
+                "type": "expense", "amount": "500000", "wallet_id": "wal_1",
+                "items": [{ "name": "Rokok", "amount": 40000 }]
+            }),
+        )
+        .unwrap_err();
+        assert!(fields(error)["items"].contains("strings"));
+    }
+
+    #[test]
+    fn should_refuse_items_on_an_update() {
+        let error = parse(
+            Tool::UpdateTransaction,
+            json!({ "transaction_id": "txn_1", "items": [{ "name": "Rokok", "amount": "1" }] }),
+        )
+        .unwrap_err();
+        assert!(fields(error).contains_key("items"));
     }
 
     #[test]

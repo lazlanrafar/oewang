@@ -188,7 +188,9 @@ pub async fn execute(
 fn check_amount_ceiling(call: &ToolCall, max_amount: Decimal) -> Result<()> {
     let amounts: Vec<Option<Decimal>> = match call {
         ToolCall::CreateTransaction(args) | ToolCall::UpdateTransaction(args) => {
-            vec![args.amount, args.to_amount]
+            let mut amounts = vec![args.amount, args.to_amount];
+            amounts.extend(args.items.iter().map(|item| Some(item.amount)));
+            amounts
         }
         ToolCall::AddTransactionItems(args) => {
             args.items.iter().map(|item| Some(item.amount)).collect()
@@ -812,7 +814,25 @@ async fn create_transaction(
         attachment_ids: None,
     };
 
-    let row = transactions::service::create(pool, actor, input).await?;
+    // One write for the transaction and its items (TXN-28). The amounts are
+    // the ones the model was given: nothing here adds them up or works out
+    // a remainder (D27); the share view does that when a figure is read.
+    let items: Vec<transactions::service::ItemInput<'_>> = args
+        .items
+        .iter()
+        .map(|item| transactions::service::ItemInput {
+            name: &item.name,
+            brand: None,
+            quantity: item.quantity,
+            unit: None,
+            unit_price: None,
+            amount: item.amount,
+            category_id: item.category_id.as_deref(),
+            notes: None,
+        })
+        .collect();
+
+    let row = transactions::service::create_with_items(pool, actor, input, &items).await?;
     let detail = transactions::service::find(pool, actor.workspace_id, &row.id).await?;
 
     Ok(written(&detail, "Created"))

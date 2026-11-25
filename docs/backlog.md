@@ -1037,9 +1037,9 @@ Requirements: TXN-25, TXN-26, TXN-27
 ### US-078: Categorised items from chat, MCP and Telegram (OEW-116)
 Requirements: TXN-28
 
-- [ ] `create_transaction` takes optional `items` in the Rust and Python catalogs and in MCP; category names resolve as the transaction's does; amounts stay strings (D12, Rust and pytest tests)
-- [ ] `get_spending_summary` and `get_budget_status` answer from shares (Rust test)
-- [ ] ruff, pytest, clippy and `cargo test` pass in the containers
+- [x] `create_transaction` takes optional `items` in the Rust and Python catalogs and in MCP; category names resolve as the transaction's does; amounts stay strings (D12, Rust and pytest tests)
+- [x] `get_spending_summary` and `get_budget_status` answer from shares (Rust test)
+- [x] ruff, pytest, clippy and `cargo test` pass in the containers
 - [ ] Verified locally: "belanja Superindo 500rb, 40rb-nya rokok" writes one transaction with one categorised item
 
 ### US-079: Item categories on mobile (OEW-117)

@@ -174,7 +174,26 @@ def test_a_write_requires_what_the_api_requires() -> None:
 def test_an_update_takes_every_field_a_create_takes() -> None:
     creatable = set(schema("create_transaction")["properties"])
     updatable = set(schema("update_transaction")["properties"])
-    assert updatable == creatable | {"transaction_id"}
+    # Items are written with a create only; afterwards they change through
+    # their own tool (TXN-28).
+    assert updatable == (creatable - {"items"}) | {"transaction_id"}
+
+
+def test_a_create_takes_categorised_items_with_string_amounts() -> None:
+    """TXN-28, D12: an item is a name, an amount as a string, and its own
+    category. Nothing asks the model for a remainder (D27)."""
+    create = schema("create_transaction")
+    assert "items" not in create["required"]
+
+    items = create["properties"]["items"]
+    assert items["maxItems"] == tools.MAX_ITEMS
+    line = items["items"]
+    assert line["required"] == ["name", "amount"]
+    assert line["additionalProperties"] is False
+    assert set(line["properties"]) == {"name", "amount", "quantity", "category_id"}
+    assert line["properties"]["amount"]["type"] == "string"
+    assert line["properties"]["category_id"]["type"] == "string"
+    assert "do not subtract" in tools.TOOLS_BY_NAME["create_transaction"]["description"]
 
 
 def test_a_transfer_can_name_the_other_side() -> None:
