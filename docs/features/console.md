@@ -61,7 +61,7 @@ UPDATE users SET console_role_id = 'owner' WHERE lower(email) = lower('<the owne
 
 | Action | Permission | Effect |
 |---|---|---|
-| Suspend, unsuspend a workspace | `console.workspaces.suspend` | Every channel refuses the workspace with `WORKSPACE_SUSPENDED`: web, mobile, Telegram, MCP, the AI service's tool calls, queued receipts. Its members can still sign in, list their workspaces, switch to another and sign out. Nothing is deleted or revoked, so unsuspending is the whole undo. A deleted workspace is restored first |
+| Suspend, unsuspend a workspace | `console.workspaces.suspend` | Every channel refuses the workspace with `WORKSPACE_SUSPENDED`: web, mobile, Telegram, MCP, the AI service's tool calls, queued receipts, and statement imports between their extraction and their write. Its members can still sign in, list their workspaces, switch to another and sign out. Nothing is deleted or revoked, so unsuspending is the whole undo. A deleted workspace is restored first |
 | Restore a workspace | `console.workspaces.restore` | Clears `deleted_at`. Data was never removed (OPS-2), so the workspace comes back as it was |
 | Disable, enable a user | `console.users.disable` | A disabled person cannot sign in (`USER_DISABLED`), and every refresh token, Telegram link and MCP token they held is revoked in the same transaction. Enabling lets them sign in again; links and tokens are made anew. Operators cannot be disabled, the caller included: revoke the console role first |
 
