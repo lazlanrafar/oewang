@@ -1,4 +1,6 @@
-import { listWorkspaces, readWorkspaceMe } from '$lib/server/account';
+import { redirect } from '@sveltejs/kit';
+
+import { listWorkspaces, readMe } from '$lib/server/account';
 
 import type { LayoutServerLoad } from './$types';
 
@@ -8,12 +10,24 @@ import type { LayoutServerLoad } from './$types';
  * no sidebar and no top bar, and read only who is signed in and where they
  * may go. The guard in hooks.server.ts has already ensured a session, and
  * a session with no workspace yet is sent to the check page (D109).
+ *
+ * A suspended workspace is let through (D127): this is where its members
+ * pick another workspace or leave, so it must not show the suspended page.
+ * Nothing here reads the role.
  */
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const [me, workspaces] = await Promise.all([
-		readWorkspaceMe(locals.accessToken, url),
+		readMe(locals.accessToken),
 		listWorkspaces(locals.accessToken)
 	]);
 
-	return { me, workspaces: workspaces.data ?? [] };
+	const account = me.data!;
+	if (!account.workspace) {
+		redirect(303, `/sync?next=${encodeURIComponent(url.pathname + url.search)}`);
+	}
+
+	return {
+		me: { ...account, workspace: account.workspace },
+		workspaces: workspaces.data ?? []
+	};
 };

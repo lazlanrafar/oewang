@@ -257,10 +257,11 @@ The console (D124, D125, D126) adds a second kind of permission that has nothing
 | Any session request | `Auth` extractor | A disabled person, a suspended workspace |
 | Routes outside a workspace (list, switch, sign out, the console) | `AuthUser` extractor | A disabled person only, so a member of a suspended workspace can still leave it |
 | Writes, MCP calls, Telegram messages and buttons, the AI service's tool calls | `current_role` | Both |
-| Every new session: sign-up, password, passkey, refresh, switch | `issue_session` | Both. Signing in picks the first workspace that is not suspended |
+| Every new session: sign-up, password, passkey, refresh, switch | `issue_session` | A disabled person. Signing in picks the first workspace that is not suspended, or a suspended one when that is all there is |
+| Choosing a workspace | `switch_workspace` | A suspended workspace |
 | Queued receipts | `receipts::queue::run` | Both; the job waits with its usual backoff |
 
-The answers are `USER_DISABLED` and `WORKSPACE_SUSPENDED`, never `NOT_A_MEMBER`, because both are undone: a Telegram link that read `NOT_A_MEMBER` would unlink for good. Disabling also revokes every refresh token, Telegram link and MCP token in the same transaction, as "sign out everywhere" does, and push stops reaching the person's devices. Suspending revokes nothing: refresh and switch refuse the workspace while it lasts.
+The answers are `USER_DISABLED` and `WORKSPACE_SUSPENDED`, never `NOT_A_MEMBER`, because both are undone: a Telegram link that read `NOT_A_MEMBER` would unlink for good. Disabling also revokes every refresh token, Telegram link and MCP token in the same transaction, as "sign out everywhere" does, and push stops reaching the person's devices. Suspending revokes nothing. A session already in the workspace keeps refreshing, because its token opens nothing there and refusing the refresh would sign the person out with no word of why; `/v1/auth/me` answers `workspace.suspended: true` with no role, and the app shows the suspended page with a way to another workspace or out. Switching into a suspended workspace is refused.
 
 Not re-checked: a statement import already running finishes, and the AI model call of a chat turn already streaming completes.
 

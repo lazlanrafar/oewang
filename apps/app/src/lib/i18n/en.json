@@ -307,7 +307,11 @@
 		"go_back": "Go back",
 		"try_again": "Try again",
 		"sign_in": "Sign in",
-		"console_forbidden_description": "Your console role cannot open this page. Ask a console owner if you need it."
+		"console_forbidden_description": "Your console role cannot open this page. Ask a console owner if you need it.",
+		"suspended_lead": "Workspace",
+		"suspended_emphasis": "suspended.",
+		"suspended_description": "Oewang has suspended this workspace. Its data is kept. Contact oewang support, or open another workspace.",
+		"pick_workspace": "Choose another workspace"
 	},
 	"errors": {
 		"invalid_credentials": "That email and password do not match.",
@@ -356,7 +360,9 @@
 		"split_source_not_expense": "Only an expense can be split.",
 		"payment_transaction_locked": "This transaction pays a debt. Change its amount, account or type from the debt instead.",
 		"foreign_entry_same_wallet": "That account already holds the currency this was entered in. Open the transaction to change its account.",
-		"console_forbidden": "Your console role does not allow that."
+		"console_forbidden": "Your console role does not allow that.",
+		"user_disabled": "This account is disabled. Contact oewang support.",
+		"workspace_suspended": "This workspace is suspended. Contact oewang support."
 	},
 	"style": {
 		"title": "Design system",
@@ -1049,7 +1055,8 @@
 		"currency_label": "Base currency",
 		"currency_hint": "Locked once the workspace has its first transaction.",
 		"create_submit": "Create workspace",
-		"creating": "Creating workspace…"
+		"creating": "Creating workspace…",
+		"suspended": "Suspended"
 	},
 	"account": {
 		"title": "Account",
@@ -1417,6 +1424,118 @@
 		"nav_roles": "Roles",
 		"nav_audit": "Operator audit",
 		"overview_title": "Signed in as {role}",
-		"overview_description": "What your console role allows. Screens arrive as they are built."
+		"overview_description": "What your console role allows. Screens arrive as they are built.",
+		"never": "Never",
+		"users": {
+			"search_placeholder": "Search by email or name",
+			"columns": {
+				"email": "Email",
+				"name": "Name",
+				"workspaces": "Workspaces",
+				"console_role": "Console role",
+				"joined": "Joined",
+				"last_active": "Last active"
+			},
+			"empty": {
+				"title": "No users yet",
+				"description": "People appear here once they register."
+			},
+			"empty_filtered": {
+				"title": "No users match",
+				"description": "Try another email or name, or clear the search.",
+				"action": "Clear search"
+			},
+			"sheet": {
+				"no_name": "No name",
+				"joined": "Joined",
+				"last_active": "Last active",
+				"console_role": "Console role",
+				"no_console_role": "None",
+				"workspaces": "Live workspaces",
+				"memberships": "Memberships",
+				"no_memberships": "Not a member of any workspace.",
+				"deleted": "Deleted",
+				"status": "Status",
+				"active": "Active"
+			},
+			"disabled": "Disabled"
+		},
+		"workspaces": {
+			"search_placeholder": "Search by name or slug",
+			"status_label": "Status",
+			"status_active": "Active",
+			"status_suspended": "Suspended",
+			"status_deleted": "Deleted",
+			"columns": {
+				"name": "Name",
+				"owner": "Owner",
+				"members": "Members",
+				"status": "Status",
+				"created": "Created",
+				"last_activity": "Last activity"
+			},
+			"empty": {
+				"title": "No workspaces yet",
+				"description": "Workspaces appear here once someone creates one."
+			},
+			"empty_filtered": {
+				"title": "No workspaces match",
+				"description": "Try another name or status, or clear the filters.",
+				"action": "Clear filters"
+			},
+			"sheet": {
+				"slug": "Slug",
+				"currency": "Currency",
+				"owner": "Owner",
+				"no_owner": "No owner",
+				"created": "Created",
+				"suspended": "Suspended",
+				"deleted": "Deleted",
+				"last_activity": "Last activity",
+				"contents": "Contents",
+				"wallets": "Wallets",
+				"transactions": "Transactions",
+				"storage": "Storage",
+				"files": "Files",
+				"tokens_month": "Tokens this month",
+				"tokens_input": "Input",
+				"tokens_output": "Output",
+				"members": "Members",
+				"no_members": "No members.",
+				"no_name": "No name"
+			}
+		},
+		"actions": {
+			"suspend": {
+				"button": "Suspend",
+				"title": "Suspend this workspace?",
+				"description": "Every member is blocked on the web, mobile, Telegram and MCP until it is unsuspended. Its data is kept.",
+				"done": "Workspace suspended"
+			},
+			"unsuspend": {
+				"button": "Unsuspend",
+				"title": "Unsuspend this workspace?",
+				"description": "Its members can use it again on every channel.",
+				"done": "Workspace unsuspended"
+			},
+			"restore": {
+				"button": "Restore",
+				"title": "Restore this workspace?",
+				"description": "The deleted workspace comes back with its data, and its members can open it again.",
+				"done": "Workspace restored"
+			},
+			"disable": {
+				"button": "Disable",
+				"title": "Disable this user?",
+				"description": "They are signed out everywhere (web, mobile, Telegram and MCP) and cannot sign in until enabled. Their workspaces and data are kept.",
+				"done": "User disabled"
+			},
+			"enable": {
+				"button": "Enable",
+				"title": "Enable this user?",
+				"description": "They can sign in again. Sessions ended by the disable stay ended.",
+				"done": "User enabled"
+			}
+		}
 	}
 }

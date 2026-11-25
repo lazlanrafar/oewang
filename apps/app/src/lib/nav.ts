@@ -171,8 +171,8 @@ export const consoleNavGroups: { labelKey?: TranslationKey; items: ConsoleNavIte
 	{
 		labelKey: 'console.nav_people_group',
 		items: [
-			{ titleKey: 'console.nav_users', href: '/console/users', icon: User, permission: 'console.read', pending: true },
-			{ titleKey: 'console.nav_workspaces', href: '/console/workspaces', icon: Users, permission: 'console.read', pending: true },
+			{ titleKey: 'console.nav_users', href: '/console/users', icon: User, permission: 'console.read' },
+			{ titleKey: 'console.nav_workspaces', href: '/console/workspaces', icon: Users, permission: 'console.read' },
 			{ titleKey: 'console.nav_feedback', href: '/console/feedback', icon: MessageSquareWarning, permission: 'console.read', pending: true }
 		]
 	},

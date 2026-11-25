@@ -1,5 +1,8 @@
+import { error } from '@sveltejs/kit';
+
 import type { LayoutServerLoad } from './$types';
 
+import { ApiError } from '$lib/server/api';
 import { listWorkspaces, readWorkspaceMe } from '$lib/server/account';
 import * as contactsApi from '$lib/server/contacts';
 import * as ledger from '$lib/server/ledger';
@@ -23,7 +26,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 	 * claim inside it (AUTH-4): nothing here names one, so no page can be
 	 * served another workspace's rows.
 	 */
-	const [me, workspaces, wallets, groups, categories, contacts, currencies, notices] = await Promise.all([
+	const shell = Promise.all([
 		// A session with no workspace yet is sent to the check page (D109).
 		readWorkspaceMe(locals.accessToken, url),
 		listWorkspaces(locals.accessToken),
@@ -41,6 +44,16 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 		// read them never blocks the shell.
 		receiptNotices(locals.accessToken).catch(() => null)
 	]);
+	const [me, workspaces, wallets, groups, categories, contacts, currencies, notices] = await shell.catch(
+		(caught: unknown) => {
+			// An operator suspended this workspace (CSL-5): the API refuses every
+			// read in it. The error page says so and offers another workspace.
+			if (caught instanceof ApiError && caught.code === 'WORKSPACE_SUSPENDED') {
+				error(403, 'WORKSPACE_SUSPENDED');
+			}
+			throw caught;
+		}
+	);
 
 	// The sidebar's own state, read here so the first paint is already the
 	// shape the reader left it in. Rendering it open and collapsing it in the

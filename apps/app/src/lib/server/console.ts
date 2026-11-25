@@ -11,7 +11,8 @@ import { createPublicKey, verify } from 'node:crypto';
 
 import { error } from '@sveltejs/kit';
 
-import { api, ApiError } from '$lib/server/api';
+import type { UserAction, WorkspaceAction } from '$lib/console';
+import { api, ApiError, type Envelope } from '$lib/server/api';
 
 /** Unset means there is no console on any host. */
 function consoleHost(): string | undefined {
@@ -139,4 +140,120 @@ export async function readConsoleMe(token: string | undefined): Promise<ConsoleM
 		}
 		throw caught;
 	}
+}
+
+/*
+ * Users and workspaces (CSL-3, CSL-4, US-081). Metadata only: counts, bytes
+ * and token totals, never an amount or a note (CSL-13).
+ */
+
+export type MemberRole = 'owner' | 'admin' | 'member';
+
+export type ConsoleUserRow = {
+	id: string;
+	email: string;
+	name: string | null;
+	created_at: string;
+	console_role: string | null;
+	/** How many live workspaces this person belongs to. */
+	workspaces: number;
+	last_active_at: string | null;
+	/** Set while an operator has disabled the account (US-082). */
+	disabled_at: string | null;
+};
+
+export type ConsoleUser = ConsoleUserRow & {
+	memberships: {
+		workspace_id: string;
+		workspace_name: string;
+		role: MemberRole;
+		joined_at: string;
+		workspace_deleted_at: string | null;
+	}[];
+};
+
+export type ConsoleWorkspaceRow = {
+	id: string;
+	name: string;
+	slug: string;
+	currency_code: string;
+	created_at: string;
+	deleted_at: string | null;
+	/** Set while an operator has suspended the workspace (US-082). */
+	suspended_at: string | null;
+	members: number;
+	owner_email: string | null;
+	last_activity_at: string | null;
+};
+
+export type ConsoleWorkspace = ConsoleWorkspaceRow & {
+	member_list: { user_id: string; email: string; name: string | null; role: MemberRole; joined_at: string }[];
+	counts: { wallets: number; transactions: number };
+	storage: { bytes: number; files: number };
+	tokens_month: { input: number; output: number };
+};
+
+/** A console read; a missing permission is the 403 page, as `readConsoleMe` has it. */
+async function consoleRead<T>(path: string, token: string | undefined, query?: URLSearchParams) {
+	try {
+		return await api<T>({ path, query, token });
+	} catch (caught) {
+		if (caught instanceof ApiError && caught.code === 'CONSOLE_FORBIDDEN') {
+			error(403, 'CONSOLE_FORBIDDEN');
+		}
+		throw caught;
+	}
+}
+
+/** One record for a sheet; null when the id names nothing, so the sheet stays shut. */
+async function consoleRecord<T>(path: string, token: string | undefined): Promise<T | null> {
+	try {
+		return (await consoleRead<T>(path, token)).data;
+	} catch (caught) {
+		if (caught instanceof ApiError && caught.status === 404) return null;
+		throw caught;
+	}
+}
+
+/** `search`, `sort`, `order`, `page` and `per_page`, passed straight through. */
+export function listConsoleUsers(query: URLSearchParams, token?: string): Promise<Envelope<ConsoleUserRow[]>> {
+	return consoleRead('/v1/console/users', token, query);
+}
+
+export function consoleUser(id: string, token?: string): Promise<ConsoleUser | null> {
+	return consoleRecord(`/v1/console/users/${encodeURIComponent(id)}`, token);
+}
+
+/** As the user list, plus `status` (`active`, `suspended` or `deleted`; absent is all). */
+export function listConsoleWorkspaces(
+	query: URLSearchParams,
+	token?: string
+): Promise<Envelope<ConsoleWorkspaceRow[]>> {
+	return consoleRead('/v1/console/workspaces', token, query);
+}
+
+export function consoleWorkspace(id: string, token?: string): Promise<ConsoleWorkspace | null> {
+	return consoleRecord(`/v1/console/workspaces/${encodeURIComponent(id)}`, token);
+}
+
+/*
+ * Suspend, restore, disable (CSL-5 to CSL-7, US-082). Each answers the
+ * updated row, and repeating one is a no-op. Errors reach the form action
+ * as `ApiError`s, so the page can say them in a toast.
+ */
+
+export function actOnWorkspace(id: string, action: WorkspaceAction, token?: string) {
+	return api<ConsoleWorkspaceRow>({
+		method: 'POST',
+		path: `/v1/console/workspaces/${encodeURIComponent(id)}/${action}`,
+		token
+	});
+}
+
+export function actOnUser(id: string, action: UserAction, token?: string) {
+	return api<ConsoleUserRow>({
+		method: 'POST',
+		path: `/v1/console/users/${encodeURIComponent(id)}/${action}`,
+		token
+	});
 }

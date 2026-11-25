@@ -3,7 +3,9 @@
 	 * The operator console (CSL, D124), laid out as the account area is: the
 	 * sidebar at a fifth of the width and the section beside it, under a bar
 	 * with the product's mark and the operator. Wider than the account area,
-	 * because console screens are tables.
+	 * because console screens are tables. The page is the viewport's height
+	 * and the section scrolls, so a table's own scroller has a bounded box
+	 * to scroll in and its load-more fires on scroll, not all at once.
 	 */
 	import { Logo } from '$lib/components/atoms/logo';
 	import { Button } from '$lib/components/atoms/button';
@@ -18,8 +20,8 @@
 </script>
 
 <Toaster />
-<main class="bg-background mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-8 p-4 md:p-6">
-	<div class="flex items-center justify-between gap-4">
+<main class="bg-background mx-auto flex h-dvh w-full max-w-7xl flex-col gap-8 p-4 md:p-6">
+	<div class="flex shrink-0 items-center justify-between gap-4">
 		<div class="flex items-center gap-2">
 			<Logo class="size-6" />
 			<span class="font-serif text-lg tracking-tight">{t('console.title')}</span>
@@ -36,7 +38,7 @@
 		<aside class="shrink-0 lg:w-1/5">
 			<SettingsSidebar {groups} label={t('console.title')} />
 		</aside>
-		<div class="flex min-w-0 flex-1 flex-col">
+		<div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
 			{@render children()}
 		</div>
 	</div>

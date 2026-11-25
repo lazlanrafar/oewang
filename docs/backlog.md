@@ -1069,18 +1069,18 @@ Requirements: CSL-1, CSL-2
 ### US-081: Users and workspaces (OEW-125)
 Requirements: CSL-3, CSL-4, CSL-13
 
-- [ ] User list and detail; workspace list and detail
+- [x] User list and detail; workspace list and detail: search, sort, status facet and paging in the URL; the open row is `?user=` / `?workspace=`
 - [x] A test fails when a console response carries an amount, a balance, a note or a transaction's text
-- [ ] Verify in browser
+- [x] Verify in browser
 
 ### US-082: Suspend, restore and disable (OEW-126)
 Requirements: CSL-5, CSL-6, CSL-7, CSL-14
 
 - [x] Suspend, unsuspend and restore a workspace; disable and enable a user (API)
-- [ ] The console's buttons, the app's suspended page and the disabled sign-in message
+- [x] The console's buttons, the app's suspended page and the disabled sign-in message
 - [x] `WORKSPACE_SUSPENDED` and `USER_DISABLED` on every channel: web, mobile, Telegram, MCP and the AI service's callbacks
 - [x] `operator_audit` written in the same transaction as each action
-- [ ] Verify in browser
+- [x] Verify in browser
 
 ### US-083: Feedback inbox (OEW-127)
 Requirements: CSL-8

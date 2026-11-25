@@ -65,14 +65,14 @@ UPDATE users SET console_role_id = 'owner' WHERE lower(email) = lower('<the owne
 | Restore a workspace | `console.workspaces.restore` | Clears `deleted_at`. Data was never removed (OPS-2), so the workspace comes back as it was |
 | Disable, enable a user | `console.users.disable` | A disabled person cannot sign in (`USER_DISABLED`), and every refresh token, Telegram link and MCP token they held is revoked in the same transaction. Enabling lets them sign in again; links and tokens are made anew. Operators cannot be disabled, the caller included: revoke the console role first |
 
-Repeating an action changes nothing and writes no audit row. Every change writes one `operator_audit` row with the entity's console row before and after (CSL-14). Where each check sits is in [security/auth.md](../security/auth.md#disabled-users-and-suspended-workspaces-d127).
+Repeating an action changes nothing and writes no audit row. The buttons sit in the sheet header, shown only to an operator with the permission, each behind a confirmation that says what it does. A member who opens a suspended workspace sees a page saying so, with the way to another workspace (`/workspaces`, which stays open) and to sign out. Every change writes one `operator_audit` row with the entity's console row before and after (CSL-14). Where each check sits is in [security/auth.md](../security/auth.md#disabled-users-and-suspended-workspaces-d127).
 
 ## Screens
 
 | Screen | Permission | Story |
 |---|---|---|
-| Users, a user | `console.read` | US-081 |
-| Workspaces, a workspace | `console.read` | US-081 |
+| Users, a user | `console.read` | US-081. `/console/users`, the user's sheet at `?user=`: email, name, status, joined, last active, console role and memberships |
+| Workspaces, a workspace | `console.read` | US-081. `/console/workspaces` with an Active, Suspended or Deleted facet, the sheet at `?workspace=`: owner, members, counts, storage, tokens this month |
 | Suspend, restore, disable | the matching write permission | US-082 |
 | Feedback | `console.read`, `console.feedback.write` to change status | US-083 |
 | Usage, health, overview | `console.read` | US-084 |
