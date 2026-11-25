@@ -67,7 +67,7 @@
 	} from '$lib/components/organisms/transactions';
 	import { FormError } from '$lib/components/molecules/form-error';
 	import { canvasParams, readCanvas } from '$lib/canvas';
-	import { messageForCode } from '$lib/errors';
+	import { messageForCode, toastRefusal } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 	import { absDecimal, trimZeros } from '$lib/money';
@@ -576,7 +576,14 @@
 
 	let itemDialog = $state<{
 		open: boolean;
-		item: { id: string; name: string; quantity: string | null; unit: string | null; amount: string } | null;
+		item: {
+			id: string;
+			name: string;
+			quantity: string | null;
+			unit: string | null;
+			amount: string;
+			category_id: string | null;
+		} | null;
 	}>({ open: false, item: null });
 	let deletingItem = $state('');
 	let deleteItemForm = $state<HTMLFormElement | null>(null);
@@ -599,6 +606,72 @@
 			await update({ navigate: false });
 		};
 	};
+
+	/**
+	 * A write from the detail sheet that is a picker or a button, not a form.
+	 *
+	 * Posted to this page's own action, as an in-cell change is (D5). The
+	 * sheet's overlay covers the page banner, so a refusal is a toast.
+	 */
+	async function itemAction(action: string, fields: Record<string, string>) {
+		const body = new FormData();
+		for (const [key, value] of Object.entries(fields)) body.set(key, value);
+
+		const response = await fetch(action, { method: 'POST', body });
+		const result = deserialize(await response.text());
+
+		await invalidateAll();
+		if (result.type !== 'success' && !toastRefusal(result)) await applyAction(result);
+		return result;
+	}
+
+	/**
+	 * An item's category, picked on its row. The API replaces an item whole,
+	 * so the rest of it is sent back as it was read (TXN-27).
+	 */
+	async function setItemCategory(itemId: string, categoryId: string) {
+		const item = data.detail?.transaction.items.find((entry) => entry.id === itemId);
+		if (!item) return;
+
+		const result = await itemAction('?/saveItem', {
+			transaction_id: detailParam,
+			item_id: item.id,
+			name: item.name,
+			brand: item.brand ?? '',
+			quantity: item.quantity ?? '',
+			unit: item.unit ?? '',
+			unit_price: item.unit_price ?? '',
+			amount: item.amount,
+			category_id: categoryId,
+			notes: item.notes ?? ''
+		});
+		if (result.type === 'success') toast.success(t('txn.item_saved'));
+	}
+
+	let categorizing = $state(false);
+
+	/** Ask for a category for every item that has none (TXN-27). */
+	async function categorizeItems() {
+		const without = (items: ReadonlyArray<{ category_id: string | null }>) =>
+			items.filter((item) => !item.category_id).length;
+		const before = without(data.detail?.transaction.items ?? []);
+
+		categorizing = true;
+		try {
+			const result = await itemAction('?/categorizeItems', { transaction_id: detailParam });
+			if (result.type !== 'success') return;
+
+			// The model leaves an item it is unsure of empty, so "done" may
+			// have changed nothing, and saying otherwise would be a lie.
+			if (without(data.detail?.transaction.items ?? []) < before) {
+				toast.success(t('txn.items_categorised'));
+			} else {
+				toast.info(t('txn.items_categorised_none'));
+			}
+		} finally {
+			categorizing = false;
+		}
+	}
 
 	// ----------------------------------------------------- the receipt canvas
 
@@ -962,6 +1035,9 @@
 		deletingItem = itemId;
 		deleteItemForm?.requestSubmit();
 	}}
+	onItemCategoryChange={setItemCategory}
+	onCategorizeItems={categorizeItems}
+	{categorizing}
 	onOpenFile={openFile}
 	onAttachmentsChange={setAttachments}
 />
@@ -1011,6 +1087,9 @@
 			<input type="hidden" name="transaction_id" value={detailParam} />
 			{#if itemDialog.item}
 				<input type="hidden" name="item_id" value={itemDialog.item.id} />
+				<!-- A save replaces the item whole: without this the dialog
+				     would clear the category picked on the row. -->
+				<input type="hidden" name="category_id" value={itemDialog.item.category_id ?? ''} />
 			{/if}
 
 			<div class="space-y-4 py-4">

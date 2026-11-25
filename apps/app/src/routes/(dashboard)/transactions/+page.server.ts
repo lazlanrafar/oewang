@@ -291,6 +291,11 @@ export const actions: Actions = {
 			)
 		),
 
+	categorizeItems: async ({ request, locals }) =>
+		run(request, (form) =>
+			ledger.categorizeItems(text(form, 'transaction_id'), locals.accessToken)
+		),
+
 	deleteItem: async ({ request, locals }) =>
 		run(request, (form) =>
 			ledger.deleteItem(
@@ -366,7 +371,11 @@ function receiptItems(form: FormData): ledger.TransactionItemPayload[] {
 			name: typeof entry.name === 'string' ? entry.name : '',
 			quantity: typeof entry.quantity === 'string' ? entry.quantity : null,
 			unit_price: typeof entry.unit_price === 'string' ? entry.unit_price : null,
-			amount: typeof entry.amount === 'string' ? entry.amount : ''
+			amount: typeof entry.amount === 'string' ? entry.amount : '',
+			category_id:
+				typeof entry.category_id === 'string' && entry.category_id !== ''
+					? entry.category_id
+					: null
 		}))
 		.filter((item) => item.amount !== '');
 }

@@ -73,6 +73,10 @@ export type Transaction = {
 	is_exported: boolean;
 	source: 'web' | 'chat' | 'import' | 'receipt';
 	created_at: string;
+	/** How many categories other than its own the row's items span (TXN-26). List rows only. */
+	other_category_count?: number;
+	/** Under a category filter, the part of `amount` in those categories; null when that is all of it (TXN-25). */
+	matched_amount?: string | null;
 };
 
 export type HistoryEntry = {
@@ -407,6 +411,15 @@ export function replaceItem(
 		method: 'PUT',
 		path: `/v1/transactions/${transactionId}/items/${itemId}`,
 		body,
+		token
+	});
+}
+
+/** Fill a category for every item that has none (TXN-27). Answers the whole item list. */
+export function categorizeItems(transactionId: string, token?: string) {
+	return api<TransactionItem[]>({
+		method: 'POST',
+		path: `/v1/transactions/${transactionId}/items/categorize`,
 		token
 	});
 }

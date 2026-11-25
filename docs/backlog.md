@@ -1028,10 +1028,10 @@ Requirements: TXN-27, TXN-29
 ### US-077: Item categories in the web app (OEW-115)
 Requirements: TXN-25, TXN-26, TXN-27
 
-- [ ] `select-category` on each item row in the detail sheet and the receipt confirmation sheet, limited to the transaction's type
-- [ ] "Categorise items" in the detail sheet
-- [ ] The category cell shows "+N"; under a category filter the amount cell shows the matched portion
-- [ ] Every string in `en.json`; `bun run check` and `bun run test` pass in the containers
+- [x] `select-category` on each item row in the detail sheet and the receipt confirmation sheet, limited to the transaction's type
+- [x] "Categorise items" in the detail sheet
+- [x] The category cell shows "+N"; under a category filter the amount cell shows the matched portion
+- [x] Every string in `en.json`; `bun run check` and `bun run test` pass in the containers
 - [ ] Verified locally in the browser: scan a receipt with cigarettes, confirm, see the budget and the overview chart move
 
 ### US-078: Categorised items from chat, MCP and Telegram (OEW-116)

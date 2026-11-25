@@ -24,6 +24,7 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import { getLocalTimeZone } from '@internationalized/date';
 
+	import { Badge } from '../../atoms/badge/index.js';
 	import { Button } from '../../atoms/button/index.js';
 	import { Checkbox } from '../../atoms/checkbox/index.js';
 	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
@@ -58,6 +59,7 @@
 		isZero
 	} from '$lib/money.js';
 	import { cn } from '$lib/utils.js';
+	import { t } from '$lib/i18n';
 
 	let {
 		rows,
@@ -496,7 +498,8 @@
 				</div>
 			{:else if column.key === 'category'}
 				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-				<div class="h-full w-full" onclick={(event) => event.stopPropagation()}>
+				<div class="flex h-full w-full items-center" onclick={(event) => event.stopPropagation()}>
+					<div class="h-full min-w-0 flex-1">
 					<SelectCategory
 						categories={categoryItems}
 						value={categoryOf(row)}
@@ -510,6 +513,18 @@
 						}}
 						inDataTable
 					/>
+					</div>
+					{#if row.otherCategoryCount}
+						<!-- "Groceries +2": the items span that many other
+						     categories (TXN-26). -->
+						<Badge
+							variant="muted"
+							class="mr-2 shrink-0"
+							title={t('txn.other_categories', { count: row.otherCategoryCount })}
+						>
+							+{row.otherCategoryCount}
+						</Badge>
+					{/if}
 				</div>
 			{:else if column.key === 'account'}
 				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
@@ -536,6 +551,15 @@
 					<div class={cn('truncate font-mono', isNegative(row.amount) ? 'text-red' : 'text-green')}>
 						{money(row)}
 					</div>
+					{#if row.matchedAmount}
+						<!-- Under a category filter, the part of the row the
+						     filter counts, beside the whole amount (TXN-25). -->
+						<div class="text-subtle truncate font-mono text-xs">
+							{t('txn.matched_amount', {
+								amount: formatMoney(row.matchedAmount, row.currency, { signed: true })
+							})}
+						</div>
+					{/if}
 					{#if row.originalAmount && row.originalCurrency}
 						<!-- What the user typed, muted beside it (TXN-21). A row
 						     entered in the wallet's own currency shows one line. -->

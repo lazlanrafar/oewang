@@ -30,6 +30,10 @@ export type TransactionRow = {
 	/** Written on a cached rate from another day, so the row is marked (TXN-22). */
 	staleRate?: boolean;
 	staleRateDate?: string;
+	/** How many other categories the row's items span: "Groceries +2" (TXN-26). */
+	otherCategoryCount?: number;
+	/** Under a category filter, the signed part of `amount` that matched (TXN-25). */
+	matchedAmount?: string;
 	note?: string;
 };
 

@@ -23,6 +23,8 @@ export type ReceiptLineItem = {
 	amount: string;
 	quantity: string | null;
 	unit_price: string | null;
+	/** The category the scan proposes for the line, when it is sure of one (TXN-27). */
+	category_id: string | null;
 };
 
 export type ReceiptDraft = {
@@ -186,7 +188,8 @@ function lineItems(value: unknown): ReceiptLineItem[] {
 			name,
 			amount,
 			quantity: optionalDecimal(item.quantity),
-			unit_price: optionalDecimal(item.unit_price)
+			unit_price: optionalDecimal(item.unit_price),
+			category_id: string(item.category_id) || null
 		});
 	}
 
@@ -314,6 +317,8 @@ export type ReceiptFormItem = {
 	quantity: string;
 	unitPrice: string;
 	amount: string;
+	/** Empty when the line has no category of its own. */
+	categoryId: string;
 };
 
 /**
@@ -365,7 +370,11 @@ export function toReceiptForm(
 			name: item.name,
 			quantity: item.quantity ?? '',
 			unitPrice: item.unit_price ?? '',
-			amount: item.amount
+			amount: item.amount,
+			// Only a category this workspace has: the picker could not show another.
+			categoryId: context.categories.some((category) => category.id === item.category_id)
+				? (item.category_id ?? '')
+				: ''
 		}))
 	};
 }

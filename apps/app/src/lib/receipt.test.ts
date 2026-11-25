@@ -104,7 +104,7 @@ describe('parseReceiptResponse', () => {
 		});
 
 		expect(parsed?.draft.line_items).toEqual([
-			{ name: 'Es teh', amount: '8000', quantity: null, unit_price: null }
+			{ name: 'Es teh', amount: '8000', quantity: null, unit_price: null, category_id: null }
 		]);
 	});
 
@@ -205,7 +205,7 @@ describe('matchCategoryId', () => {
 	it('matches a line item when the merchant says nothing', () => {
 		const draft = {
 			merchant: 'Warung Tekko',
-			line_items: [{ name: 'Transport fee', amount: '10000', quantity: null, unit_price: null }]
+			line_items: [{ name: 'Transport fee', amount: '10000', quantity: null, unit_price: null, category_id: null }]
 		};
 
 		expect(matchCategoryId(draft, categories)).toBe('c2');
@@ -215,7 +215,7 @@ describe('matchCategoryId', () => {
 		// The merchant is a statement about the whole receipt; one item is not.
 		const draft = {
 			merchant: 'Food Hall',
-			line_items: [{ name: 'Transport fee', amount: '10000', quantity: null, unit_price: null }]
+			line_items: [{ name: 'Transport fee', amount: '10000', quantity: null, unit_price: null, category_id: null }]
 		};
 
 		expect(matchCategoryId(draft, categories)).toBe('c1');
@@ -337,9 +337,28 @@ describe('toReceiptForm', () => {
 			walletId: 'w2',
 			categoryId: '',
 			items: [
-				{ name: 'Iga bakar', quantity: '1', unitPrice: '45000.0000', amount: '45000.0000' }
+				{
+					name: 'Iga bakar',
+					quantity: '1',
+					unitPrice: '45000.0000',
+					amount: '45000.0000',
+					categoryId: ''
+				}
 			]
 		});
+	});
+
+	it('prefills the category the scan proposed for a line, when the workspace has it (TXN-27)', () => {
+		const withItem = (category_id: unknown) =>
+			parseReceiptResponse({
+				...response,
+				draft: { ...response.draft, line_items: [{ ...response.draft.line_items[0], category_id }] }
+			}) as ParsedReceipt;
+
+		expect(toReceiptForm(withItem('c1'), context).items[0].categoryId).toBe('c1');
+		expect(toReceiptForm(withItem('gone'), context).items[0].categoryId).toBe('');
+		expect(toReceiptForm(withItem(null), context).items[0].categoryId).toBe('');
+		expect(toReceiptForm(withItem(7), context).items[0].categoryId).toBe('');
 	});
 
 	it('preselects a category the merchant matches', () => {
@@ -364,7 +383,7 @@ describe('toReceiptForm', () => {
 				...parsed.draft,
 				subtotal: null,
 				tax: null,
-				line_items: [{ name: 'Es teh', amount: '8000', quantity: null, unit_price: null }]
+				line_items: [{ name: 'Es teh', amount: '8000', quantity: null, unit_price: null, category_id: null }]
 			}
 		};
 
@@ -380,8 +399,8 @@ describe('itemsTotal', () => {
 	it('adds the line amounts without parsing them', () => {
 		expect(
 			itemsTotal([
-				{ name: 'Iga bakar', amount: '45000.0000', quantity: null, unit_price: null },
-				{ name: 'Es teh', amount: '8000.0000', quantity: null, unit_price: null }
+				{ name: 'Iga bakar', amount: '45000.0000', quantity: null, unit_price: null, category_id: null },
+				{ name: 'Es teh', amount: '8000.0000', quantity: null, unit_price: null, category_id: null }
 			])
 		).toBe('53000.0000');
 	});
@@ -392,7 +411,7 @@ describe('itemsTotal', () => {
 });
 
 describe('itemsDisagree', () => {
-	const items = [{ name: 'Iga bakar', amount: '45000', quantity: null, unit_price: null }];
+	const items = [{ name: 'Iga bakar', amount: '45000', quantity: null, unit_price: null, category_id: null }];
 
 	it('notices items that do not reach the total', () => {
 		// A service charge makes this legitimate (TXN-12), so it is a note
