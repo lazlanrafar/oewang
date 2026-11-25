@@ -1040,7 +1040,7 @@ Requirements: TXN-28
 - [x] `create_transaction` takes optional `items` in the Rust and Python catalogs and in MCP; category names resolve as the transaction's does; amounts stay strings (D12, Rust and pytest tests)
 - [x] `get_spending_summary` and `get_budget_status` answer from shares (Rust test)
 - [x] ruff, pytest, clippy and `cargo test` pass in the containers
-- [ ] Verified locally: "belanja Superindo 500rb, 40rb-nya rokok" writes one transaction with one categorised item
+- [x] Verified locally: "belanja Superindo 500rb dari Cash kategori Food, 40rb-nya rokok" writes one transaction with one categorised item (2026-11-25, after blank optional arguments stopped being refused)
 
 ### US-079: Item categories on mobile (OEW-117)
 Requirements: MOB-11

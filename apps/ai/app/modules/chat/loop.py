@@ -217,7 +217,9 @@ async def execute_tool(
     try:
         data = await api.post(TOOLS_EXECUTE_PATH, request)
     except owe1_client.ApiError as error:
-        logger.info("tool %s refused with %s", name, error.code)
+        # Which arguments, never what they held: the names are the schema's
+        # own keys, the values are the user's (OPS-3).
+        logger.info("tool %s refused with %s %s", name, error.code, sorted(error.fields or {}))
         payload = {"ok": False, "error": _error_payload(error)}
         return False, payload, error.message or error.code
     except owe1_client.ClientError as error:
@@ -285,7 +287,6 @@ def _assistant_content(message: Any) -> tuple[list[dict[str, Any]], bool]:
             )
 
     return blocks, screened
-
 
 
 async def run_turn(

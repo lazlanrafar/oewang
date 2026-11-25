@@ -716,14 +716,18 @@ impl<'a> Reader<'a> {
         })
     }
 
-    /// The raw value, or `None` when the key is absent or explicitly null.
+    /// The raw value, or `None` when the key is absent, null or a blank
+    /// string.
     ///
-    /// A model that fills every parameter with `null` is asking for the
-    /// default, not for a validation error.
+    /// A model that fills every parameter with `null` or `""` is asking for
+    /// the default, not for a validation error. Refusing `to_amount: ""` on
+    /// an expense sent a weaker model round the refusals until the turn's
+    /// write cap. A required argument left blank still fails its `require`.
     fn get(&mut self, name: &'static str) -> Option<&'a Value> {
         self.seen.push(name);
         match self.fields.and_then(|fields| fields.get(name)) {
             None | Some(Value::Null) => None,
+            Some(Value::String(raw)) if raw.trim().is_empty() => None,
             Some(value) => Some(value),
         }
     }
@@ -765,15 +769,7 @@ impl<'a> Reader<'a> {
 
     /// An identifier, which is a string with a tighter bound. Nothing is
     /// looked up here; an id that does not exist is the service's answer.
-    ///
-    /// A blank id is how a model leaves an optional one out, so it reads as
-    /// absent; a required id still fails its `require`.
     fn id(&mut self, name: &'static str) -> Option<String> {
-        if let Some(Value::String(raw)) = self.get(name) {
-            if raw.trim().is_empty() {
-                return None;
-            }
-        }
         let value = self.text(name)?;
         if value.chars().count() > MAX_ID {
             self.reject(name, "That is not an id.");
@@ -1018,6 +1014,8 @@ impl<'a> Reader<'a> {
             // a line item that silently lost its count is a wrong receipt.
             let quantity: std::result::Result<Option<Decimal>, ()> = match fields.get("quantity") {
                 None | Some(Value::Null) => Ok(None),
+                // Blank is absent, as it is for the call's own arguments.
+                Some(Value::String(raw)) if raw.trim().is_empty() => Ok(None),
                 Some(Value::String(raw)) => Decimal::from_str(raw.trim()).map(Some).map_err(|_| ()),
                 Some(_) => Err(()),
             };
@@ -1211,6 +1209,35 @@ mod tests {
         let missing =
             fields(parse(Tool::PayDebt, json!({ "debt_id": " ", "amount": "10" })).unwrap_err());
         assert_eq!(missing["debt_id"], "This argument is required.");
+    }
+
+    #[test]
+    fn should_read_blank_optional_arguments_as_absent() {
+        // What a model that fills every parameter sends for an expense.
+        let call = parse(
+            Tool::CreateTransaction,
+            json!({
+                "type": "expense", "amount": "25000", "wallet_id": "w_cash",
+                "to_amount": "", "to_wallet_id": " ", "description": " ", "date": "",
+                "items": [{ "name": "rokok", "amount": "40000", "quantity": "" }]
+            }),
+        )
+        .unwrap();
+        let ToolCall::CreateTransaction(args) = call else {
+            panic!("wrong variant")
+        };
+        assert_eq!(args.to_amount, None);
+        assert_eq!(args.description, None);
+        assert_eq!(args.items[0].quantity, None);
+
+        let missing = fields(
+            parse(
+                Tool::CreateTransaction,
+                json!({ "type": "expense", "amount": "", "wallet_id": "w_cash" }),
+            )
+            .unwrap_err(),
+        );
+        assert_eq!(missing["amount"], "This argument is required.");
     }
 
     #[test]
