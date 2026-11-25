@@ -520,7 +520,8 @@ pub async fn email_is_member(
 }
 
 /// The lookup every authenticated write performs, which is why the index is
-/// led by `user_id` rather than `workspace_id`.
+/// led by `user_id` rather than `workspace_id`. A deleted workspace has no
+/// members, so a token minted before the delete stops working with it.
 pub async fn find_membership(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
@@ -530,7 +531,9 @@ pub async fn find_membership(
         MembershipRow,
         r#"SELECT workspace_id, user_id, role
            FROM user_workspaces
-           WHERE workspace_id = $1 AND user_id = $2 AND deleted_at IS NULL"#,
+           WHERE workspace_id = $1 AND user_id = $2 AND deleted_at IS NULL
+             AND EXISTS (SELECT 1 FROM workspaces w
+                         WHERE w.id = user_workspaces.workspace_id AND w.deleted_at IS NULL)"#,
         workspace_id,
         user_id
     )

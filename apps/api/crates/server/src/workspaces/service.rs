@@ -71,6 +71,26 @@ pub async fn change_role(
     tx.commit().await.map_err(internal)
 }
 
+/// Soft-delete the workspace (OPS-2). Every member loses it at once: the
+/// membership lookup every authenticated call makes refuses a deleted one.
+pub async fn delete(pool: &PgPool, actor: Actor<'_>) -> Result<()> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    accounts::soft_delete_workspace(&mut *tx, actor.workspace_id)
+        .await
+        .map_err(internal)?;
+    log(
+        &mut tx,
+        actor,
+        "workspace.deleted",
+        "workspace",
+        actor.workspace_id,
+        None,
+        None,
+    )
+    .await?;
+    tx.commit().await.map_err(internal)
+}
+
 pub async fn remove(
     pool: &PgPool,
     actor: Actor<'_>,

@@ -51,7 +51,7 @@ HS256, signed with `JWT_SECRET` (at least 32 characters, validated at startup).
 | `exp` | Expiry. 15 minutes (D38) |
 | `jti` | Token ID, logged on issue so a session can be traced |
 
-**`role` is a snapshot.** If an owner demotes a member while that member holds a live token, the old role stays in the token until it expires or is refreshed. For write-sensitive operations the API re-reads the membership row, so a demotion takes effect immediately on writes. Read endpoints accept the snapshot. This is the deliberate trade: one database read on every write, none on every read.
+**`role` is a snapshot.** If an owner demotes a member while that member holds a live token, the old role stays in the token until it expires or is refreshed. For write-sensitive operations the API re-reads the membership row, so a demotion takes effect immediately on writes. Read endpoints accept the snapshot. This is the deliberate trade: one database read on every write, none on every read. A membership in a soft-deleted workspace is not live, so deleting a workspace (owner only, one transaction with its `workspace.deleted` audit row) stops every member's writes, refreshes and switches into it at once.
 
 ## The session cookies
 
@@ -196,7 +196,7 @@ A row that exists in another workspace returns 404, never 403 (VLT-4). A 403 wou
 `POST /v1/auth/switch-workspace` with a target workspace ID:
 
 1. Read the live membership row for `(user_id, workspace_id)`.
-2. No live row, or a soft-deleted one: `NOT_A_MEMBER`.
+2. No live row, a soft-deleted one, or a deleted workspace: `NOT_A_MEMBER`.
 3. Issue a new token with the new `wid` and the role from that row.
 4. SvelteKit replaces the cookie.
 
