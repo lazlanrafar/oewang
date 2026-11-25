@@ -49,6 +49,9 @@ pub enum AppError {
     /// An operator suspended this workspace (CSL-5).
     #[error("this workspace is suspended")]
     WorkspaceSuspended,
+    /// A console role still held by an operator cannot be deleted (CSL-12).
+    #[error("this console role is still held by an operator")]
+    ConsoleRoleInUse,
 
     // -- validation and general
     #[error("validation failed")]
@@ -217,6 +220,7 @@ impl AppError {
             ConsoleForbidden => "CONSOLE_FORBIDDEN",
             UserDisabled => "USER_DISABLED",
             WorkspaceSuspended => "WORKSPACE_SUSPENDED",
+            ConsoleRoleInUse => "CONSOLE_ROLE_IN_USE",
             ResetTokenInvalid => "RESET_TOKEN_INVALID",
             Validation(_) => "VALIDATION_FAILED",
             MalformedRequest => "MALFORMED_REQUEST",
@@ -293,6 +297,7 @@ impl AppError {
             | ConfirmationRequired(_)
             | ToolCapExceeded
             | ToolCallInProgress
+            | ConsoleRoleInUse
             | IdTaken
             | Stale(_)
             | ContactHasDebts
@@ -344,6 +349,7 @@ impl AppError {
             LastOwner => "Promote another member to owner first.",
             NoWorkspace => "Create a workspace or accept an invitation, then switch into it.",
             UserDisabled | WorkspaceSuspended => "Contact oewang support.",
+            ConsoleRoleInUse => "Move its operators to another role first.",
             McpTokenInvalid => "Create a new token in Account, MCP, or connect again.",
             WorkspaceIdNotAllowed => "Drop workspace_id; switch workspace to act in another one.",
             Validation(_) | ToolArgsInvalid(_) => "Fix the listed fields and try again.",
@@ -488,6 +494,7 @@ mod tests {
             AppError::ConsoleForbidden,
             AppError::UserDisabled,
             AppError::WorkspaceSuspended,
+            AppError::ConsoleRoleInUse,
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,
@@ -550,7 +557,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 70);
+        assert_eq!(samples.len(), 71);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

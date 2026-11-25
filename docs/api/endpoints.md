@@ -586,6 +586,14 @@ The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, 
 | GET | `/v1/console/overview` | `console.read` | `{ users: { total, new_7d }, workspaces: { total, active, suspended, deleted }, feedback_open, tokens_month: { input, output }, signups_by_week: [{ week_start, count }] }`, twelve ISO weeks in UTC, oldest first, empty weeks included (CSL-10) |
 | GET | `/v1/console/usage` | `console.read` | `month` `YYYY-MM`, the current month in UTC when absent. `{ month, totals: { input, output, calls }, by_workspace: [{ workspace_id, workspace_name, input, output, calls }] (top 50), by_model: [{ model, ... }], by_feature: [{ feature, ... }] }`, each by tokens descending. Tokens, never money (CSL-9) |
 | GET | `/v1/console/health` | `console.read` | `{ receipt_jobs: { pending, failed_24h, failed_7d }, ai_calls_by_day: [{ day, calls, input, output }] }`, fourteen UTC days, oldest first, empty days included (CSL-10) |
+| GET | `/v1/console/roles` | `console.roles.manage` or `console.operators.manage` | Live roles: `[{ id, name, description, is_system, permissions, operators, created_at }]`, the system role first (CSL-12) |
+| POST | `/v1/console/roles` | `console.roles.manage` | `{ name, description?, permissions: string[] }`. 201 with the role. A permission the caller does not hold: `CONSOLE_FORBIDDEN`. Name 1 to 60 characters, unique among live roles. Audited `role.created` |
+| PATCH | `/v1/console/roles/{id}` | `console.roles.manage` | `{ name?, description?, permissions? }`; `permissions` replaces the set. Refused for a system role and for the role the caller holds (`VALIDATION_FAILED`, `fields.role`), and `CONSOLE_FORBIDDEN` when the role holds or would hold a permission the caller does not. Audited `role.updated` |
+| DELETE | `/v1/console/roles/{id}` | `console.roles.manage` | 204. Soft. A system role: `VALIDATION_FAILED`; a role someone holds: `CONSOLE_ROLE_IN_USE`. Audited `role.deleted` |
+| GET | `/v1/console/operators` | `console.operators.manage` | `[{ user_id, email, name, role_id, role_name, last_active_at }]` (CSL-11) |
+| PUT | `/v1/console/operators/{user_id}` | `console.operators.manage` | `{ role_id }`: grant or change a registered user's role. Returns the operator row. Refused for oneself and for a disabled user (`VALIDATION_FAILED`), `CONSOLE_FORBIDDEN` when either the old or the new role holds a permission the caller does not, `LAST_OWNER` when it would leave no owner. Audited `operator.granted` / `operator.changed` |
+| DELETE | `/v1/console/operators/{user_id}` | `console.operators.manage` | 204. Revokes the role, with the same guards. Audited `operator.revoked` |
+| GET | `/v1/console/audit` | `console.audit.read` | Paged, newest first: `[{ id, operator_id, operator_email, action, entity, entity_id, before, after, created_at }]` (CSL-14) |
 
 ## Internal
 

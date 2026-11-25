@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 196 with test evidence
+- 198 with test evidence
 - 29 verified in browser only
-- 16 not done
+- 14 not done
 
 | ID | Evidence |
 |---|---|
@@ -85,8 +85,8 @@ in browser" box ticked; or a written reason it is not done.
 | CSL-8 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-9 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-10 | `apps/api/crates/server/src/console/tests.rs` |
-| CSL-11 | not done: planned in US-085 (epic OEW-123), not built yet |
-| CSL-12 | not done: planned in US-085 (epic OEW-123), not built yet |
+| CSL-11 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-12 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-13 | `apps/api/crates/server/src/console/tests.rs` |
 | CSL-14 | `apps/api/crates/server/src/console/tests.rs` |
 | DEBT-1 | `apps/api/crates/server/src/debts/tests.rs` |

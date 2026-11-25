@@ -708,3 +708,244 @@ pub async fn ai_calls_by_day(executor: impl PgExecutor<'_>) -> Result<Vec<DayUsa
     .fetch_all(executor)
     .await
 }
+
+// ------------------------------------------------------ roles, operators
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct RoleRow {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_system: bool,
+    pub permissions: Vec<String>,
+    /// How many people hold it.
+    pub operators: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+const ROLE_SELECT: &str = "SELECT r.id, r.name, r.description, r.is_system,
+        COALESCE((SELECT array_agg(p.permission ORDER BY p.permission)
+                    FROM console_role_permissions p WHERE p.role_id = r.id), '{}') AS permissions,
+        (SELECT count(*) FROM users u WHERE u.console_role_id = r.id) AS operators,
+        r.created_at
+   FROM console_roles r
+  WHERE r.deleted_at IS NULL";
+
+pub async fn list_roles(executor: impl PgExecutor<'_>) -> Result<Vec<RoleRow>, sqlx::Error> {
+    sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "{ROLE_SELECT} ORDER BY r.is_system DESC, lower(r.name)"
+    )))
+    .fetch_all(executor)
+    .await
+}
+
+pub async fn find_role(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<RoleRow>, sqlx::Error> {
+    sqlx::query_as(sqlx::AssertSqlSafe(format!("{ROLE_SELECT} AND r.id = $1")))
+        .bind(id)
+        .fetch_optional(executor)
+        .await
+}
+
+/// Lock a live role: `is_system`, none when it does not exist.
+pub async fn lock_role(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<bool>, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT is_system FROM console_roles WHERE id = $1 AND deleted_at IS NULL FOR UPDATE",
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await
+}
+
+/// True when a live role already has this name (case-insensitive).
+pub async fn role_name_taken(
+    executor: impl PgExecutor<'_>,
+    name: &str,
+    except_id: Option<&str>,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM console_roles
+                         WHERE lower(name) = lower($1) AND deleted_at IS NULL
+                           AND ($2::text IS NULL OR id <> $2))",
+    )
+    .bind(name)
+    .bind(except_id)
+    .fetch_one(executor)
+    .await
+}
+
+pub async fn insert_role(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    name: &str,
+    description: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("INSERT INTO console_roles (id, name, description) VALUES ($1, $2, $3)")
+        .bind(id)
+        .bind(name)
+        .bind(description)
+        .execute(executor)
+        .await
+        .map(|_| ())
+}
+
+pub async fn update_role(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    name: &str,
+    description: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE console_roles SET name = $2, description = $3, updated_at = now() WHERE id = $1",
+    )
+    .bind(id)
+    .bind(name)
+    .bind(description)
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+/// Replace a role's permissions with this set.
+pub async fn set_role_permissions(
+    executor: &mut sqlx::PgConnection,
+    id: &str,
+    permissions: &[String],
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM console_role_permissions WHERE role_id = $1")
+        .bind(id)
+        .execute(&mut *executor)
+        .await?;
+    sqlx::query(
+        "INSERT INTO console_role_permissions (role_id, permission)
+         SELECT $1, unnest($2::text[])",
+    )
+    .bind(id)
+    .bind(permissions)
+    .execute(&mut *executor)
+    .await
+    .map(|_| ())
+}
+
+pub async fn soft_delete_role(executor: impl PgExecutor<'_>, id: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE console_roles SET deleted_at = now(), updated_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(executor)
+        .await
+        .map(|_| ())
+}
+
+pub async fn role_holders(
+    executor: impl PgExecutor<'_>,
+    role_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar("SELECT count(*) FROM users WHERE console_role_id = $1")
+        .bind(role_id)
+        .fetch_one(executor)
+        .await
+}
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct OperatorListRow {
+    pub user_id: String,
+    pub email: String,
+    pub name: Option<String>,
+    pub role_id: String,
+    pub role_name: String,
+    pub last_active_at: Option<DateTime<Utc>>,
+}
+
+pub async fn list_operators(
+    executor: impl PgExecutor<'_>,
+) -> Result<Vec<OperatorListRow>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT u.id AS user_id, u.email, u.name, r.id AS role_id, r.name AS role_name,
+                (SELECT max(t.created_at) FROM refresh_tokens t WHERE t.user_id = u.id)
+                  AS last_active_at
+           FROM users u
+           JOIN console_roles r ON r.id = u.console_role_id
+          ORDER BY lower(u.email)",
+    )
+    .fetch_all(executor)
+    .await
+}
+
+/// Lock a user for a role change: `(console_role_id, disabled)`.
+pub async fn lock_operator(
+    executor: impl PgExecutor<'_>,
+    user_id: &str,
+) -> Result<Option<(Option<String>, bool)>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT console_role_id, disabled_at IS NOT NULL FROM users WHERE id = $1 FOR UPDATE",
+    )
+    .bind(user_id)
+    .fetch_optional(executor)
+    .await
+}
+
+pub async fn set_console_role(
+    executor: impl PgExecutor<'_>,
+    user_id: &str,
+    role_id: Option<&str>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE users SET console_role_id = $2, updated_at = now() WHERE id = $1")
+        .bind(user_id)
+        .bind(role_id)
+        .execute(executor)
+        .await
+        .map(|_| ())
+}
+
+/// How many people hold the system owner role, the rows locked so two
+/// revocations cannot both see a second owner.
+pub async fn lock_owners(executor: impl PgExecutor<'_>) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT id FROM users WHERE console_role_id = 'owner' ORDER BY id FOR UPDATE",
+    )
+    .fetch_all(executor)
+    .await
+    .map(|rows| rows.len() as i64)
+}
+
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct OperatorAuditRow {
+    pub id: String,
+    pub operator_id: String,
+    pub operator_email: String,
+    pub action: String,
+    pub entity: String,
+    pub entity_id: String,
+    pub before: Option<serde_json::Value>,
+    pub after: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+}
+
+pub async fn list_operator_audit(
+    executor: impl PgExecutor<'_>,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<OperatorAuditRow>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT a.id, a.operator_id, u.email AS operator_email, a.action, a.entity,
+                a.entity_id, a.before, a.after, a.created_at
+           FROM operator_audit a
+           JOIN users u ON u.id = a.operator_id
+          ORDER BY a.created_at DESC, a.id
+          LIMIT $1 OFFSET $2",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(executor)
+    .await
+}
+
+pub async fn count_operator_audit(executor: impl PgExecutor<'_>) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar("SELECT count(*) FROM operator_audit")
+        .fetch_one(executor)
+        .await
+}

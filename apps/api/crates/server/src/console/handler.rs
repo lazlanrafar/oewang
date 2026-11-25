@@ -402,3 +402,183 @@ pub async fn health(
         Err(error) => Err(ApiError::new(error, request_id.0)),
     }
 }
+
+// ------------------------------------------------------ roles, operators
+
+/// `GET /v1/console/roles` (CSL-11, CSL-12). Either management permission:
+/// the operators screen picks a role from this list.
+pub async fn roles(
+    State(state): State<AppState>,
+    operator: Operator,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<Vec<oewang_db::repositories::console::RoleRow>>>, ApiError> {
+    if !operator.can(ConsolePermission::RolesManage) {
+        operator.require(ConsolePermission::OperatorsManage)?;
+    }
+    match service::roles(&state.db).await {
+        Ok(rows) => Ok(Json(Envelope::data(rows, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RoleBody {
+    pub name: String,
+    pub description: Option<String>,
+    #[serde(default)]
+    pub permissions: Vec<String>,
+}
+
+/// `POST /v1/console/roles` (CSL-12).
+pub async fn create_role(
+    State(state): State<AppState>,
+    operator: Operator,
+    request_id: RequestId,
+    Json(body): Json<RoleBody>,
+) -> std::result::Result<
+    (
+        axum::http::StatusCode,
+        Json<Envelope<oewang_db::repositories::console::RoleRow>>,
+    ),
+    ApiError,
+> {
+    operator.require(ConsolePermission::RolesManage)?;
+    match service::create_role(
+        &state.db,
+        &operator,
+        &body.name,
+        body.description.as_deref(),
+        &body.permissions,
+    )
+    .await
+    {
+        Ok(row) => Ok((
+            axum::http::StatusCode::CREATED,
+            Json(Envelope::data(row, request_id.0)),
+        )),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RolePatch {
+    pub name: Option<String>,
+    #[serde(default, deserialize_with = "crate::contacts::handler::explicit_null")]
+    pub description: Option<Option<String>>,
+    pub permissions: Option<Vec<String>>,
+}
+
+/// `PATCH /v1/console/roles/{id}` (CSL-12).
+pub async fn update_role(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(role_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<RolePatch>,
+) -> std::result::Result<Json<Envelope<oewang_db::repositories::console::RoleRow>>, ApiError> {
+    operator.require(ConsolePermission::RolesManage)?;
+    match service::update_role(
+        &state.db,
+        &operator,
+        &role_id,
+        body.name.as_deref(),
+        body.description.as_ref().map(|text| text.as_deref()),
+        body.permissions.as_deref(),
+    )
+    .await
+    {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `DELETE /v1/console/roles/{id}` (CSL-12).
+pub async fn delete_role(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(role_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<axum::http::StatusCode, ApiError> {
+    operator.require(ConsolePermission::RolesManage)?;
+    match service::delete_role(&state.db, &operator, &role_id).await {
+        Ok(()) => Ok(axum::http::StatusCode::NO_CONTENT),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `GET /v1/console/operators` (CSL-11).
+pub async fn operators(
+    State(state): State<AppState>,
+    operator: Operator,
+    request_id: RequestId,
+) -> std::result::Result<
+    Json<Envelope<Vec<oewang_db::repositories::console::OperatorListRow>>>,
+    ApiError,
+> {
+    operator.require(ConsolePermission::OperatorsManage)?;
+    match service::operators(&state.db).await {
+        Ok(rows) => Ok(Json(Envelope::data(rows, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GrantBody {
+    pub role_id: String,
+}
+
+/// `PUT /v1/console/operators/{user_id}` (CSL-11): grant or change a role.
+pub async fn grant(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(user_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<GrantBody>,
+) -> std::result::Result<
+    Json<Envelope<Option<oewang_db::repositories::console::OperatorListRow>>>,
+    ApiError,
+> {
+    operator.require(ConsolePermission::OperatorsManage)?;
+    match service::set_operator_role(&state.db, &operator, &user_id, Some(&body.role_id)).await {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `DELETE /v1/console/operators/{user_id}` (CSL-11): revoke the role.
+pub async fn revoke(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(user_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<axum::http::StatusCode, ApiError> {
+    operator.require(ConsolePermission::OperatorsManage)?;
+    match service::set_operator_role(&state.db, &operator, &user_id, None).await {
+        Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PageQuery {
+    pub page: Option<u32>,
+    pub per_page: Option<u32>,
+}
+
+/// `GET /v1/console/audit` (CSL-14).
+pub async fn audit(
+    State(state): State<AppState>,
+    operator: Operator,
+    Query(query): Query<PageQuery>,
+    request_id: RequestId,
+) -> std::result::Result<
+    Json<Envelope<Vec<oewang_db::repositories::console::OperatorAuditRow>>>,
+    ApiError,
+> {
+    operator.require(ConsolePermission::AuditRead)?;
+    let page = Page::new(query.page, query.per_page);
+    let result = service::operator_audit(&state.db, page)
+        .await
+        .map(|(rows, total)| (rows, total, page));
+    paged(result, request_id.0)
+}

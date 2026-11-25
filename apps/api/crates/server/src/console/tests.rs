@@ -588,3 +588,179 @@ async fn should_count_the_overview_usage_and_health(pool: PgPool) {
     assert_eq!(health.ai_calls_by_day.last().unwrap().calls, 3);
     assert_eq!(health.receipt_jobs.failed_7d, 0);
 }
+
+// ------------------------------------------------------ roles, operators
+
+async fn person(pool: &PgPool, id: &str, role: Option<&str>) {
+    sqlx::query(
+        "INSERT INTO users (id, email, password_hash, console_role_id)
+         VALUES ($1, $1 || '@example.com', 'x', $2)",
+    )
+    .bind(id)
+    .bind(role)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+async fn as_operator(pool: &PgPool, id: &str) -> Operator {
+    Operator::new(service::operator(pool, id).await.unwrap(), "req".into())
+}
+
+fn permission_keys(permissions: &[ConsolePermission]) -> Vec<String> {
+    permissions.iter().map(|p| p.key().to_string()).collect()
+}
+
+/// CSL-12: roles are made, edited and deleted within what the editor holds.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_manage_roles_within_what_the_operator_holds(pool: PgPool) {
+    use ConsolePermission::*;
+    person(&pool, "usr_owner", Some("owner")).await;
+    person(&pool, "usr_support", Some("support")).await;
+    let owner = as_operator(&pool, "usr_owner").await;
+    let support = as_operator(&pool, "usr_support").await;
+
+    let role = service::create_role(
+        &pool,
+        &owner,
+        " Analyst ",
+        None,
+        &permission_keys(&[Read, AuditRead]),
+    )
+    .await
+    .unwrap();
+    assert_eq!(role.name, "Analyst");
+    assert_eq!(role.permissions, ["console.audit.read", "console.read"]);
+
+    // Support does not hold suspend, so it cannot put it in a role.
+    let error = service::create_role(
+        &pool,
+        &support,
+        "Wide",
+        None,
+        &permission_keys(&[WorkspacesSuspend]),
+    )
+    .await
+    .unwrap_err();
+    assert!(matches!(error, AppError::ConsoleForbidden), "{error:?}");
+    let error = service::create_role(&pool, &owner, "analyst", None, &[])
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(error, AppError::Validation(_)),
+        "a duplicate name: {error:?}"
+    );
+
+    let edited = service::update_role(
+        &pool,
+        &owner,
+        &role.id,
+        None,
+        None,
+        Some(&permission_keys(&[Read])),
+    )
+    .await
+    .unwrap();
+    assert_eq!(edited.permissions, ["console.read"]);
+
+    for (who, id) in [(&owner, "owner"), (&support, "support")] {
+        let error = service::update_role(&pool, who, id, Some("Renamed"), None, None)
+            .await
+            .unwrap_err();
+        assert!(matches!(error, AppError::Validation(_)), "{id}: {error:?}");
+    }
+
+    let error = service::delete_role(&pool, &owner, "support")
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::ConsoleRoleInUse), "{error:?}");
+    service::delete_role(&pool, &owner, &role.id).await.unwrap();
+    assert!(service::roles(&pool)
+        .await
+        .unwrap()
+        .iter()
+        .all(|r| r.id != role.id));
+
+    let actions: Vec<String> = operator_audit(&pool)
+        .await
+        .into_iter()
+        .map(|(a, _)| a)
+        .collect();
+    assert_eq!(actions, ["role.created", "role.updated", "role.deleted"]);
+}
+
+/// CSL-11: grant, change and revoke, never one's own, never above one's
+/// own, never the last owner.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_grant_and_revoke_operators_with_the_guards(pool: PgPool) {
+    use ConsolePermission::*;
+    person(&pool, "usr_owner", Some("owner")).await;
+    person(&pool, "usr_lead", None).await;
+    person(&pool, "usr_staff", None).await;
+    let owner = as_operator(&pool, "usr_owner").await;
+
+    // Nobody changes their own role.
+    let error = service::set_operator_role(&pool, &owner, "usr_owner", None)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+
+    // A lead with every permission but not the owner role.
+    let all = service::create_role(
+        &pool,
+        &owner,
+        "Lead",
+        None,
+        &permission_keys(&ConsolePermission::ALL),
+    )
+    .await
+    .unwrap();
+    let row = service::set_operator_role(&pool, &owner, "usr_lead", Some(&all.id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.role_name, "Lead");
+    let lead = as_operator(&pool, "usr_lead").await;
+
+    // The lead cannot take the only owner's role away.
+    let error = service::set_operator_role(&pool, &lead, "usr_owner", None)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::LastOwner), "{error:?}");
+
+    // A support operator cannot grant a role wider than support.
+    service::set_operator_role(&pool, &owner, "usr_staff", Some("support"))
+        .await
+        .unwrap();
+    let support_lead = {
+        sqlx::query("UPDATE users SET console_role_id = 'support' WHERE id = 'usr_lead'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        as_operator(&pool, "usr_lead").await
+    };
+    assert!(!support_lead.can(OperatorsManage));
+    let error = service::set_operator_role(&pool, &support_lead, "usr_staff", Some("owner"))
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::ConsoleForbidden), "{error:?}");
+
+    service::set_operator_role(&pool, &owner, "usr_staff", None)
+        .await
+        .unwrap();
+    let operators = service::operators(&pool).await.unwrap();
+    assert!(operators.iter().all(|row| row.user_id != "usr_staff"));
+
+    let actions: Vec<String> = operator_audit(&pool)
+        .await
+        .into_iter()
+        .map(|(a, _)| a)
+        .collect();
+    assert!(actions.contains(&"operator.granted".to_string()));
+    assert!(actions.contains(&"operator.revoked".to_string()));
+    let (rows, total) = service::operator_audit(&pool, oewang_domain::Page::new(None, None))
+        .await
+        .unwrap();
+    assert_eq!(rows.len() as i64, total);
+    assert_eq!(rows[0].operator_email, "usr_owner@example.com");
+}

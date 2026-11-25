@@ -74,6 +74,16 @@ Repeating an action changes nothing and writes no audit row. The buttons sit in 
 - **Usage.** One calendar month in UTC, `?month=YYYY-MM`: totals, the top fifty workspaces, and each model and feature, in tokens. A price per token would need a table kept in step with every provider, so money is out (CSL-9).
 - **Health.** Receipt jobs waiting and failed, and model calls per day for fourteen days, from the database. Errors and deploys stay in Sentry and Coolify; the page links to them when `CONSOLE_SENTRY_URL` and `CONSOLE_COOLIFY_URL` are set.
 
+## Operators and roles (CSL-11, CSL-12, D125)
+
+Three rules keep the roles from being a way up:
+
+- **Nobody hands out what they do not hold.** A role is created or edited only with permissions the editor holds, an existing role is edited only when the editor holds all of it, and a role is granted to, or taken from, a person only when the granter holds all of that role.
+- **Nobody changes their own role**, neither by reassigning themselves nor by editing the role they hold.
+- **There is always an owner.** `owner` is a system role that cannot be edited or deleted, and the last person holding it cannot lose it.
+
+A role somebody holds cannot be deleted (`CONSOLE_ROLE_IN_USE`); deleting is soft, so the audit trail can still name it. A disabled user is enabled before being made an operator. Every change is an `operator_audit` row, and owners read the trail on the operator audit screen.
+
 ## Screens
 
 | Screen | Permission | Story |

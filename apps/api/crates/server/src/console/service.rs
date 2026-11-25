@@ -8,9 +8,11 @@ use oewang_db::repositories::{
     usage,
     vault::{self, StorageUsage},
 };
-use oewang_domain::{AppError, Page, Result};
+use oewang_domain::{AppError, ConsolePermission, Page, Result};
 use serde::Serialize;
 use sqlx::PgPool;
+
+use crate::console::operator::Operator;
 
 /// The user's console role, or CONSOLE_FORBIDDEN when they hold none.
 pub async fn operator(pool: &PgPool, user_id: &str) -> Result<OperatorRow> {
@@ -562,4 +564,320 @@ pub async fn health(pool: &PgPool) -> Result<Health> {
         receipt_jobs: console::receipt_job_counts(pool).await.map_err(internal)?,
         ai_calls_by_day: console::ai_calls_by_day(pool).await.map_err(internal)?,
     })
+}
+
+// ------------------------------------------------------ roles, operators
+
+fn parse_permissions(keys: &[String]) -> Result<Vec<ConsolePermission>> {
+    let mut parsed = keys
+        .iter()
+        .map(|key| {
+            ConsolePermission::parse(key)
+                .ok_or_else(|| AppError::validation([("permissions", "Unknown permission.")]))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    parsed.sort();
+    parsed.dedup();
+    Ok(parsed)
+}
+
+/// Nobody hands out what they do not hold (CSL-11, CSL-12).
+fn ensure_held(operator: &Operator, wanted: &[ConsolePermission]) -> Result<()> {
+    if wanted.iter().all(|permission| operator.can(*permission)) {
+        Ok(())
+    } else {
+        Err(AppError::ConsoleForbidden)
+    }
+}
+
+fn keys_of(role: &console::RoleRow) -> Result<Vec<ConsolePermission>> {
+    parse_permissions(&role.permissions)
+}
+
+fn role_fields<'a>(
+    name: &'a str,
+    description: Option<&'a str>,
+) -> Result<(&'a str, Option<&'a str>)> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().count() > 60 {
+        return Err(AppError::validation([("name", "Use 1 to 60 characters.")]));
+    }
+    let description = description.map(str::trim).filter(|text| !text.is_empty());
+    if description.is_some_and(|text| text.chars().count() > 200) {
+        return Err(AppError::validation([(
+            "description",
+            "A description can be at most 200 characters.",
+        )]));
+    }
+    Ok((name, description))
+}
+
+pub async fn roles(pool: &PgPool) -> Result<Vec<console::RoleRow>> {
+    console::list_roles(pool).await.map_err(internal)
+}
+
+/// Create a role (CSL-12).
+pub async fn create_role(
+    pool: &PgPool,
+    operator: &Operator,
+    name: &str,
+    description: Option<&str>,
+    permissions: &[String],
+) -> Result<console::RoleRow> {
+    let (name, description) = role_fields(name, description)?;
+    let wanted = parse_permissions(permissions)?;
+    ensure_held(operator, &wanted)?;
+    let keys: Vec<String> = wanted.iter().map(|p| p.key().to_string()).collect();
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    if console::role_name_taken(&mut *tx, name, None)
+        .await
+        .map_err(internal)?
+    {
+        return Err(AppError::validation([(
+            "name",
+            "Another role has this name.",
+        )]));
+    }
+    let id = cuid2::create_id();
+    console::insert_role(&mut *tx, &id, name, description)
+        .await
+        .map_err(internal)?;
+    console::set_role_permissions(&mut tx, &id, &keys)
+        .await
+        .map_err(internal)?;
+    let after = console::find_role(&mut *tx, &id).await.map_err(internal)?;
+    audit(
+        &mut tx,
+        &operator.user_id,
+        "role.created",
+        "console_role",
+        &id,
+        None,
+        snapshot(&after)?,
+    )
+    .await?;
+    tx.commit().await.map_err(internal)?;
+    after.ok_or(AppError::NotFound)
+}
+
+/// Edit a role (CSL-12). Absent fields are left alone. System roles are
+/// fixed, and nobody edits the role they hold, so no one widens their own.
+pub async fn update_role(
+    pool: &PgPool,
+    operator: &Operator,
+    id: &str,
+    name: Option<&str>,
+    description: Option<Option<&str>>,
+    permissions: Option<&[String]>,
+) -> Result<console::RoleRow> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let is_system = console::lock_role(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    if is_system {
+        return Err(AppError::validation([(
+            "role",
+            "A system role cannot be changed.",
+        )]));
+    }
+    if operator.role_id == id {
+        return Err(AppError::validation([(
+            "role",
+            "Another operator changes the role you hold.",
+        )]));
+    }
+    let before = console::find_role(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    // Editing a role is handing out what it holds afterwards.
+    ensure_held(operator, &keys_of(&before)?)?;
+
+    let (name, description) = role_fields(
+        name.unwrap_or(&before.name),
+        description.unwrap_or(before.description.as_deref()),
+    )?;
+    if console::role_name_taken(&mut *tx, name, Some(id))
+        .await
+        .map_err(internal)?
+    {
+        return Err(AppError::validation([(
+            "name",
+            "Another role has this name.",
+        )]));
+    }
+    console::update_role(&mut *tx, id, name, description)
+        .await
+        .map_err(internal)?;
+    if let Some(permissions) = permissions {
+        let wanted = parse_permissions(permissions)?;
+        ensure_held(operator, &wanted)?;
+        let keys: Vec<String> = wanted.iter().map(|p| p.key().to_string()).collect();
+        console::set_role_permissions(&mut tx, id, &keys)
+            .await
+            .map_err(internal)?;
+    }
+    let after = console::find_role(&mut *tx, id).await.map_err(internal)?;
+    audit(
+        &mut tx,
+        &operator.user_id,
+        "role.updated",
+        "console_role",
+        id,
+        snapshot(&before)?,
+        snapshot(&after)?,
+    )
+    .await?;
+    tx.commit().await.map_err(internal)?;
+    after.ok_or(AppError::NotFound)
+}
+
+/// Delete a role nobody holds (CSL-12). Soft: the audit trail names it.
+pub async fn delete_role(pool: &PgPool, operator: &Operator, id: &str) -> Result<()> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let is_system = console::lock_role(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    if is_system {
+        return Err(AppError::validation([(
+            "role",
+            "A system role cannot be deleted.",
+        )]));
+    }
+    if console::role_holders(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        > 0
+    {
+        return Err(AppError::ConsoleRoleInUse);
+    }
+    let before = console::find_role(&mut *tx, id).await.map_err(internal)?;
+    console::soft_delete_role(&mut *tx, id)
+        .await
+        .map_err(internal)?;
+    audit(
+        &mut tx,
+        &operator.user_id,
+        "role.deleted",
+        "console_role",
+        id,
+        snapshot(&before)?,
+        None,
+    )
+    .await?;
+    tx.commit().await.map_err(internal)
+}
+
+pub async fn operators(pool: &PgPool) -> Result<Vec<console::OperatorListRow>> {
+    console::list_operators(pool).await.map_err(internal)
+}
+
+/// Give a registered user a console role, or change it; `None` revokes it
+/// (CSL-11). Nobody changes their own role, nobody grants or takes away
+/// more than they hold, and the last owner stays.
+pub async fn set_operator_role(
+    pool: &PgPool,
+    operator: &Operator,
+    user_id: &str,
+    role_id: Option<&str>,
+) -> Result<Option<console::OperatorListRow>> {
+    if user_id == operator.user_id {
+        return Err(AppError::validation([(
+            "user",
+            "Another operator changes your console role.",
+        )]));
+    }
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let owners = console::lock_owners(&mut *tx).await.map_err(internal)?;
+    let (current, disabled) = console::lock_operator(&mut *tx, user_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    if current.as_deref() == role_id {
+        tx.commit().await.map_err(internal)?;
+        return find_operator_row(pool, user_id).await;
+    }
+    if disabled && role_id.is_some() {
+        return Err(AppError::validation([("user", "Enable the user first.")]));
+    }
+    // What they hold now is taken away: it must be the operator's to take.
+    let before = match current.as_deref() {
+        Some(current) => {
+            let role = console::find_role(&mut *tx, current)
+                .await
+                .map_err(internal)?;
+            if let Some(role) = &role {
+                ensure_held(operator, &keys_of(role)?)?;
+            }
+            role
+        }
+        None => None,
+    };
+    if current.as_deref() == Some("owner") && owners <= 1 {
+        return Err(AppError::LastOwner);
+    }
+    let after = match role_id {
+        Some(role_id) => {
+            let role = console::find_role(&mut *tx, role_id)
+                .await
+                .map_err(internal)?
+                .ok_or_else(|| AppError::validation([("role_id", "Unknown role.")]))?;
+            ensure_held(operator, &keys_of(&role)?)?;
+            Some(role)
+        }
+        None => None,
+    };
+
+    console::set_console_role(&mut *tx, user_id, role_id)
+        .await
+        .map_err(internal)?;
+    let action = match (&before, &after) {
+        (None, Some(_)) => "operator.granted",
+        (Some(_), None) => "operator.revoked",
+        _ => "operator.changed",
+    };
+    let describe = |role: &Option<console::RoleRow>| {
+        role.as_ref()
+            .map(|role| serde_json::json!({ "role_id": role.id, "role_name": role.name }))
+    };
+    audit(
+        &mut tx,
+        &operator.user_id,
+        action,
+        "user",
+        user_id,
+        describe(&before),
+        describe(&after),
+    )
+    .await?;
+    tx.commit().await.map_err(internal)?;
+    find_operator_row(pool, user_id).await
+}
+
+async fn find_operator_row(
+    pool: &PgPool,
+    user_id: &str,
+) -> Result<Option<console::OperatorListRow>> {
+    Ok(console::list_operators(pool)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .find(|row| row.user_id == user_id))
+}
+
+/// The console's own audit trail, newest first (CSL-14).
+pub async fn operator_audit(
+    pool: &PgPool,
+    page: Page,
+) -> Result<(Vec<console::OperatorAuditRow>, i64)> {
+    let rows = console::list_operator_audit(pool, i64::from(page.limit), page.offset())
+        .await
+        .map_err(internal)?;
+    let total = console::count_operator_audit(pool)
+        .await
+        .map_err(internal)?;
+    Ok((rows, total))
 }
