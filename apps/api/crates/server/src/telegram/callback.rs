@@ -67,6 +67,10 @@ pub async fn handle(state: &AppState, bot: &Bot, query: CallbackQuery) -> Result
                 .ok();
             return Ok(());
         }
+        Err(AppError::WorkspaceSuspended | AppError::UserDisabled) => {
+            answer(Some(render::SUSPENDED)).await;
+            return Ok(());
+        }
         Err(error) => return Err(error),
     }
 

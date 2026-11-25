@@ -95,16 +95,17 @@ pub async fn targets_for_user(
 ) -> Result<Vec<DeviceTarget>, sqlx::Error> {
     sqlx::query_as!(
         DeviceTarget,
-        r#"SELECT id, token FROM device_tokens
-           WHERE user_id = $1 AND deleted_at IS NULL
-           ORDER BY created_at, id"#,
+        r#"SELECT d.id, d.token FROM device_tokens d
+           JOIN users u ON u.id = d.user_id AND u.disabled_at IS NULL
+           WHERE d.user_id = $1 AND d.deleted_at IS NULL
+           ORDER BY d.created_at, d.id"#,
         user_id
     )
     .fetch_all(executor)
     .await
 }
 
-/// Every live device of every live member of a workspace.
+/// Every live device of every live, enabled member of a workspace.
 pub async fn targets_for_workspace(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,
@@ -115,6 +116,8 @@ pub async fn targets_for_workspace(
            FROM device_tokens d
            JOIN user_workspaces m
              ON m.user_id = d.user_id AND m.workspace_id = $1 AND m.deleted_at IS NULL
+           -- A disabled person is told nothing (CSL-7).
+           JOIN users u ON u.id = d.user_id AND u.disabled_at IS NULL
            WHERE d.deleted_at IS NULL
            ORDER BY d.created_at, d.id"#,
         workspace_id

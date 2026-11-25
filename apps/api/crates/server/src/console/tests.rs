@@ -286,3 +286,162 @@ async fn should_never_answer_with_a_users_money_or_ledger_text(pool: PgPool) {
         assert!(!text.contains("98765"), "a balance leaked");
     }
 }
+
+// ---------------------------------------------------------------- actions
+
+async fn operator_audit(pool: &PgPool) -> Vec<(String, String)> {
+    sqlx::query_as("SELECT action, entity_id FROM operator_audit ORDER BY created_at, action")
+        .fetch_all(pool)
+        .await
+        .unwrap()
+}
+
+/// CSL-5, CSL-14
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_suspend_and_unsuspend_a_workspace_once_each(pool: PgPool) {
+    user(&pool, Some("owner")).await;
+    customers(&pool).await;
+
+    let row = service::set_suspended(&pool, USER, WORKSPACE, true)
+        .await
+        .unwrap();
+    assert!(row.suspended_at.is_some());
+    // Asking again changes nothing and is not audited twice.
+    service::set_suspended(&pool, USER, WORKSPACE, true)
+        .await
+        .unwrap();
+    let row = service::set_suspended(&pool, USER, WORKSPACE, false)
+        .await
+        .unwrap();
+    assert!(row.suspended_at.is_none());
+
+    assert_eq!(
+        operator_audit(&pool).await,
+        [
+            ("workspace.suspended".to_string(), WORKSPACE.to_string()),
+            ("workspace.unsuspended".to_string(), WORKSPACE.to_string()),
+        ]
+    );
+
+    // A deleted workspace is restored first, not suspended.
+    let error = service::set_suspended(&pool, USER, GONE, true)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+    let error = service::set_suspended(&pool, USER, "ws_nope", true)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::NotFound), "{error:?}");
+}
+
+/// CSL-6, CSL-14
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_restore_a_deleted_workspace(pool: PgPool) {
+    user(&pool, Some("owner")).await;
+    customers(&pool).await;
+
+    let row = service::restore(&pool, USER, GONE).await.unwrap();
+    assert!(row.deleted_at.is_none());
+    service::restore(&pool, USER, GONE).await.unwrap();
+    assert_eq!(
+        operator_audit(&pool).await,
+        [("workspace.restored".to_string(), GONE.to_string())]
+    );
+}
+
+/// CSL-7, CSL-14
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_disable_a_user_and_end_their_sessions(pool: PgPool) {
+    user(&pool, Some("owner")).await;
+    customers(&pool).await;
+    sqlx::query(
+        "INSERT INTO refresh_tokens (id, user_id, workspace_id, token_hash, family_id, expires_at)
+         VALUES ('rt_1', $1, $2, 'hash', 'fam', now() + interval '1 day')",
+    )
+    .bind(OWNER)
+    .bind(WORKSPACE)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let row = service::set_disabled(&pool, USER, OWNER, true)
+        .await
+        .unwrap();
+    assert!(row.disabled_at.is_some());
+    let live: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(OWNER)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(live, 0);
+
+    let row = service::set_disabled(&pool, USER, OWNER, false)
+        .await
+        .unwrap();
+    assert!(row.disabled_at.is_none());
+    assert_eq!(
+        operator_audit(&pool).await,
+        [
+            ("user.disabled".to_string(), OWNER.to_string()),
+            ("user.enabled".to_string(), OWNER.to_string()),
+        ]
+    );
+}
+
+/// CSL-7: an operator, the caller included, is never disabled.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_to_disable_an_operator(pool: PgPool) {
+    user(&pool, Some("owner")).await;
+    customers(&pool).await;
+    sqlx::query("UPDATE users SET console_role_id = 'viewer' WHERE id = $1")
+        .bind(OWNER)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    for target in [USER, OWNER] {
+        let error = service::set_disabled(&pool, USER, target, true)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, AppError::Validation(_)),
+            "{target}: {error:?}"
+        );
+    }
+    assert!(operator_audit(&pool).await.is_empty());
+}
+
+/// CSL-5, CSL-7, D127: the shared check every way in goes through.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_shut_a_suspended_workspace_and_a_disabled_user_out(pool: PgPool) {
+    use crate::auth::service::{check_access, current_role};
+    user(&pool, Some("owner")).await;
+    customers(&pool).await;
+    assert!(current_role(&pool, WORKSPACE, OWNER).await.is_ok());
+
+    service::set_suspended(&pool, USER, WORKSPACE, true)
+        .await
+        .unwrap();
+    let error = current_role(&pool, WORKSPACE, OWNER).await.unwrap_err();
+    assert!(matches!(error, AppError::WorkspaceSuspended), "{error:?}");
+    // Outside the workspace the person is still welcome: listing and
+    // switching to another one go through.
+    assert!(check_access(&pool, OWNER, None).await.is_ok());
+    let listed = oewang_db::repositories::accounts::list_workspaces_for_user(&pool, OWNER)
+        .await
+        .unwrap();
+    assert!(listed.iter().any(|w| w.id == WORKSPACE && w.suspended));
+
+    service::set_suspended(&pool, USER, WORKSPACE, false)
+        .await
+        .unwrap();
+    service::set_disabled(&pool, USER, OWNER, true)
+        .await
+        .unwrap();
+    let error = check_access(&pool, OWNER, None).await.unwrap_err();
+    assert!(matches!(error, AppError::UserDisabled), "{error:?}");
+    let error = current_role(&pool, WORKSPACE, OWNER).await.unwrap_err();
+    assert!(matches!(error, AppError::UserDisabled), "{error:?}");
+}

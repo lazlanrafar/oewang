@@ -65,6 +65,8 @@ pub struct WorkspaceMembershipRow {
     pub slug: String,
     pub currency_code: String,
     pub role: String,
+    /// An operator suspended it (CSL-5): listed, but no session enters it.
+    pub suspended: bool,
 }
 
 // ------------------------------------------------------------------- users
@@ -547,7 +549,8 @@ pub async fn list_workspaces_for_user(
 ) -> Result<Vec<WorkspaceMembershipRow>, sqlx::Error> {
     sqlx::query_as!(
         WorkspaceMembershipRow,
-        r#"SELECT w.id, w.name, w.slug, w.currency_code, m.role
+        r#"SELECT w.id, w.name, w.slug, w.currency_code, m.role,
+                  w.suspended_at IS NOT NULL AS "suspended!"
            FROM user_workspaces m
            JOIN workspaces w ON w.id = m.workspace_id
            WHERE m.user_id = $1 AND m.deleted_at IS NULL AND w.deleted_at IS NULL
@@ -628,4 +631,24 @@ pub async fn soft_delete_membership(
     .execute(executor)
     .await
     .map(|result| result.rows_affected())
+}
+
+/// Whether an operator has shut this user, or this workspace, out
+/// (CSL-5, CSL-7): `(user disabled, workspace suspended)`. An unknown user
+/// reads as not disabled; the token check that follows catches it.
+pub async fn access_state(
+    executor: impl PgExecutor<'_>,
+    user_id: &str,
+    workspace_id: Option<&str>,
+) -> Result<(bool, bool), sqlx::Error> {
+    let row = sqlx::query!(
+        r#"SELECT
+             EXISTS (SELECT 1 FROM users WHERE id = $1 AND disabled_at IS NOT NULL) AS "disabled!",
+             EXISTS (SELECT 1 FROM workspaces WHERE id = $2 AND suspended_at IS NOT NULL) AS "suspended!""#,
+        user_id,
+        workspace_id
+    )
+    .fetch_one(executor)
+    .await?;
+    Ok((row.disabled, row.suspended))
 }

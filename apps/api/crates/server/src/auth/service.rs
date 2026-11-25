@@ -46,11 +46,35 @@ pub async fn current_role(pool: &PgPool, workspace_id: &str, user_id: &str) -> R
         .await
         .map_err(internal)?
         .ok_or(AppError::NotAMember)?;
+    check_access(pool, user_id, Some(workspace_id)).await?;
 
     membership
         .role
         .parse::<Role>()
         .map_err(|error| AppError::Internal(anyhow::anyhow!("unknown role in database: {error}")))
+}
+
+/// Refuse a user an operator disabled, or a workspace an operator suspended
+/// (CSL-5, CSL-7, D127). Every way in reaches one of its callers: the
+/// session extractors, `current_role` and `issue_session`.
+///
+/// Its own errors, never `NotAMember`: a suspension is undone, and a caller
+/// that reads `NotAMember` as "gone" (a Telegram link) would end for good.
+pub async fn check_access(
+    executor: impl sqlx::PgExecutor<'_>,
+    user_id: &str,
+    workspace_id: Option<&str>,
+) -> Result<()> {
+    let (disabled, suspended) = accounts::access_state(executor, user_id, workspace_id)
+        .await
+        .map_err(internal)?;
+    if disabled {
+        Err(AppError::UserDisabled)
+    } else if suspended {
+        Err(AppError::WorkspaceSuspended)
+    } else {
+        Ok(())
+    }
 }
 
 /// Create a user and open a session with no workspace (WS-5, D109).
@@ -140,7 +164,9 @@ pub(crate) async fn sign_in(
     let workspaces = accounts::list_workspaces_for_user(pool, user_id)
         .await
         .map_err(internal)?;
-    let scope = match workspaces.first() {
+    // The first workspace an operator has not suspended: one suspended
+    // workspace must not lock the person out of the others.
+    let scope = match workspaces.iter().find(|workspace| !workspace.suspended) {
         Some(first) => Some((
             first.id.as_str(),
             first
@@ -382,6 +408,14 @@ async fn issue_session(
     family_id: String,
     session: &SessionContext<'_>,
 ) -> Result<IssuedSession> {
+    // Every session is minted here (sign-up, password, passkey, refresh,
+    // switch), so this one check bars a disabled person from all of them.
+    check_access(
+        &mut **tx,
+        user_id,
+        scope.map(|(workspace_id, _)| workspace_id),
+    )
+    .await?;
     let access = token::issue_access_token(session.jwt_secret, user_id, scope, session.access_ttl)?;
     let refresh = token::issue_refresh_token();
     let refresh_expires_at =

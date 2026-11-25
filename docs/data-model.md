@@ -81,6 +81,7 @@ erDiagram
 | `profile_picture` | text | Nullable. The current photo's version id; the photo itself is a 256px JPEG at `usr/{user_id}/avatar` in object storage, served through the API (D94) |
 | `income_color`, `expense_color` | text | Nullable, `#rrggbb` lowercase (checked). The colours this user sees income and expense in; null is the default (D100) |
 | `password_hash` | text | Argon2id. Never returned by any endpoint (AUTH-1) |
+| `disabled_at` | timestamptz | Nullable. Set while an operator has disabled the account (CSL-7, D127): no sign-in, no session |
 | `console_role_id` | text | Nullable, FK `console_roles`. The person's operator role in the console (D125); null for everyone who is not an operator. Partial index where not null |
 | `created_at`, `updated_at` | timestamp | |
 
@@ -95,6 +96,7 @@ Dropped from the old table: `oauth_provider`, `providers` (D21), `system_role` (
 | `slug` | text | Unique, not null |
 | `country` | text | Nullable, ISO 3166-1 alpha-2 |
 | `currency_code` | text | Not null, default `IDR`. ISO 4217 |
+| `suspended_at` | timestamptz | Nullable. Set while an operator has suspended the workspace (CSL-5, D127). Data untouched; every channel refuses it |
 | `created_at`, `updated_at`, `deleted_at` | timestamp | |
 
 Dropped: every `plan_*`, `pending_plan_*`, `mayar_*`, `ai_tokens_*`, `extra_*`, `vault_size_used_bytes`, `storage_violation_at`. Billing is out of scope.
@@ -318,6 +320,21 @@ Migration `0022`, D125, CSL-2. The operator console's roles. Not workspace-scope
 | `permission` | text | `CHECK` against the keys of `ConsolePermission`: `console.read`, `console.feedback.write`, `console.users.disable`, `console.workspaces.suspend`, `console.workspaces.restore`, `console.operators.manage`, `console.roles.manage`, `console.audit.read` |
 
 Primary key `(role_id, permission)`. A link table: changing a role's permissions replaces its rows, which are deleted rather than soft-deleted because they hold no user data and nothing to restore. The change is recorded in the operator audit (CSL-14).
+
+#### `operator_audit`
+
+Migration `0023`, CSL-14. What operators did in the console, one row per change, written in the same transaction as the change. `audit_logs` requires a workspace and disabling a user has none, so the console keeps its own. Append-only.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | CUID2, primary key |
+| `operator_id` | text | FK users. Who did it |
+| `action` | text | `workspace.suspended`, `workspace.unsuspended`, `workspace.restored`, `user.disabled`, `user.enabled`; role and operator changes from US-085 |
+| `entity`, `entity_id` | text | `workspace` or `user`, and its id |
+| `before`, `after` | jsonb | The console's row for the entity, which holds no money (CSL-13) |
+| `created_at` | timestamptz | |
+
+Indexes: `(created_at DESC)` and `(entity, entity_id)`.
 
 #### `mcp_tokens`, `oauth_clients`, `oauth_codes`
 

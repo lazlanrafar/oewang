@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT d.id, d.token\n           FROM device_tokens d\n           JOIN user_workspaces m\n             ON m.user_id = d.user_id AND m.workspace_id = $1 AND m.deleted_at IS NULL\n           WHERE d.deleted_at IS NULL\n           ORDER BY d.created_at, d.id",
+  "query": "SELECT d.id, d.token\n           FROM device_tokens d\n           JOIN user_workspaces m\n             ON m.user_id = d.user_id AND m.workspace_id = $1 AND m.deleted_at IS NULL\n           -- A disabled person is told nothing (CSL-7).\n           JOIN users u ON u.id = d.user_id AND u.disabled_at IS NULL\n           WHERE d.deleted_at IS NULL\n           ORDER BY d.created_at, d.id",
   "describe": {
     "columns": [
       {
@@ -36,5 +36,5 @@
       false
     ]
   },
-  "hash": "09128bd88ee68e988ae6534be511b318b59492578ad1a2f1c5c9d0e15181285e"
+  "hash": "b4a5108641b219c3a0fa1a20db9265742004a584b677661ba51536d75e8efee8"
 }

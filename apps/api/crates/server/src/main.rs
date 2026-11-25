@@ -523,6 +523,26 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/console/workspaces/{id}",
             get(console::handler::workspace),
         )
+        .route(
+            "/v1/console/workspaces/{id}/suspend",
+            post(console::handler::suspend),
+        )
+        .route(
+            "/v1/console/workspaces/{id}/unsuspend",
+            post(console::handler::unsuspend),
+        )
+        .route(
+            "/v1/console/workspaces/{id}/restore",
+            post(console::handler::restore),
+        )
+        .route(
+            "/v1/console/users/{id}/disable",
+            post(console::handler::disable),
+        )
+        .route(
+            "/v1/console/users/{id}/enable",
+            post(console::handler::enable),
+        )
         // Feedback from settings, any role (FB-1).
         .route("/v1/feedback", post(feedback::handler::send))
         // Exchange rates. A suggestion for the form; nothing reads it on

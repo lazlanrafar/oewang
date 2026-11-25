@@ -57,6 +57,16 @@ The first owner is set by hand, once per environment:
 UPDATE users SET console_role_id = 'owner' WHERE lower(email) = lower('<the owner email>');
 ```
 
+## Suspend, restore, disable (CSL-5 to CSL-7, D127)
+
+| Action | Permission | Effect |
+|---|---|---|
+| Suspend, unsuspend a workspace | `console.workspaces.suspend` | Every channel refuses the workspace with `WORKSPACE_SUSPENDED`: web, mobile, Telegram, MCP, the AI service's tool calls, queued receipts. Its members can still sign in, list their workspaces, switch to another and sign out. Nothing is deleted or revoked, so unsuspending is the whole undo. A deleted workspace is restored first |
+| Restore a workspace | `console.workspaces.restore` | Clears `deleted_at`. Data was never removed (OPS-2), so the workspace comes back as it was |
+| Disable, enable a user | `console.users.disable` | A disabled person cannot sign in (`USER_DISABLED`), and every refresh token, Telegram link and MCP token they held is revoked in the same transaction. Enabling lets them sign in again; links and tokens are made anew. Operators cannot be disabled, the caller included: revoke the console role first |
+
+Repeating an action changes nothing and writes no audit row. Every change writes one `operator_audit` row with the entity's console row before and after (CSL-14). Where each check sits is in [security/auth.md](../security/auth.md#disabled-users-and-suspended-workspaces-d127).
+
 ## Screens
 
 | Screen | Permission | Story |

@@ -23,6 +23,11 @@ pub const DISCONNECTED: &str =
 pub const NO_LONGER_MEMBER: &str =
     "You're no longer a member of that workspace, so this chat has been disconnected.";
 
+/// The workspace is suspended, or the person disabled, by oewang (CSL-5,
+/// CSL-7). The link stays: either can be undone.
+pub const SUSPENDED: &str =
+    "This Oewang workspace is unavailable right now. Contact Oewang support.";
+
 pub const HELP: &str = "Send a photo or a PDF of a receipt and I'll save it as an expense.\n\nOr ask me anything about your money, like \"how much did I spend on food this month?\"\n\n/disconnect stops this chat acting for your account.";
 
 pub const MEMBER_CANNOT_WRITE: &str = "Your role in this workspace can't add transactions. Ask an owner or an admin, or ask me questions instead.";

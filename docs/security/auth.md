@@ -51,7 +51,7 @@ HS256, signed with `JWT_SECRET` (at least 32 characters, validated at startup).
 | `exp` | Expiry. 15 minutes (D38) |
 | `jti` | Token ID, logged on issue so a session can be traced |
 
-**`role` is a snapshot.** If an owner demotes a member while that member holds a live token, the old role stays in the token until it expires or is refreshed. For write-sensitive operations the API re-reads the membership row, so a demotion takes effect immediately on writes. Read endpoints accept the snapshot. This is the deliberate trade: one database read on every write, none on every read. A membership in a soft-deleted workspace is not live, so deleting a workspace (owner only, one transaction with its `workspace.deleted` audit row) stops every member's writes, refreshes and switches into it at once.
+**`role` is a snapshot.** If an owner demotes a member while that member holds a live token, the old role stays in the token until it expires or is refreshed. For write-sensitive operations the API re-reads the membership row, so a demotion takes effect immediately on writes. Read endpoints accept the snapshot. This is the deliberate trade: one database read on every write for the role. Since D127 every authenticated request also makes one small read, whether the person is disabled or the workspace suspended, so an operator's action stops reads as well as writes on the next request. A membership in a soft-deleted workspace is not live, so deleting a workspace (owner only, one transaction with its `workspace.deleted` audit row) stops every member's writes, refreshes and switches into it at once.
 
 ## The session cookies
 
@@ -247,6 +247,22 @@ The console (D124, D125, D126) adds a second kind of permission that has nothing
 - Same sign-in, different host. An operator signs in with their ordinary password on `console.oewang.com`, which sits behind Cloudflare Access and accepts only a request carrying Access's signed token. The `__Host-` cookies keep that session off `app.oewang.com`.
 - Checked per request. The `Operator` extractor reads the role and its permissions from the database on every console call (D126); nothing about the console is in the access token. Without a role or the route's permission: `CONSOLE_FORBIDDEN`.
 - Never a user's data. No console route returns an amount, a balance, a note or a transaction's text, and there is no impersonation (CSL-13).
+
+### Disabled users and suspended workspaces (D127)
+
+`auth::service::check_access` is the one check, and every way in reaches it:
+
+| Way in | Where | What is refused |
+|---|---|---|
+| Any session request | `Auth` extractor | A disabled person, a suspended workspace |
+| Routes outside a workspace (list, switch, sign out, the console) | `AuthUser` extractor | A disabled person only, so a member of a suspended workspace can still leave it |
+| Writes, MCP calls, Telegram messages and buttons, the AI service's tool calls | `current_role` | Both |
+| Every new session: sign-up, password, passkey, refresh, switch | `issue_session` | Both. Signing in picks the first workspace that is not suspended |
+| Queued receipts | `receipts::queue::run` | Both; the job waits with its usual backoff |
+
+The answers are `USER_DISABLED` and `WORKSPACE_SUSPENDED`, never `NOT_A_MEMBER`, because both are undone: a Telegram link that read `NOT_A_MEMBER` would unlink for good. Disabling also revokes every refresh token, Telegram link and MCP token in the same transaction, as "sign out everywhere" does, and push stops reaching the person's devices. Suspending revokes nothing: refresh and switch refuse the workspace while it lasts.
+
+Not re-checked: a statement import already running finishes, and the AI model call of a chat turn already streaming completes.
 
 Details and the permission matrix: [features/console.md](../features/console.md).
 

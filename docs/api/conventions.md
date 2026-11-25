@@ -138,6 +138,8 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `LAST_OWNER` | 409 | Removing or demoting the only owner (WS-4) |
 | `INVITE_INVALID` | 404 | Unknown, already accepted, or expired invite token |
 | `WORKSPACE_ID_NOT_ALLOWED` | 400 | A body or query string named `workspace_id`. The workspace comes from the token (AUTH-4) |
+| `USER_DISABLED` | 403 | An operator disabled this account: no sign-in, no session (CSL-7, D127) |
+| `WORKSPACE_SUSPENDED` | 403 | An operator suspended this workspace: every channel refuses it until it is unsuspended (CSL-5, D127) |
 | `CONSOLE_FORBIDDEN` | 403 | The caller has no live console role, or their role lacks the permission the console route checks (CSL-2, D126) |
 
 ### Validation and general

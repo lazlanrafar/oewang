@@ -59,7 +59,7 @@ pub async fn me(
 #[derive(Debug, Deserialize)]
 pub struct ListQuery {
     pub search: Option<String>,
-    /// Workspaces only: `active` or `deleted`; absent is both.
+    /// Workspaces only: `active`, `suspended` or `deleted`; absent is all.
     pub status: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
@@ -128,8 +128,14 @@ pub async fn workspaces(
         let status = match non_empty(&query.status) {
             None => None,
             Some("active") => Some(WorkspaceStatus::Active),
+            Some("suspended") => Some(WorkspaceStatus::Suspended),
             Some("deleted") => Some(WorkspaceStatus::Deleted),
-            Some(_) => return Err(AppError::validation([("status", "Use active or deleted.")])),
+            Some(_) => {
+                return Err(AppError::validation([(
+                    "status",
+                    "Use active, suspended or deleted.",
+                )]))
+            }
         };
         let desc = if query.order.is_some() {
             descending(&query.order)?
@@ -177,5 +183,85 @@ fn paged<T: Serialize>(
             PageMeta::new(page.page, page.limit, total as u64),
         ))),
         Err(error) => Err(ApiError::new(error, request_id)),
+    }
+}
+
+/// `POST /v1/console/workspaces/{id}/suspend` and `/unsuspend` (CSL-5).
+pub async fn suspend(
+    state: State<AppState>,
+    operator: Operator,
+    path: Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<ConsoleWorkspaceRow>>, ApiError> {
+    set_suspended(state, operator, path, request_id, true).await
+}
+
+pub async fn unsuspend(
+    state: State<AppState>,
+    operator: Operator,
+    path: Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<ConsoleWorkspaceRow>>, ApiError> {
+    set_suspended(state, operator, path, request_id, false).await
+}
+
+async fn set_suspended(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(workspace_id): Path<String>,
+    request_id: RequestId,
+    suspend: bool,
+) -> std::result::Result<Json<Envelope<ConsoleWorkspaceRow>>, ApiError> {
+    operator.require(ConsolePermission::WorkspacesSuspend)?;
+    match service::set_suspended(&state.db, &operator.user_id, &workspace_id, suspend).await {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `POST /v1/console/workspaces/{id}/restore` (CSL-6).
+pub async fn restore(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(workspace_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<ConsoleWorkspaceRow>>, ApiError> {
+    operator.require(ConsolePermission::WorkspacesRestore)?;
+    match service::restore(&state.db, &operator.user_id, &workspace_id).await {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `POST /v1/console/users/{id}/disable` and `/enable` (CSL-7).
+pub async fn disable(
+    state: State<AppState>,
+    operator: Operator,
+    path: Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<ConsoleUserRow>>, ApiError> {
+    set_disabled(state, operator, path, request_id, true).await
+}
+
+pub async fn enable(
+    state: State<AppState>,
+    operator: Operator,
+    path: Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<ConsoleUserRow>>, ApiError> {
+    set_disabled(state, operator, path, request_id, false).await
+}
+
+async fn set_disabled(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(user_id): Path<String>,
+    request_id: RequestId,
+    disable: bool,
+) -> std::result::Result<Json<Envelope<ConsoleUserRow>>, ApiError> {
+    operator.require(ConsolePermission::UsersDisable)?;
+    match service::set_disabled(&state.db, &operator.user_id, &user_id, disable).await {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
     }
 }

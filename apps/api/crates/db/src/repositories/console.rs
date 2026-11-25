@@ -58,6 +58,8 @@ pub struct ConsoleUserRow {
     pub email: String,
     pub name: Option<String>,
     pub created_at: DateTime<Utc>,
+    /// Set while an operator has disabled the account (CSL-7).
+    pub disabled_at: Option<DateTime<Utc>>,
     /// The console role's name, when the user is an operator.
     pub console_role: Option<String>,
     /// Live memberships of live workspaces.
@@ -66,7 +68,8 @@ pub struct ConsoleUserRow {
     pub last_active_at: Option<DateTime<Utc>>,
 }
 
-const USER_SELECT: &str = "SELECT u.id, u.email, u.name, u.created_at, r.name AS console_role,
+const USER_SELECT: &str =
+    "SELECT u.id, u.email, u.name, u.created_at, u.disabled_at, r.name AS console_role,
         (SELECT count(*) FROM user_workspaces m
            JOIN workspaces w ON w.id = m.workspace_id AND w.deleted_at IS NULL
           WHERE m.user_id = u.id AND m.deleted_at IS NULL) AS workspaces,
@@ -163,7 +166,9 @@ pub enum WorkspaceSort {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkspaceStatus {
+    /// Neither deleted nor suspended.
     Active,
+    Suspended,
     Deleted,
 }
 
@@ -176,6 +181,8 @@ pub struct ConsoleWorkspaceRow {
     pub currency_code: String,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+    /// Set while an operator has suspended the workspace (CSL-5).
+    pub suspended_at: Option<DateTime<Utc>>,
     pub members: i64,
     /// The earliest live owner, the person a support question goes to.
     pub owner_email: Option<String>,
@@ -185,7 +192,7 @@ pub struct ConsoleWorkspaceRow {
 // shortcut: last activity is a max over the workspace's audit rows, once
 // per listed row; fine at today's scale, keep a column if the list slows.
 const WORKSPACE_SELECT: &str =
-    "SELECT w.id, w.name, w.slug, w.currency_code, w.created_at, w.deleted_at,
+    "SELECT w.id, w.name, w.slug, w.currency_code, w.created_at, w.deleted_at, w.suspended_at,
         (SELECT count(*) FROM user_workspaces m
           WHERE m.workspace_id = w.id AND m.deleted_at IS NULL) AS members,
         (SELECT u.email FROM user_workspaces m JOIN users u ON u.id = m.user_id
@@ -211,7 +218,10 @@ fn push_workspace_filters(
     }
     match status {
         Some(WorkspaceStatus::Active) => {
-            builder.push(" AND w.deleted_at IS NULL");
+            builder.push(" AND w.deleted_at IS NULL AND w.suspended_at IS NULL");
+        }
+        Some(WorkspaceStatus::Suspended) => {
+            builder.push(" AND w.deleted_at IS NULL AND w.suspended_at IS NOT NULL");
         }
         Some(WorkspaceStatus::Deleted) => {
             builder.push(" AND w.deleted_at IS NOT NULL");
@@ -305,4 +315,101 @@ pub async fn workspace_counts(
     .bind(workspace_id)
     .fetch_one(executor)
     .await
+}
+
+// ---------------------------------------------------------------- actions
+
+/// Lock the workspace row for an operator action:
+/// `(deleted_at, suspended_at)`, none when it does not exist.
+pub async fn lock_workspace(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<(Option<DateTime<Utc>>, Option<DateTime<Utc>>)>, sqlx::Error> {
+    sqlx::query_as("SELECT deleted_at, suspended_at FROM workspaces WHERE id = $1 FOR UPDATE")
+        .bind(id)
+        .fetch_optional(executor)
+        .await
+}
+
+pub async fn set_workspace_suspended(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    suspended: bool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE workspaces
+            SET suspended_at = CASE WHEN $2 THEN now() END, updated_at = now()
+          WHERE id = $1",
+    )
+    .bind(id)
+    .bind(suspended)
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+pub async fn restore_workspace(executor: impl PgExecutor<'_>, id: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE workspaces SET deleted_at = NULL, updated_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(executor)
+        .await
+        .map(|_| ())
+}
+
+/// Lock the user row: `(disabled_at, console_role_id)`, none when unknown.
+pub async fn lock_user(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<(Option<DateTime<Utc>>, Option<String>)>, sqlx::Error> {
+    sqlx::query_as("SELECT disabled_at, console_role_id FROM users WHERE id = $1 FOR UPDATE")
+        .bind(id)
+        .fetch_optional(executor)
+        .await
+}
+
+pub async fn set_user_disabled(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    disabled: bool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE users
+            SET disabled_at = CASE WHEN $2 THEN now() END, updated_at = now()
+          WHERE id = $1",
+    )
+    .bind(id)
+    .bind(disabled)
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+pub struct OperatorAuditEntry<'a> {
+    pub operator_id: &'a str,
+    pub action: &'a str,
+    pub entity: &'a str,
+    pub entity_id: &'a str,
+    pub before: Option<serde_json::Value>,
+    pub after: Option<serde_json::Value>,
+}
+
+/// One row of the console's own audit trail (CSL-14).
+pub async fn insert_operator_audit(
+    executor: impl PgExecutor<'_>,
+    entry: OperatorAuditEntry<'_>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO operator_audit (id, operator_id, action, entity, entity_id, before, after)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    )
+    .bind(cuid2::create_id())
+    .bind(entry.operator_id)
+    .bind(entry.action)
+    .bind(entry.entity)
+    .bind(entry.entity_id)
+    .bind(entry.before)
+    .bind(entry.after)
+    .execute(executor)
+    .await
+    .map(|_| ())
 }

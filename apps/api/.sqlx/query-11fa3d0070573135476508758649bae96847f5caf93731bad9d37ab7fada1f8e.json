@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT w.id, w.name, w.slug, w.currency_code, m.role\n           FROM user_workspaces m\n           JOIN workspaces w ON w.id = m.workspace_id\n           WHERE m.user_id = $1 AND m.deleted_at IS NULL AND w.deleted_at IS NULL\n           ORDER BY m.joined_at",
+  "query": "SELECT w.id, w.name, w.slug, w.currency_code, m.role,\n                  w.suspended_at IS NOT NULL AS \"suspended!\"\n           FROM user_workspaces m\n           JOIN workspaces w ON w.id = m.workspace_id\n           WHERE m.user_id = $1 AND m.deleted_at IS NULL AND w.deleted_at IS NULL\n           ORDER BY m.joined_at",
   "describe": {
     "columns": [
       {
@@ -57,6 +57,12 @@
             "name": "role"
           }
         }
+      },
+      {
+        "ordinal": 5,
+        "name": "suspended!",
+        "type_info": "Bool",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -69,8 +75,9 @@
       false,
       false,
       false,
-      false
+      false,
+      null
     ]
   },
-  "hash": "a48a0a354d58714cdd04b5ebf2d73ae8e3527864673bc75ea1f9830a1194bd88"
+  "hash": "11fa3d0070573135476508758649bae96847f5caf93731bad9d37ab7fada1f8e"
 }

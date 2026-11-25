@@ -156,6 +156,9 @@ async fn run(state: &AppState, job: &ReceiptJobRow) -> Result<()> {
         },
     };
 
+    // Queued before a suspension, read after it: wait, with the usual
+    // backoff, rather than save into a workspace that is shut (CSL-5).
+    crate::auth::service::check_access(&state.db, &job.user_id, Some(&job.workspace_id)).await?;
     let read = read_and_save(state, actor, &job.vault_file_id).await?;
     let next = decide(&read, job.attempts, job.created_at, Utc::now());
 
