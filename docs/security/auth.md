@@ -93,6 +93,8 @@ flowchart TD
 
 A token used twice means either a stolen copy or a race. Both are handled the same way: the entire family, meaning every token descended from that login, is revoked and the user signs in again. The cost of a false positive is one re-login. The cost of ignoring it is an attacker keeping a parallel session alive indefinitely.
 
+So the app never races itself. `src/hooks.server.ts` holds one pending rotation per refresh token: parallel requests that arrive without the access cookie (several uploads, two tabs, a preload and its click) share it, and the result is kept ten seconds after it settles for a request that left the browser just before the new cookies arrived. That state lives in the one app process. The access cookie also ends 30 seconds before its token, so a request never carries a token the API has just expired, whose 401 would clear both cookies.
+
 ### Revocation
 
 Unlike the old app, logout really ends the session (D38).

@@ -49,7 +49,8 @@ function base(maxAge: number) {
 export function setSession(cookies: Cookies, session: IssuedSession): void {
 	const now = Math.floor(Date.now() / 1000);
 
-	cookies.set(ACCESS_COOKIE, session.access_token, base(session.access_expires_at - now));
+	// 30 seconds early, so a request never carries a token the API has just expired.
+	cookies.set(ACCESS_COOKIE, session.access_token, base(session.access_expires_at - now - 30));
 	cookies.set(REFRESH_COOKIE, session.refresh_token, base(session.refresh_expires_at - now));
 }
 

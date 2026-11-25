@@ -34,7 +34,7 @@ describe('setSession', () => {
 		vi.resetModules();
 	});
 
-	it('should keep both tokens in httpOnly cookies that live as long as the tokens do', () => {
+	it('should keep both tokens in httpOnly cookies that end with the tokens, the access one 30 seconds early', () => {
 		vi.useFakeTimers({ now: new Date('2026-11-23T00:00:00Z') });
 		const { cookies, set } = recorder();
 
@@ -48,7 +48,7 @@ describe('setSession', () => {
 		for (const { options } of set) {
 			expect(options).toMatchObject({ path: '/', httpOnly: true, sameSite: 'lax' });
 		}
-		expect(set[0].options.maxAge).toBe(15 * 60);
+		expect(set[0].options.maxAge).toBe(15 * 60 - 30);
 		expect(set[1].options.maxAge).toBe(30 * 24 * 60 * 60);
 	});
 
