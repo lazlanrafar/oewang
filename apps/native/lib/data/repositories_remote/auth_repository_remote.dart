@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
@@ -7,6 +5,7 @@ import 'package:oewang/data/dto/login_response_dto.dart';
 import 'package:oewang/data/repositories/auth_repository.dart';
 import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/api/auth_interceptor.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
 import 'package:oewang/domain/models/session.dart';
 
@@ -77,20 +76,6 @@ class AuthRepositoryRemote implements AuthRepository {
       }
     }
     await storage.clear();
-  }
-}
-
-/// The payload of a JWT, unverified. Empty when it is not one.
-Map<String, dynamic> decodeJwtClaims(String token) {
-  try {
-    final parts = token.split('.');
-    if (parts.length != 3) return const {};
-    final decoded = jsonDecode(
-      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-    );
-    return decoded is Map<String, dynamic> ? decoded : const {};
-  } on FormatException {
-    return const {};
   }
 }
 

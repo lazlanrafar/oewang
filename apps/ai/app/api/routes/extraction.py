@@ -185,20 +185,35 @@ async def receipt_categorize(body: CategorizeRequest, request: Request) -> JSONR
 
     Strings in, one name out. The API keeps the answer only when it is
     exactly one of the workspace's categories.
+
+    With `per_item`, the answer is `items` instead: one name or null per
+    item sent, in the same order (TXN-27). `category` is then null.
     """
     config: Settings = request.app.state.config
     request_id = request_id_of(request, body)
 
+    category: str | None = None
+    items: list[str | None] = []
     try:
-        category, used, usage = await categorize.categorize(
-            merchant=body.merchant,
-            items=body.items,
-            categories=body.categories,
-            config=config,
-        )
+        if body.per_item:
+            items, used, usage = await categorize.categorize_items(
+                merchant=body.merchant,
+                items=body.items,
+                categories=body.categories,
+                config=config,
+            )
+        else:
+            category, used, usage = await categorize.categorize(
+                merchant=body.merchant,
+                items=body.items,
+                categories=body.categories,
+                config=config,
+            )
     except categorize.CategorizeFailed:
         return error_response("CATEGORIZE_FAILED", CATEGORIZE_FAILED_MESSAGE, request_id)
     except model.ModelUnavailable:
         return error_response("MODEL_UNAVAILABLE", MODEL_UNAVAILABLE_MESSAGE, request_id)
 
-    return envelope({"category": category, "model": used, "usage": usage}, request_id)
+    return envelope(
+        {"category": category, "items": items, "model": used, "usage": usage}, request_id
+    )

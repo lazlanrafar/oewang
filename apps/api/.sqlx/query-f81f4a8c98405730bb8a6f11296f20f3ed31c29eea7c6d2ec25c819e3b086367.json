@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, wallet_id, to_wallet_id, category_id, amount, to_amount,\n                  original_amount, original_currency_code, exchange_rate,\n                  base_amount, base_rate, base_rate_source, base_rate_date,\n                  date, type AS \"type!\", name, description, is_exported,\n                  source, fingerprint, created_at, updated_at\n           FROM transactions\n           WHERE workspace_id = $1 AND id = ANY($2) AND deleted_at IS NULL\n           ORDER BY id",
+  "query": "SELECT t.id, t.wallet_id, w.name AS wallet_name,\n                  w.currency_code AS wallet_currency_code,\n                  t.to_wallet_id, tw.name AS \"to_wallet_name?\",\n                  t.category_id, c.name AS \"category_name?\",\n                  t.amount, t.to_amount, t.original_amount, t.original_currency_code,\n                  t.exchange_rate, t.base_amount, t.base_rate, t.base_rate_source,\n                  t.base_rate_date, t.date, t.type AS \"type!\", t.name, t.description,\n                  t.is_exported, t.source, t.created_at, t.updated_at,\n                  (SELECT count(*) FROM transaction_category_shares os\n                    WHERE os.transaction_id = t.id AND NOT os.is_own)\n                      AS \"other_category_count!\",\n                  NULL::numeric AS matched_amount\n           FROM transactions t\n           JOIN wallets w ON w.id = t.wallet_id\n           LEFT JOIN wallets tw ON tw.id = t.to_wallet_id\n           LEFT JOIN categories c ON c.id = t.category_id\n           WHERE t.workspace_id = $1 AND t.id = $2 AND (t.deleted_at IS NULL OR $3)",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,28 @@
       },
       {
         "ordinal": 2,
+        "name": "wallet_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "wallet_currency_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "currency_code"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
         "name": "to_wallet_id",
         "type_info": "Text",
         "origin": {
@@ -37,7 +59,18 @@
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 5,
+        "name": "to_wallet_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "wallets",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
         "name": "category_id",
         "type_info": "Text",
         "origin": {
@@ -48,7 +81,18 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 7,
+        "name": "category_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "categories",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "amount",
         "type_info": "Numeric",
         "origin": {
@@ -59,7 +103,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 9,
         "name": "to_amount",
         "type_info": "Numeric",
         "origin": {
@@ -70,7 +114,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 10,
         "name": "original_amount",
         "type_info": "Numeric",
         "origin": {
@@ -81,7 +125,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 11,
         "name": "original_currency_code",
         "type_info": "Text",
         "origin": {
@@ -92,7 +136,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 12,
         "name": "exchange_rate",
         "type_info": "Numeric",
         "origin": {
@@ -103,7 +147,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 13,
         "name": "base_amount",
         "type_info": "Numeric",
         "origin": {
@@ -114,7 +158,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 14,
         "name": "base_rate",
         "type_info": "Numeric",
         "origin": {
@@ -125,7 +169,7 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 15,
         "name": "base_rate_source",
         "type_info": "Text",
         "origin": {
@@ -136,7 +180,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 16,
         "name": "base_rate_date",
         "type_info": "Date",
         "origin": {
@@ -147,7 +191,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 17,
         "name": "date",
         "type_info": "Timestamptz",
         "origin": {
@@ -158,7 +202,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 18,
         "name": "type!",
         "type_info": "Text",
         "origin": {
@@ -169,7 +213,7 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 19,
         "name": "name",
         "type_info": "Text",
         "origin": {
@@ -180,7 +224,7 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 20,
         "name": "description",
         "type_info": "Text",
         "origin": {
@@ -191,7 +235,7 @@
         }
       },
       {
-        "ordinal": 17,
+        "ordinal": 21,
         "name": "is_exported",
         "type_info": "Bool",
         "origin": {
@@ -202,7 +246,7 @@
         }
       },
       {
-        "ordinal": 18,
+        "ordinal": 22,
         "name": "source",
         "type_info": "Text",
         "origin": {
@@ -213,18 +257,7 @@
         }
       },
       {
-        "ordinal": 19,
-        "name": "fingerprint",
-        "type_info": "Text",
-        "origin": {
-          "Table": {
-            "table": "transactions",
-            "name": "fingerprint"
-          }
-        }
-      },
-      {
-        "ordinal": 20,
+        "ordinal": 23,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -235,7 +268,7 @@
         }
       },
       {
-        "ordinal": 21,
+        "ordinal": 24,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -244,17 +277,34 @@
             "name": "updated_at"
           }
         }
+      },
+      {
+        "ordinal": 25,
+        "name": "other_category_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 26,
+        "name": "matched_amount",
+        "type_info": "Numeric",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
         "Text",
-        "TextArray"
+        "Text",
+        "Bool"
       ]
     },
     "nullable": [
       false,
       false,
+      false,
+      false,
+      true,
+      true,
       true,
       true,
       false,
@@ -272,10 +322,11 @@
       true,
       false,
       false,
-      true,
       false,
-      false
+      false,
+      null,
+      null
     ]
   },
-  "hash": "483eb74f6070e776389de19a9ca52062a0325c61c9ac0e550a8c0a876b4fdd5a"
+  "hash": "f81f4a8c98405730bb8a6f11296f20f3ed31c29eea7c6d2ec25c819e3b086367"
 }

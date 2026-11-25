@@ -21,17 +21,18 @@ COMPOSE=(docker compose -f infra/docker-compose.yml)
 E2E=false
 [[ "${1:-}" == "--e2e" ]] && E2E=true
 
-passed=()
-failed=()
+RESULTS=$(mktemp)
 
+# One check: its name and time go to RESULTS for the summary.
 step() {
 	local name="$1"
 	shift
-	printf '\n\033[1m== %s\033[0m\n' "$name"
+	printf '\n== %s\n' "$name"
+	local start=$SECONDS
 	if "$@"; then
-		passed+=("$name")
+		echo "pass|$name ($((SECONDS - start))s)" >>"$RESULTS"
 	else
-		failed+=("$name")
+		echo "FAIL|$name ($((SECONDS - start))s)" >>"$RESULTS"
 	fi
 }
 
@@ -41,23 +42,10 @@ in_container() { "${COMPOSE[@]}" run --rm --no-deps "$@"; }
 # finished minutes later, mid-journeys, and restarted the api under them.
 API_TARGET=(-e CARGO_TARGET_DIR=/cargo-target/ci)
 
-# -- secret scan: the commits this branch adds over main, as ci.yml did on a PR.
-step "secret scan" docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.24.3 \
-	detect --config .github/gitleaks.toml --redact --log-opts="origin/main..HEAD"
-
-# -- docs: the generated configuration reference and requirement coverage.
-step "docs: env vars" python3 scripts/env-vars.py --check
-step "docs: coverage" python3 scripts/coverage.py
-
-if $E2E; then
-	# A retry, reported as flaky rather than hidden: `cargo watch` also
-	# restarts the api for a moment on file events that change no code.
-	# Before the api steps, not after: `cargo sqlx prepare` touches the
-	# sources, the dev api's `cargo watch` rebuilds and restarts minutes
-	# later, and journeys running then die on ECONNREFUSED.
+group_e2e() {
+	# Settled means the last thing `cargo watch` did was start the api:
+	# a quiet log is not enough, one crate can compile for minutes silently.
 	step "e2e: api settled" bash -c '
-		# Settled means the last thing `cargo watch` did was start the api:
-		# a quiet log is not enough, one crate can compile for minutes silently.
 		for _ in $(seq 1 120); do
 			last=$(docker compose -f infra/docker-compose.yml logs --since 30m api 2>&1 \
 				| sed -E "s/\x1b\[[0-9;]*m//g" | grep -E "\[Running|listening addr" | tail -1)
@@ -67,34 +55,55 @@ if $E2E; then
 			sleep 5
 		done
 		exit 1'
+	# A retry stays, reported as flaky rather than hidden.
 	step "e2e: journeys and axe" bash -c \
 		'cd apps/app && E2E_BASE_URL=http://localhost:3000 E2E_CHAT=0 bun run test:e2e -- --workers=2 --retries=1'
-fi
+}
 
-# -- api: one container, the same order as the CI job.
-step "api: fmt" in_container "${API_TARGET[@]}" api cargo fmt --all --check
-step "api: migrate" in_container api sqlx migrate run --source migrations
-# On a copy of the sources: `sqlx prepare` touches them to force the macros
-# to rerun, and on the mounted tree that restarts the dev api's `cargo watch`.
-step "api: sqlx cache current" in_container "${API_TARGET[@]}" -e SQLX_OFFLINE=false api \
-	sh -c 'cp -a /app /tmp/src && cd /tmp/src && cargo sqlx prepare --workspace --check -- --all-targets'
-step "api: clippy" in_container "${API_TARGET[@]}" api cargo clippy --all-targets -- -D warnings
-step "api: test" in_container "${API_TARGET[@]}" api cargo test
+group_api() {
+	step "api: fmt" in_container "${API_TARGET[@]}" api cargo fmt --all --check
+	step "api: migrate" in_container api sqlx migrate run --source migrations
+	# On a copy of the sources: `sqlx prepare` touches them to force the
+	# macros to rerun, and the mounted tree is the dev api's.
+	step "api: sqlx cache current" in_container "${API_TARGET[@]}" -e SQLX_OFFLINE=false api \
+		sh -c 'cp -a /app /tmp/src && cd /tmp/src && cargo sqlx prepare --workspace --check -- --all-targets'
+	step "api: clippy" in_container "${API_TARGET[@]}" api cargo clippy --all-targets -- -D warnings
+	step "api: test" in_container "${API_TARGET[@]}" api cargo test
+}
 
-# -- ai
-step "ai: ruff" in_container ai uv run ruff check .
-step "ai: pytest" in_container ai uv run pytest -q
+group_ai() {
+	step "ai: ruff" in_container ai uv run ruff check .
+	step "ai: pytest" in_container ai uv run pytest -q
+}
 
-# -- app
-step "app: check" in_container app bun run check
-step "app: test" in_container app bun run test
+group_app() {
+	step "app: check" in_container app bun run check
+	step "app: test" in_container app bun run test
+}
 
-# -- native: on the host, not in a container (iOS needs Xcode, D113).
-step "native: analyze" bash -c 'cd apps/native && flutter pub get >/dev/null && flutter analyze'
-step "native: test" bash -c 'cd apps/native && flutter test'
+# On the host, not in a container (iOS needs Xcode, D113).
+group_native() {
+	step "native: analyze" bash -c 'cd apps/native && flutter pub get >/dev/null && flutter analyze'
+	step "native: test" bash -c 'cd apps/native && flutter test'
+}
 
+# -- quick checks first, in this shell.
+# Secret scan: the commits this branch adds over main, as ci.yml did on a PR.
+step "secret scan" docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.24.3 \
+	detect --config .github/gitleaks.toml --redact --log-opts="origin/main..HEAD"
+step "docs: env vars" python3 scripts/env-vars.py --check
+step "docs: coverage" python3 scripts/coverage.py
+
+groups=(api ai app native)
+$E2E && groups=(e2e "${groups[@]}")
+# One group at a time: side by side they pinned every core of the laptop
+# (owner's call, 2026-11-24), for about two minutes saved.
+for g in "${groups[@]}"; do "group_$g"; done
 
 printf '\n\033[1m== Summary\033[0m\n'
-for name in "${passed[@]}"; do printf '  \033[32mpass\033[0m  %s\n' "$name"; done
-for name in "${failed[@]}"; do printf '  \033[31mFAIL\033[0m  %s\n' "$name"; done
-[[ ${#failed[@]} -eq 0 ]]
+grep '^pass|' "$RESULTS" | while IFS='|' read -r _ name; do printf '  \033[32mpass\033[0m  %s\n' "$name"; done
+fails=$(grep -c '^FAIL|' "$RESULTS")
+grep '^FAIL|' "$RESULTS" | while IFS='|' read -r _ name; do printf '  \033[31mFAIL\033[0m  %s\n' "$name"; done
+printf '  total %ss\n' "$SECONDS"
+
+[[ $fails -eq 0 ]]

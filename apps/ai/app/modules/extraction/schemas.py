@@ -256,6 +256,8 @@ class CategorizeRequest(BaseModel):
     merchant: str | None = Field(default=None, max_length=MAX_LABEL_CHARS)
     items: list[str] = Field(default_factory=list)
     categories: list[str] = Field(default_factory=list, max_length=MAX_CATEGORIES)
+    #: One category per item instead of one for the receipt (TXN-27).
+    per_item: bool = False
 
     @field_validator("items")
     @classmethod

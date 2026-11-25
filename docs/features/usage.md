@@ -23,7 +23,7 @@ The API records, because it is the only process with a database (D3). The AI ser
 | `receipt` | Receipt parse, through the `Meter` in `server/src/ai/extraction.rs` |
 | `import` | Statement extraction, same module |
 | `columns` | CSV column mapping, same module |
-| `categorize` | The Telegram receipt's category pick, same module |
+| `categorize` | The Telegram receipt's category pick and the per-item category proposals (TXN-27), same module |
 | `chat` | A web chat turn, through the `TurnMeter` in the stream pump |
 | `telegram` | A Telegram chat turn, same pump, told apart by the turn's channel |
 

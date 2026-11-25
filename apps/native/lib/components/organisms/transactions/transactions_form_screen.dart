@@ -121,6 +121,20 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
         settings?.timeInput != 'None' && settings?.timeInput != null;
     final inputOrder = settings?.inputOrder ?? 'Amount';
 
+    // The amount is saved in the selected wallet's currency; before one is
+    // picked (or while wallets load) show the workspace's base currency.
+    final baseCurrency = ref
+        .watch(currentWorkspaceProvider)
+        .valueOrNull
+        ?.currencyCode;
+    String amountCurrency() =>
+        _firstOrNull(
+          vm.walletOptions,
+          (w) => w.id == vm.state.walletId,
+        )?.currency ??
+        widget.transaction?.amount.currency ??
+        (baseCurrency == null || baseCurrency.isEmpty ? 'IDR' : baseCurrency);
+
     return Scaffold(
       appBar: PageAppBar(
         title: title,
@@ -284,7 +298,7 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                         (_) => AmountKeypad(
                           initial: vm.state.amount,
                           title: 'Amount',
-                          currency: 'IDR',
+                          currency: amountCurrency(),
                           workspaceTabs: true,
                           onChanged: vm.setAmount,
                           onSubmit: (v) {
@@ -348,7 +362,11 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
                     variant: InputVariant.underline,
                   ),
 
-                  _AmountRow(vm: vm, onSubmitted: (_) => openAfterAmount()),
+                  _AmountRow(
+                    vm: vm,
+                    currency: amountCurrency(),
+                    onSubmitted: (_) => openAfterAmount(),
+                  ),
 
                   if (vm.state.type == TransactionType.transfer) ...[
                     _TransferWalletsRow(
@@ -450,8 +468,13 @@ class _TransactionFormScreenState extends ConsumerState<TransactionFormScreen> {
 }
 
 class _AmountRow extends StatelessWidget {
-  const _AmountRow({required this.vm, this.onSubmitted});
+  const _AmountRow({
+    required this.vm,
+    required this.currency,
+    this.onSubmitted,
+  });
   final TransactionFormViewModel vm;
+  final String currency;
 
   /// Fires once the keypad's OK is tapped — the parent uses this to open the
   /// next field's drawer (category/account, or from/to for a transfer).
@@ -471,6 +494,7 @@ class _AmountRow extends StatelessWidget {
       context: InputContext.currency,
       label: 'Amount',
       amount: vm.state.amount,
+      currency: currency,
       valueColor: color,
       onAmountChanged: vm.setAmount,
       onAmountSubmitted: onSubmitted,

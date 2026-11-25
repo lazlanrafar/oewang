@@ -247,3 +247,21 @@ async fn should_refuse_a_member_and_replace_a_pending_invite(pool: PgPool) {
         ["member.invited", "member.invited", "member.invite_revoked"]
     );
 }
+
+/// A deleted workspace is gone for every member at once, not only for the
+/// owner who deleted it: the membership lookup behind every write refuses it.
+/// OPS-1, OPS-2
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_members_write_once_the_workspace_is_deleted(pool: PgPool) {
+    fixture(&pool).await;
+    let role = crate::auth::service::current_role(&pool, WORKSPACE, ADMIN).await;
+    assert_eq!(role.unwrap(), Role::Admin);
+
+    service::delete(&pool, as_user(OWNER)).await.unwrap();
+
+    let error = crate::auth::service::current_role(&pool, WORKSPACE, ADMIN)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::NotAMember), "{error:?}");
+    assert_eq!(audit_actions(&pool).await, ["workspace.deleted"]);
+}

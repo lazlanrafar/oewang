@@ -59,6 +59,9 @@ class FakeApi implements HttpClientAdapter {
   /// Paths answered with this error instead, once.
   final refuse = <String, (int, String, String)>{};
 
+  /// Runs after each request is handled, e.g. to switch workspace mid-drain.
+  void Function()? afterRequest;
+
   var _clock = 0;
   String _now() =>
       '2026-11-23T04:05:06.${(++_clock).toString().padLeft(6, '0')}+00:00';
@@ -90,6 +93,7 @@ class FakeApi implements HttpClientAdapter {
     final answer = refused != null
         ? _error(refused.$1, refused.$2, refused.$3)
         : _handle(method, path, options);
+    afterRequest?.call();
     if (loseNextResponse) {
       loseNextResponse = false;
       throw DioException.connectionError(
@@ -226,7 +230,7 @@ class Harness {
     sync = SyncService(
       db: db,
       api: api,
-      workspaceId: () => 'ws1',
+      workspaceId: () => workspace(),
       canWrite: () => canWrite,
       onSynced: () => synced++,
     );
@@ -255,6 +259,7 @@ class Harness {
   final server = FakeApi();
   final db = AppDatabase(NativeDatabase.memory());
   final bool canWrite;
+  String? Function() workspace = () => 'ws1';
   late final SyncService sync;
   late final TransactionsRepositoryOffline transactions;
   late final WalletsRepositoryOffline wallets;
@@ -747,4 +752,35 @@ void main() {
       );
     },
   );
+
+  test('OEW-121: a workspace switch mid-drain leaves the rest queued and '
+      'sends nothing under the new workspace', () async {
+    await h.offline();
+    for (final name in ['A', 'B', 'C']) {
+      (await h.wallets.create(NewWalletDraft(name: name))).ok;
+    }
+    h.server.afterRequest = () => h.workspace = () => 'ws2';
+
+    await h.online();
+
+    expect(h.server.log, ['POST /wallets']);
+    final q = await h.queue();
+    expect(q.map((e) => e.status), [QueueStatus.queued, QueueStatus.queued]);
+    expect(await h.db.entries('ws2'), isEmpty);
+
+    // A direct write that sees the switch after its awaits is not sent.
+    h.server
+      ..afterRequest = null
+      ..log.clear();
+    var reads = 0;
+    h.workspace = () => reads++ == 0 ? 'ws1' : 'ws2';
+    final res = await h.sync.write(
+      kind: 'wallets',
+      op: QueueOp.create,
+      entityId: 'wnew000000000000000000000',
+      payload: {'id': 'wnew000000000000000000000', 'name': 'D'},
+    );
+    expect(res, isA<Failure<Json?, AppError>>());
+    expect(h.server.log, isEmpty);
+  });
 }

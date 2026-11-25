@@ -28,6 +28,8 @@
 			amount: string;
 			quantity?: string | null;
 			unit?: string | null;
+			/** The item's own category, when it has one (TXN-24). */
+			categoryId?: string | null;
 		}>;
 		/** How the items add up against the transaction, when they do not. */
 		itemsMismatch?: string | null;
@@ -61,6 +63,7 @@
 	 */
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import Plus from '@lucide/svelte/icons/plus';
+	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 
@@ -69,6 +72,7 @@
 	import * as Accordion from '../../atoms/accordion/index.js';
 	import { FilePicker } from '../../molecules/file-picker/index.js';
 	import { FileTile } from '../../molecules/file-tile/index.js';
+	import { SelectCategory } from '../../molecules/select-category/index.js';
 	import type { UploadedFile } from '../../molecules/file-dropzone/index.js';
 	import { filePicker, fileTile } from '$lib/files.js';
 	import { t } from '$lib/i18n';
@@ -87,6 +91,9 @@
 		onAddItem,
 		onEditItem,
 		onDeleteItem,
+		onItemCategoryChange,
+		onCategorizeItems,
+		categorizing = false,
 		onOpenFile,
 		onAttachmentsChange,
 		debts = null,
@@ -102,6 +109,11 @@
 		onAddItem?: () => void;
 		onEditItem?: (itemId: string) => void;
 		onDeleteItem?: (itemId: string) => void;
+		/** An item's category was picked; empty means none (TXN-27). */
+		onItemCategoryChange?: (itemId: string, categoryId: string) => void;
+		/** Ask for a category for every item that has none (TXN-27). */
+		onCategorizeItems?: () => void;
+		categorizing?: boolean;
 		/** A tile was clicked: the page opens the file sheet over this one. */
 		onOpenFile?: (file: UploadedFile) => void;
 		/** The whole new set, saved as soon as it changes (TXN-13). */
@@ -121,6 +133,14 @@
 			: []),
 		...(debts?.debts ?? []).map((debt) => ({ key: debt.id, debt, amount: debt.amount }))
 	]);
+
+	/* A transfer has no category, so its items take none either. */
+	const itemType = $derived(
+		transaction?.type === 'income' || transaction?.type === 'expense' ? transaction.type : undefined
+	);
+	const uncategorised = $derived(
+		itemType !== undefined && (transaction?.items ?? []).some((item) => !item.categoryId)
+	);
 
 	let pickerOpen = $state(false);
 	const tile = fileTile();
@@ -279,7 +299,8 @@
 					{#if transaction.items?.length}
 						<ul class="divide-border divide-y border">
 							{#each transaction.items as item (item.id)}
-								<li class="flex items-center gap-2 px-3 py-2 text-sm">
+								<li class="space-y-2 px-3 py-2 text-sm">
+									<div class="flex items-center gap-2">
 									<span class="min-w-0 flex-1 truncate">
 										{item.name}
 										{#if item.quantity}
@@ -309,6 +330,25 @@
 											<Trash2 class="size-3" />
 										</Button>
 									{/if}
+									</div>
+									<!-- The category the item is counted under, its own when
+									     it has one (TXN-24). A reader sees it only when set. -->
+									{#if itemType && (canEdit || item.categoryId)}
+										<!-- Keyed on the loaded items: a pick the API refused
+										     goes back to what the reload says. -->
+										{#key transaction.items}
+										<SelectCategory
+											type={itemType}
+											creatable={canEdit}
+											disabled={!canEdit}
+											createLabel={(typed) => t('common.create_named', { name: typed })}
+											clearLabel={t('txn.item_no_category')}
+											placeholder={t('txn.item_category')}
+											value={item.categoryId ?? ''}
+											onChange={(value) => onItemCategoryChange?.(item.id, value)}
+										/>
+										{/key}
+									{/if}
 								</li>
 							{/each}
 						</ul>
@@ -319,6 +359,19 @@
 							with a service charge on it legitimately does not add up
 							(TXN-12).
 						-->
+						{#if canEdit && uncategorised && onCategorizeItems}
+							<Button
+								variant="outline"
+								size="caps"
+								class="w-full"
+								loading={categorizing}
+								onclick={onCategorizeItems}
+							>
+								<Sparkles class="h-3.5 w-3.5" />
+								{t('txn.categorise_items')}
+							</Button>
+						{/if}
+
 						{#if transaction.itemsMismatch}
 							<Badge variant="outline" class="text-destructive gap-1">
 								<TriangleAlert class="size-3" />

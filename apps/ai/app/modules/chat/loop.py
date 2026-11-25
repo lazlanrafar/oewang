@@ -61,13 +61,18 @@ REFUSAL_CODES = frozenset(
         "TOOL_ARGS_INVALID",
         "TOOL_FORBIDDEN",
         "TOOL_CAP_EXCEEDED",
+        "TOOL_CALL_IN_PROGRESS",
         "CONFIRMATION_REQUIRED",
     }
 )
 
 #: Fixed text, because an exception string can carry anything, including the
-#: prompt (OPS-3).
-UNREACHABLE_SUMMARY = "the tool call did not reach the API"
+#: prompt (OPS-3). A lost response looks the same as a lost request, so the
+#: model is told the outcome is unknown, not that nothing happened.
+UNREACHABLE_SUMMARY = (
+    "the tool call's outcome is unknown: it may have been applied, "
+    "so check before trying it again"
+)
 
 #: What the `error` event says when the model call itself fails. Fixed text,
 #: for the same reason.
@@ -217,7 +222,9 @@ async def execute_tool(
     try:
         data = await api.post(TOOLS_EXECUTE_PATH, request)
     except owe1_client.ApiError as error:
-        logger.info("tool %s refused with %s", name, error.code)
+        # Which arguments, never what they held: the names are the schema's
+        # own keys, the values are the user's (OPS-3).
+        logger.info("tool %s refused with %s %s", name, error.code, sorted(error.fields or {}))
         payload = {"ok": False, "error": _error_payload(error)}
         return False, payload, error.message or error.code
     except owe1_client.ClientError as error:
@@ -285,7 +292,6 @@ def _assistant_content(message: Any) -> tuple[list[dict[str, Any]], bool]:
             )
 
     return blocks, screened
-
 
 
 async def run_turn(

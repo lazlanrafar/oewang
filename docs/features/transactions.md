@@ -134,6 +134,12 @@ File bytes arrive as chunks through the SvelteKit server's `/vault/files` routes
 
 Line items move no money: only the transaction's own `amount` does. When the items do not add up to it the sheet raises a badge and nothing more, because a receipt with a service charge on it legitimately does not add up (TXN-12).
 
+An item may carry its own category, picked with `select-category` limited to the transaction's type (TXN-27). An item whose category differs from the transaction's is counted under its own in every figure grouped by category; what is left of the amount, floored at zero, stays with the transaction's category (TXN-24, D123). The rule is one view, [category shares](../data-model.md#category-shares). In the table the category cell then reads "Groceries +2", a derived count (TXN-26), and under a category filter that matched through an item the amount cell shows the matched portion beside the whole amount (TXN-25). Categorise items asks the AI service for a category for each item that has none, from the workspace's existing categories only. An item bought before under a category takes that category first, with no model call (TXN-29).
+
+In the web app the item's picker sits under each line in the detail sheet and in the receipt confirmation sheet, and it is clearable: its first row, "No category", puts the item back under the transaction's category. A pick saves at once through the item's own `PUT`, which replaces the item whole, so the rest of the item is sent back as it was read. Categorise items is a button under the lines, shown to an admin or owner while at least one item has no category; a refusal is a toast, because the sheet's overlay covers the page banner. A transfer's items get no picker, since a transfer has no category. The receipt scan's proposal for a line is prefilled only when the workspace has that category. The matched portion is a muted line under the row's amount, signed like it.
+
+The same proposal is made in two places, by one function (`transactions::service::suggest_item_categories`). The receipt scan answers every draft item with a `category_id`, so the confirmation sheet opens with the pickers filled. `POST /v1/transactions/{id}/items/categorize` does it for one existing transaction and writes the result, touching only items that have no category ([endpoints](../api/endpoints.md#transaction-line-items)). History is `items::last_categories`: the item key of ITM-1 (`lower(btrim(name))`), live items on live transactions with a live category, the newest purchase winning. Only the names it does not know go to the AI service, with the category names of the transaction's type; the answer is kept when it is exactly one of those names.
+
 **Debts** is an accordion section shown when the row is a debt payment or the source of a debt: each debt with its contact, type, remaining amount and status, opening the debt's detail sheet. A writer also sees Create debt, which opens the debt form with this transaction as its source (DEBT-12). Editing a payment transaction shows its amount, account, type, destination and foreign entry read-only, with a line naming the debt and a link to it (DEBT-8).
 
 Every confirmation on this screen is the design system's alert dialog rather than the browser's `confirm`. The native one blocks the renderer until it is dismissed, which freezes the page, and it cannot be translated (UI-1, UI-4).
@@ -227,6 +233,8 @@ So "a review list with low confidence rows flagged" has nothing to render. The c
 #### Deduplication (TXN-16, D29)
 
 Both paths compute a content fingerprint per row and store it ([data model](../data-model.md#import-fingerprint)). A row whose fingerprint already exists in the workspace is counted as a duplicate and skipped, enforced by a unique index rather than by a dialog.
+
+Two identical rows inside one file are two transactions, not one and a duplicate: the nth repeat in an import hashes its type and its number into its print, so it has its own stable print ([data model](../data-model.md#import-fingerprint)).
 
 So re-uploading last month's statement imports only the rows that are new. The user never has to remember what they already imported, and a partially failed import is safe to retry whole.
 

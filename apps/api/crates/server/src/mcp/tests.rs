@@ -486,6 +486,7 @@ fn state(pool: &PgPool) -> crate::state::AppState {
         max_file_bytes: 10 * 1024 * 1024,
         import_row_limit: 5000,
         trust_proxy_headers: false,
+        trusted_proxy_hops: 1,
         app_relay_key: None,
     };
     crate::state::AppState {
@@ -608,6 +609,53 @@ async fn should_cancel_a_debt_payment_deleted_through_the_mcp_tool(pool: PgPool)
 
     let after = debts::find(&pool, "ws_a", &debt.id).await.unwrap();
     assert_eq!(after.status, "unpaid");
+}
+
+/// TXN-28: MCP's `create_transaction` writes categorised items with the
+/// transaction, through the web's create.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_create_a_transaction_with_categorised_items_over_mcp(pool: PgPool) {
+    fixture(&pool).await;
+    sqlx::query(
+        "INSERT INTO wallets (id, workspace_id, name, currency_code) VALUES ('w_mcp', 'ws_a', 'Cash', 'IDR')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO categories (id, workspace_id, name, type)
+         VALUES ('c_food', 'ws_a', 'Groceries', 'expense'), ('c_smoke', 'ws_a', 'Cigarettes', 'expense')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let state = state(&pool);
+    let created = service::call(
+        &state,
+        &caller("tok_items", Some(vec!["ws_a".into()])),
+        "req_items",
+        "create_transaction",
+        json!({
+            "type": "expense", "wallet_id": "w_mcp", "amount": "500000",
+            "date": "2026-11-10T09:00:00Z", "category_id": "c_food", "name": "Superindo",
+            "items": [{ "name": "Rokok", "amount": "40000", "category_id": "c_smoke" }]
+        }),
+    )
+    .await
+    .unwrap();
+
+    let item: (String, Option<String>) = sqlx::query_as(
+        "SELECT amount::text, category_id FROM transaction_items WHERE transaction_id = $1",
+    )
+    .bind(created["id"].as_str().unwrap())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        item,
+        ("40000.0000".to_string(), Some("c_smoke".to_string()))
+    );
 }
 
 // -------------------------------------------------------------- debts

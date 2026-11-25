@@ -258,3 +258,48 @@ pub async fn count_purchases(
 
     builder.build_query_scalar().fetch_one(executor).await
 }
+
+/// The category last given to an item of each name, in the order asked
+/// (TXN-29).
+///
+/// "The same item" is the key above, compared in SQL so the trimming and
+/// the lowercasing are the ones the item list uses. The newest purchase
+/// that has a category wins, so a correction made on the latest receipt is
+/// what the next one starts from. A category that was deleted since is not
+/// an answer. Nothing is stored for this: the past items are the rules.
+pub async fn last_categories(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    names: &[&str],
+) -> Result<Vec<Option<String>>, sqlx::Error> {
+    let mut builder = QueryBuilder::new("SELECT n.ord, h.category_id FROM unnest(");
+    builder.push_bind(names);
+    builder.push(
+        "::text[]) WITH ORDINALITY AS n(name, ord)
+         CROSS JOIN LATERAL (
+             SELECT i.category_id
+             FROM transaction_items i
+             JOIN transactions t
+               ON t.id = i.transaction_id AND t.workspace_id = i.workspace_id
+             JOIN categories c
+               ON c.id = i.category_id AND c.workspace_id = i.workspace_id
+             WHERE i.workspace_id = ",
+    );
+    builder.push_bind(workspace_id);
+    builder.push(format_args!(
+        " AND i.deleted_at IS NULL AND t.deleted_at IS NULL AND c.deleted_at IS NULL
+               AND i.amount >= 0 AND {KEY} = lower(btrim(n.name))
+             ORDER BY t.date DESC, i.updated_at DESC, i.id DESC
+             LIMIT 1
+         ) h"
+    ));
+    let rows: Vec<(i64, String)> = builder.build_query_as().fetch_all(executor).await?;
+
+    let mut out = vec![None; names.len()];
+    for (ord, category_id) in rows {
+        if let Some(slot) = out.get_mut(ord as usize - 1) {
+            *slot = Some(category_id);
+        }
+    }
+    Ok(out)
+}

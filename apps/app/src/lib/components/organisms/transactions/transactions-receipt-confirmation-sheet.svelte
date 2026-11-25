@@ -106,7 +106,8 @@
 			name: item.name,
 			amount: item.amount,
 			quantity: null,
-			unit_price: null
+			unit_price: null,
+			category_id: null
 		}))
 	);
 
@@ -132,7 +133,8 @@
 					name: item.name,
 					quantity: item.quantity || null,
 					unit_price: item.unitPrice || null,
-					amount: item.amount
+					amount: item.amount,
+					category_id: item.categoryId || null
 				}))
 		)
 	);
@@ -286,6 +288,9 @@
 					</div>
 
 					{#each form.items as item, index (index)}
+						<!-- Two rows a line: the figures as read, then the category the
+						     line is counted under, which is its own when it has one
+						     (TXN-27). A receipt is always an expense. -->
 						<div class="grid grid-cols-[1fr_4rem_7rem] items-center gap-2">
 							<Input
 								bind:value={form.items[index].name}
@@ -301,6 +306,15 @@
 								inputmode="decimal"
 								class="font-mono"
 								aria-label={t('receipt.item_amount', { line: index + 1 })}
+							/>
+							<SelectCategory
+								type="expense"
+								creatable
+								createLabel={(typed) => t('common.create_named', { name: typed })}
+								clearLabel={t('txn.item_no_category')}
+								placeholder={t('txn.item_category')}
+								bind:value={form.items[index].categoryId}
+								class="col-span-3"
 							/>
 						</div>
 					{/each}

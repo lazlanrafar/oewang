@@ -65,6 +65,8 @@ A cap needs something to count against, and that unit is a `turn_id`. The API mi
 
 The AI service does not mint it, for the same reason the `role` in the body is a claim rather than a fact. A service that produced a fresh id per call would hand itself an untouched budget on every call, and the three per-turn caps above would bound nothing. The party being counted cannot also be the party that decides what counts as one turn.
 
+A write is also remembered by its `call_id` within the turn. The AI service retries a call once after a transport error, and a write that timed out may have landed, so a repeat of a finished write gets the first outcome back rather than writing again; a repeat while the first still runs is refused with `TOOL_CALL_IN_PROGRESS`, because its outcome is not known yet. A failed write is forgotten, so it can be tried again.
+
 `split_bill` is the one tool that writes many rows (up to 20 receivables and the contacts it creates). It is not capped per row; it is confirmed instead, like a delete, and counts as one write once confirmed (D122).
 
 Bulk paths deliberately do not exist as tools. There is no `bulk_delete_transactions`, no `delete_wallet`, no `delete_category`, no membership tool, no settings tool. Those operations exist only in the UI, where a human clicked them. The tool catalog is small on purpose (D17).
@@ -81,6 +83,7 @@ The challenge the API records is keyed by the chat session and the transaction I
 
 - A confirmation cannot be carried from one row to another. The key holds the ID.
 - A confirmation cannot be carried from one session to another. The key holds the session, so a challenge raised in one conversation does nothing in a second one opened alongside it.
+- A confirmation cannot come from the turn that asked. The challenge records the `turn_id` that raised it, and `confirmed: true` is honoured only from a different turn, because the person answers between turns; inside the asking turn only the model could have set the flag.
 - A confirmation cannot be replayed. The delete that answers a challenge consumes it, so deleting the same row again starts at the first step again.
 - `confirmed: true` on a call the API has not previously challenged for that exact ID is not honoured. It is answered with `CONFIRMATION_REQUIRED`, which is the first step of the flow rather than a refusal of it: the model gets the row's description and has to ask the user.
 
@@ -175,12 +178,14 @@ Each case names the test that holds it. A control is tested where it is enforced
 | A `member` session asking for any write | `TOOL_FORBIDDEN`, and the assistant reports the refusal | `should_refuse_every_write_tool_for_a_member` |
 | A delete with `confirmed: true` on the first call | `CONFIRMATION_REQUIRED`. The flag is not honoured unchallenged | `should_not_honour_a_confirmed_flag_on_a_first_call` |
 | A confirmation token reused for a different transaction ID | Rejected | `should_not_carry_a_confirmation_to_another_row` |
+| A delete confirmed in the same turn that was challenged | `CONFIRMATION_REQUIRED` again; nothing deleted | `should_refuse_a_confirmation_in_the_turn_that_asked` |
 | Four write tool calls in one turn | The fourth is refused by the cap | `should_refuse_the_fourth_write_in_one_turn` |
 | A tool argument with a 13-digit amount | Refused by the amount cap | `should_refuse_an_amount_above_the_ceiling` |
 | A model emitting `<img onerror=…>` in its reply | Sanitized before rendering | `apps/app`, the markdown tests |
 | 25 chat turns in one minute | The 21st is rate limited | `should_refuse_the_twenty_first_chat_turn_in_a_minute` |
 | A categorize answer naming a category that does not exist | Dropped; the receipt is saved uncategorised | `test_a_category_it_was_not_shown_is_dropped` |
 | The categorize call | Passes no tools and no document | `test_a_category_it_was_shown_comes_back`, `test_the_model_sees_strings_and_no_document` |
+| The per-item categorize call (TXN-27) | Passes no tools and no document; an invented, missing or null answer leaves the item empty | `test_every_item_gets_a_category_from_the_list`, `test_the_items_reach_the_model_numbered_and_without_tools`, `test_an_unknown_a_missing_and_an_unsure_item_are_empty` |
 | A Telegram `start` value nobody minted, including the old `slug___user` shape | Refused; nothing linked | `should_refuse_a_value_nobody_minted` |
 | A link token used twice, or after ten minutes | Refused | `should_refuse_a_token_used_twice`, `should_refuse_an_expired_token` |
 | Button data the bot did not make | Not acted on | `should_refuse_callback_data_it_did_not_make` |

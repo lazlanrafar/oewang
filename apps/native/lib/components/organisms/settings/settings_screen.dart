@@ -201,12 +201,19 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    // Logging out wipes the offline store, queue included.
+    final unsent = await ref.read(appDatabaseProvider).unsentCount();
+    if (!context.mounted) return;
     final confirm = await showConfirmDialog(
       context,
       title: 'Log out',
-      message: 'You will need to sign in again to use the app.',
+      message: unsent == 0
+          ? 'You will need to sign in again to use the app.'
+          : '$unsent unsent ${unsent == 1 ? 'change' : 'changes'} on this '
+                'device will be discarded. You will need to sign in again '
+                'to use the app.',
       confirmLabel: 'Log out',
-      isDestructive: false,
+      isDestructive: unsent > 0,
     );
     if (!confirm) return;
     await ref.read(sessionControllerProvider.notifier).clear();

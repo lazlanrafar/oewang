@@ -62,6 +62,8 @@ One registry in Rust (`mcp/tools/*.rs`). Every tool deserializes its arguments i
 | Members | `list_members`, `list_invites`, `invite_member`, `revoke_invite`, `update_member_role`, `remove_member` |
 | Settings | `get_assistant_settings`, `update_assistant_settings`, `send_feedback` |
 
+`create_transaction` takes `items`, written in the same database write, and each may carry its own `category_id` (TXN-28): a supermarket run with cigarettes in it is one transaction whose cigarettes count under their own category (D123). `get_transaction_summary` and `get_budget_status` read those shares.
+
 When a token reaches more than one workspace, every tool takes a required `workspace_id`; `list_workspaces` lists the ids. With one workspace in reach the argument is not offered.
 
 `import_transactions` is the web's CSV import: the client reads the file and sends rows as column-to-text maps with a column mapping, into one wallet per call. Fingerprints make a re-import a no-op (TXN-16), and rows are audited as `import`, as the web's are. Transfers are not an import shape; send them with `create_transaction`.

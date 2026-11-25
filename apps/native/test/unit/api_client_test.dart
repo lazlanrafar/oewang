@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/config/env.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/api/auth_interceptor.dart';
 import 'package:oewang/data/services/api/owe1/owe1_protocol.dart';
 import 'package:oewang/data/services/api/owe1/owe1_session.dart';
 import 'package:oewang/data/services/storage/secure_storage_service.dart';
@@ -348,6 +349,36 @@ void main() {
 
       expect(all.map((r) => r.statusCode), [200, 200, 200]);
       expect(t.server.refreshes, 1);
+    });
+
+    test('a queued write for another workspace never leaves', () async {
+      String jwt(String wid) =>
+          'h.${base64Url.encode(utf8.encode(jsonEncode({'wid': wid}))).replaceAll('=', '')}.s';
+      final t = build(access: jwt('ws_b'));
+      t.server.validAccess = jwt('ws_b');
+
+      await expectLater(
+        t.api.post(
+          '/wallets',
+          data: {'name': 'Cash'},
+          extra: {AuthInterceptor.workspace: 'ws_a'},
+        ),
+        throwsA(
+          isA<DioException>().having(
+            (e) => e.type,
+            'type',
+            DioExceptionType.cancel,
+          ),
+        ),
+      );
+      expect(t.server.routed, isEmpty);
+
+      await t.api.post(
+        '/wallets',
+        data: {'name': 'Cash'},
+        extra: {AuthInterceptor.workspace: 'ws_b'},
+      );
+      expect(t.server.routed, ['POST /v1/wallets']);
     });
 
     test('a refused refresh clears the tokens and signs out', () async {

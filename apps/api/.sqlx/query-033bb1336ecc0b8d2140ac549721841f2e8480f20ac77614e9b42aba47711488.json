@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT b.id, b.category_id, c.name AS category_name, b.amount,\n                  COALESCE((\n                      SELECT sum(t.base_amount)\n                      FROM transactions t\n                      WHERE t.workspace_id = b.workspace_id\n                        AND t.category_id = b.category_id\n                        AND t.type = 'expense'\n                        AND t.deleted_at IS NULL\n                        AND t.date >= $2 AND t.date < $3\n                  ), 0) AS \"spent!\"\n           FROM budgets b\n           JOIN categories c\n             ON c.id = b.category_id AND c.workspace_id = b.workspace_id\n            AND c.deleted_at IS NULL\n           WHERE b.workspace_id = $1 AND b.deleted_at IS NULL\n           ORDER BY c.sort_order, c.name",
+  "query": "SELECT b.id, b.category_id, c.name AS category_name, b.amount,\n                  COALESCE((\n                      SELECT sum(s.base_amount)\n                      FROM transaction_category_shares s\n                      JOIN transactions t ON t.id = s.transaction_id\n                      WHERE s.workspace_id = b.workspace_id\n                        AND s.category_id = b.category_id\n                        AND t.type = 'expense'\n                        AND t.date >= $2 AND t.date < $3\n                  ), 0) AS \"spent!\"\n           FROM budgets b\n           JOIN categories c\n             ON c.id = b.category_id AND c.workspace_id = b.workspace_id\n            AND c.deleted_at IS NULL\n           WHERE b.workspace_id = $1 AND b.deleted_at IS NULL\n           ORDER BY c.sort_order, c.name",
   "describe": {
     "columns": [
       {
@@ -69,5 +69,5 @@
       null
     ]
   },
-  "hash": "f0e8222211ddabf616e16d9a08fd4bcd79caeabef5249c82c39bc9f5064ababf"
+  "hash": "033bb1336ecc0b8d2140ac549721841f2e8480f20ac77614e9b42aba47711488"
 }

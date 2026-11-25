@@ -41,6 +41,10 @@ export function toRow(transaction: Transaction, locale = 'en-GB'): TransactionRo
 		originalCurrency: transaction.original_currency_code ?? undefined,
 		staleRate: transaction.base_rate_is_stale || undefined,
 		staleRateDate: transaction.base_rate_is_stale ? transaction.base_rate_date : undefined,
+		otherCategoryCount: transaction.other_category_count || undefined,
+		matchedAmount: transaction.matched_amount
+			? signedAmount(transaction.type, transaction.matched_amount)
+			: undefined,
 		note: transaction.description ?? undefined
 	};
 }

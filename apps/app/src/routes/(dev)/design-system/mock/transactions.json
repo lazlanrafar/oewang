@@ -20,6 +20,8 @@
 			"categoryId": "food",
 			"walletId": "wallet-1",
 			"amount": "-87500",
+			"otherCategoryCount": 2,
+			"matchedAmount": "-40000",
 			"currency": "IDR",
 			"note": "Team lunch. Receipt attached."
 		},

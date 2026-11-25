@@ -484,21 +484,7 @@ pub async fn begin_turn(
         role: role.as_str().to_string(),
         session_id: session_id.to_string(),
         message: message.to_string(),
-        history: stored
-            .into_iter()
-            // The model takes a conversation of two speakers. A system row is
-            // not one of them.
-            .filter(|row| row.role == "user" || row.role == "assistant")
-            .rev()
-            .take(HISTORY_WINDOW)
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .map(|row| TurnMessage {
-                role: row.role,
-                content: row.content,
-            })
-            .collect(),
+        history: history(stored),
         context: TurnContext {
             currency_code: workspace.currency_code,
             today: Utc::now().date_naive().to_string(),
@@ -622,6 +608,26 @@ fn clean_title(raw: &str) -> Result<String> {
     Ok(title.chars().take(MAX_TITLE).collect())
 }
 
+/// The last `HISTORY_WINDOW` rows the model can take, oldest first.
+fn history(stored: Vec<MessageRow>) -> Vec<TurnMessage> {
+    let mut rows: Vec<TurnMessage> = stored
+        .into_iter()
+        .rev()
+        // The model takes a conversation of two speakers, so a system row is
+        // not one of them; and a provider refuses an empty assistant message,
+        // which a turn that ended in tool calls only can leave behind.
+        .filter(|row| row.role == "user" || row.role == "assistant")
+        .filter(|row| !row.content.trim().is_empty())
+        .take(HISTORY_WINDOW)
+        .map(|row| TurnMessage {
+            role: row.role,
+            content: row.content,
+        })
+        .collect();
+    rows.reverse();
+    rows
+}
+
 fn internal(error: impl Into<anyhow::Error>) -> AppError {
     AppError::Internal(error.into())
 }
@@ -629,6 +635,26 @@ fn internal(error: impl Into<anyhow::Error>) -> AppError {
 #[cfg(test)]
 mod title_tests {
     use super::*;
+
+    #[test]
+    fn should_leave_blank_rows_out_of_the_history() {
+        let row = |role: &str, content: &str| MessageRow {
+            id: String::new(),
+            session_id: String::new(),
+            role: role.to_string(),
+            content: content.to_string(),
+            attachments: None,
+            created_at: Utc::now(),
+        };
+        let stored = vec![
+            row("user", "Lunch 50k"),
+            row("assistant", "  \n"),
+            row("system", "note"),
+            row("assistant", "Saved."),
+        ];
+        let contents: Vec<String> = history(stored).into_iter().map(|m| m.content).collect();
+        assert_eq!(contents, ["Lunch 50k", "Saved."]);
+    }
 
     #[test]
     fn should_name_a_session_after_a_short_first_message() {
@@ -734,6 +760,28 @@ pub async fn parse_receipt(
         return Err(AppError::ReceiptUnreadable);
     }
 
+    // A category for every line, from what the same item was filed under
+    // before and, for the rest, from the model (TXN-27, TXN-29). Proposals
+    // only: the sheet shows them and the user's confirm is what writes.
+    let mut draft = checked.draft;
+    let names: Vec<&str> = draft
+        .line_items
+        .iter()
+        .map(|item| item.name.as_str())
+        .collect();
+    let categories = crate::transactions::service::suggest_item_categories(
+        ai,
+        crate::usage::Meter::new(pool, workspace_id, user_id),
+        request_id,
+        "expense",
+        draft.merchant.as_deref(),
+        &names,
+    )
+    .await?;
+    for (item, category_id) in draft.line_items.iter_mut().zip(categories) {
+        item.category_id = category_id;
+    }
+
     let mut quality = answer.quality;
     // The ladder reports what it was unsure of; the arithmetic reports what
     // it replaced. Both reach the sheet, and they are different claims
@@ -742,7 +790,7 @@ pub async fn parse_receipt(
 
     Ok(ReceiptOutcome {
         vault_file_id: file_id.to_string(),
-        draft: checked.draft,
+        draft,
         quality,
     })
 }

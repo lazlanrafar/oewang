@@ -77,6 +77,12 @@ pub struct TransactionView {
     pub created_at: String,
     /// The row's version: send it back verbatim as `If-Match` (D115).
     pub updated_at: String,
+    /// How many categories other than its own the items span (TXN-26).
+    pub other_category_count: i64,
+    /// Under a category filter, the part of `amount` in those categories,
+    /// and only when it is not the whole of it (TXN-25).
+    #[serde(with = "rust_decimal::serde::str_option")]
+    pub matched_amount: Option<Decimal>,
 }
 
 impl From<TransactionListRow> for TransactionView {
@@ -114,6 +120,8 @@ impl From<TransactionListRow> for TransactionView {
             source: row.source,
             created_at: row.created_at.to_rfc3339(),
             updated_at: row.updated_at.to_rfc3339(),
+            other_category_count: row.other_category_count,
+            matched_amount: row.matched_amount.filter(|matched| *matched != row.amount),
         }
     }
 }
@@ -640,6 +648,26 @@ pub async fn list_items(
     let id = request_id.0;
 
     match service::list_items(&state.db, &auth.workspace_id, &transaction_id).await {
+        Ok(rows) => Ok(Json(Envelope::data(
+            rows.into_iter().map(Into::into).collect(),
+            id,
+        ))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// Propose a category for every item that has none, and answer the items
+/// as `list_items` does (TXN-27).
+pub async fn categorize_items(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    Path(transaction_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<Vec<ItemView>>>, ApiError> {
+    let id = request_id.0;
+
+    match service::categorize_items(&state.db, &state.ai, auth.actor(), &id, &transaction_id).await
+    {
         Ok(rows) => Ok(Json(Envelope::data(
             rows.into_iter().map(Into::into).collect(),
             id,

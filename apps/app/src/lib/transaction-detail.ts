@@ -68,6 +68,7 @@ export function toDetail(
 			id: item.id,
 			name: item.name,
 			amount: formatMoney(item.amount, currency),
+			categoryId: item.category_id,
 			quantity: item.quantity,
 			unit: item.unit
 		})),

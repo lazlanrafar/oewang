@@ -34,7 +34,7 @@ describe('setSession', () => {
 		vi.resetModules();
 	});
 
-	it('should keep both tokens in httpOnly cookies that live as long as the tokens do', () => {
+	it('should keep both tokens in httpOnly cookies that end with the tokens, the access one 30 seconds early', () => {
 		vi.useFakeTimers({ now: new Date('2026-11-23T00:00:00Z') });
 		const { cookies, set } = recorder();
 
@@ -48,26 +48,30 @@ describe('setSession', () => {
 		for (const { options } of set) {
 			expect(options).toMatchObject({ path: '/', httpOnly: true, sameSite: 'lax' });
 		}
-		expect(set[0].options.maxAge).toBe(15 * 60);
+		expect(set[0].options.maxAge).toBe(15 * 60 - 30);
 		expect(set[1].options.maxAge).toBe(30 * 24 * 60 * 60);
 	});
 
-	it('should mark both cookies Secure and __Host- in production', async () => {
-		vi.stubEnv('APP_ENV', 'production');
-		vi.resetModules();
-		const production = await import('./session');
-		const { cookies, set } = recorder();
+	// Only an explicit `development` drops Secure; unset is production.
+	it.each(['production', undefined])(
+		'should mark both cookies Secure and __Host- when APP_ENV is %s',
+		async (appEnv) => {
+			vi.stubEnv('APP_ENV', appEnv);
+			vi.resetModules();
+			const production = await import('./session');
+			const { cookies, set } = recorder();
 
-		production.setSession(cookies, issued());
+			production.setSession(cookies, issued());
 
-		expect(set.map((cookie) => cookie.name)).toEqual([
-			'__Host-oewang-session',
-			'__Host-oewang-refresh'
-		]);
-		for (const { options } of set) {
-			expect(options).toMatchObject({ httpOnly: true, secure: true, path: '/' });
+			expect(set.map((cookie) => cookie.name)).toEqual([
+				'__Host-oewang-session',
+				'__Host-oewang-refresh'
+			]);
+			for (const { options } of set) {
+				expect(options).toMatchObject({ httpOnly: true, secure: true, path: '/' });
+			}
 		}
-	});
+	);
 });
 
 /** A token with these claims. The signature is never read here. */

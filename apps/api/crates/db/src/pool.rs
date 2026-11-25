@@ -55,8 +55,15 @@ pub async fn connect(config: &PoolConfig) -> Result<PgPool, sqlx::Error> {
 /// application serves from connects as a role without DDL rights, so it
 /// could not run them (docs/deployment.md#migrations).
 pub async fn migrate(url: &str) -> Result<(), sqlx::migrate::MigrateError> {
+    let mut migrator = sqlx::migrate!("../../migrations");
+    // A migration this binary does not know was applied by a newer release.
+    // Ignoring it lets a rollback to an older image start; the rule that
+    // makes that safe is that a column drop ships one release after the
+    // code stops reading it (docs/deployment.md#migrations).
+    migrator.set_ignore_missing(true);
+
     let pool = PgPoolOptions::new().max_connections(1).connect(url).await?;
-    let applied = crate::MIGRATIONS.run(&pool).await;
+    let applied = migrator.run(&pool).await;
     pool.close().await;
     applied
 }

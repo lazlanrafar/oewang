@@ -107,6 +107,10 @@ pub struct Config {
     /// puts a proxy in front: anyone can send that header, and a limiter
     /// that believes it is one anyone can step around.
     pub trust_proxy_headers: bool,
+    /// How many proxies in front append to `X-Forwarded-For`; the source is
+    /// that many entries from the right. 1 behind one proxy; 2 behind
+    /// Cloudflare and Traefik, where the last entry is Cloudflare's edge.
+    pub trusted_proxy_hops: usize,
     /// The key the app presents with `x-client-ip`, so the API believes
     /// the address it names (D112). Required in production: without it
     /// every browser counts as the app's one address.
@@ -117,6 +121,18 @@ pub struct Config {
 pub enum AppEnv {
     Development,
     Production,
+}
+
+impl AppEnv {
+    /// Only an explicit `development` relaxes anything. A typo, a `prod`,
+    /// or a variable nobody set is production, so a missing value fails
+    /// closed rather than switching the production checks off.
+    fn parse(value: Option<&str>) -> Self {
+        match value {
+            Some("development") => Self::Development,
+            _ => Self::Production,
+        }
+    }
 }
 
 /// The bot's credentials and where its API lives.
@@ -163,10 +179,7 @@ impl Config {
     }
 
     pub fn from_env() -> Result<Self, ConfigError> {
-        let app_env = match optional("APP_ENV").as_deref() {
-            Some("production") => AppEnv::Production,
-            _ => AppEnv::Development,
-        };
+        let app_env = AppEnv::parse(optional("APP_ENV").as_deref());
 
         let jwt_secret = required("JWT_SECRET")?;
         // HS256 with a short key is a weak signature, and a default left in
@@ -241,6 +254,20 @@ impl Config {
                 name: "STORAGE_BACKEND",
                 reason: format!("expected local or s3, got {storage_backend:?}"),
             });
+        } else if app_env == AppEnv::Production {
+            // The local backend writes into the container, and the next
+            // deploy throws every vault file away.
+            return Err(ConfigError::Invalid {
+                name: "STORAGE_BACKEND",
+                reason: "must be s3 in production".into(),
+            });
+        }
+
+        // Without it no migration runs, and a release whose code reads a new
+        // column starts against the old schema (docs/deployment.md#migrations).
+        let migration_database_url = optional("MIGRATION_DATABASE_URL");
+        if migration_database_url.is_none() && app_env == AppEnv::Production {
+            return Err(ConfigError::Missing("MIGRATION_DATABASE_URL"));
         }
 
         // The app's word for the browser's address is what the limiter
@@ -259,7 +286,7 @@ impl Config {
             port: parse_or("API_PORT", 3002)?,
 
             database_url: Secret::new(required("DATABASE_URL")?),
-            migration_database_url: optional("MIGRATION_DATABASE_URL").map(Secret::new),
+            migration_database_url: migration_database_url.map(Secret::new),
             db_max_connections: parse_or("DB_MAX_CONNECTIONS", 20)?,
             db_acquire_timeout: Duration::from_secs(parse_or("DB_ACQUIRE_TIMEOUT_SECS", 5)?),
             db_statement_timeout: Duration::from_secs(parse_or("DB_STATEMENT_TIMEOUT_SECS", 10)?),
@@ -365,6 +392,15 @@ impl Config {
             trust_proxy_headers: optional("TRUST_PROXY_HEADERS")
                 .map(|value| value == "true")
                 .unwrap_or(false),
+            trusted_proxy_hops: match parse_or("TRUSTED_PROXY_HOPS", 1)? {
+                0 => {
+                    return Err(ConfigError::Invalid {
+                        name: "TRUSTED_PROXY_HOPS",
+                        reason: "must be at least 1".into(),
+                    })
+                }
+                hops => hops,
+            },
             app_relay_key: app_relay_key.map(Secret::new),
         })
     }
@@ -463,6 +499,20 @@ pub(crate) fn parse_duration(name: &'static str, default: &str) -> Result<Durati
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn should_treat_anything_but_development_as_production() {
+        assert_eq!(AppEnv::parse(Some("development")), AppEnv::Development);
+        for value in [
+            None,
+            Some("production"),
+            Some("prod"),
+            Some(""),
+            Some("Development"),
+        ] {
+            assert_eq!(AppEnv::parse(value), AppEnv::Production, "{value:?}");
+        }
+    }
 
     #[test]
     fn should_parse_duration_suffixes() {

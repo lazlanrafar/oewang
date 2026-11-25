@@ -81,6 +81,7 @@ pub fn config() -> Config {
         max_file_bytes: 10 * 1024 * 1024,
         import_row_limit: 5_000,
         trust_proxy_headers: false,
+        trusted_proxy_hops: 1,
         app_relay_key: None,
     }
 }

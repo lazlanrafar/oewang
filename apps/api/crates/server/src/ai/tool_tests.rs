@@ -25,6 +25,8 @@ const OWNER: &str = "usr_owner";
 const MEMBER: &str = "usr_member";
 const SESSION: &str = "ses_1";
 const TURN: &str = "turn_1";
+/// Where a person's answer to a challenge arrives: never the turn that asked.
+const NEXT_TURN: &str = "turn_2";
 
 fn ceiling() -> Decimal {
     oewang_domain::tools::default_max_tool_amount()
@@ -33,6 +35,7 @@ fn ceiling() -> Decimal {
 fn store() -> TurnStore {
     let store = TurnStore::new();
     store.open(TURN, crate::owe1::session::now_secs());
+    store.open(NEXT_TURN, crate::owe1::session::now_secs());
     store
 }
 
@@ -46,11 +49,33 @@ async fn run(
     call_as(pool, turns, OWNER, "owner", tool, args).await
 }
 
+/// One call, for the owner, in the turn after the one that asked.
+async fn answer(
+    pool: &PgPool,
+    turns: &TurnStore,
+    tool: &str,
+    args: Value,
+) -> oewang_domain::Result<ToolOutcome> {
+    call_in(pool, turns, OWNER, "owner", NEXT_TURN, tool, args).await
+}
+
 async fn call_as(
     pool: &PgPool,
     turns: &TurnStore,
     user_id: &str,
     claimed_role: &str,
+    tool: &str,
+    args: Value,
+) -> oewang_domain::Result<ToolOutcome> {
+    call_in(pool, turns, user_id, claimed_role, TURN, tool, args).await
+}
+
+async fn call_in(
+    pool: &PgPool,
+    turns: &TurnStore,
+    user_id: &str,
+    claimed_role: &str,
+    turn_id: &str,
     tool: &str,
     args: Value,
 ) -> oewang_domain::Result<ToolOutcome> {
@@ -63,7 +88,7 @@ async fn call_as(
             user_id,
             claimed_role,
             session_id: SESSION,
-            turn_id: TURN,
+            turn_id,
             call_id: None,
             tool,
             args: &args,
@@ -156,6 +181,43 @@ async fn an_expense(pool: &PgPool, turns: &TurnStore, amount: &str, name: &str) 
 }
 
 // -------------------------------------------------------------- the gates
+
+/// The AI service retries a call once after a transport error, with a fresh
+/// request id. A write that already landed must not land twice.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_answer_a_repeated_write_call_with_its_first_outcome(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+    let args = json!({
+        "type": "expense", "amount": "1000", "wallet_id": "wal_cash",
+        "category_id": "cat_food", "date": "2026-11-03", "name": "Lunch"
+    });
+    let request = || ToolRequest {
+        workspace_id: WORKSPACE,
+        user_id: OWNER,
+        claimed_role: "owner",
+        session_id: SESSION,
+        turn_id: TURN,
+        call_id: Some("call_1"),
+        tool: "create_transaction",
+        args: &args,
+    };
+
+    let first = tools::execute(&pool, &turns, ceiling(), request())
+        .await
+        .unwrap();
+    let again = tools::execute(&pool, &turns, ceiling(), request())
+        .await
+        .unwrap();
+
+    assert_eq!(again.result, first.result);
+    let rows = count(
+        &pool,
+        "SELECT count(*) FROM transactions WHERE deleted_at IS NULL",
+    )
+    .await;
+    assert_eq!(rows, 1, "one write, not two");
+}
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_refuse_a_tool_that_does_not_exist(pool: PgPool) {
@@ -348,7 +410,7 @@ async fn should_refuse_a_second_delete_in_one_turn(pool: PgPool) {
         );
     }
 
-    run(
+    answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -357,7 +419,7 @@ async fn should_refuse_a_second_delete_in_one_turn(pool: PgPool) {
     .await
     .unwrap();
 
-    let error = run(
+    let error = answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -487,6 +549,30 @@ async fn should_not_carry_a_confirmation_to_another_row(pool: PgPool) {
     assert_eq!(error.code(), "CONFIRMATION_REQUIRED");
 }
 
+/// SEC-25: the model cannot answer its own challenge. The person answers
+/// between turns, so a confirmation inside the turn that asked is asked again.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_confirmation_in_the_turn_that_asked(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+    let id = an_expense(&pool, &turns, "1000", "Lunch").await;
+
+    let ask = json!({ "transaction_id": id });
+    let error = run(&pool, &turns, "delete_transaction", ask).await;
+    assert_eq!(error.unwrap_err().code(), "CONFIRMATION_REQUIRED");
+
+    let confirmed = json!({ "transaction_id": id, "confirmed": true });
+    let error = run(&pool, &turns, "delete_transaction", confirmed).await;
+    assert_eq!(error.unwrap_err().code(), "CONFIRMATION_REQUIRED");
+
+    let live = count(
+        &pool,
+        "SELECT count(*) FROM transactions WHERE deleted_at IS NULL",
+    )
+    .await;
+    assert_eq!(live, 1, "nothing deleted");
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_soft_delete_a_confirmed_transaction_and_restore_the_balance(pool: PgPool) {
     fixture(&pool).await;
@@ -501,7 +587,7 @@ async fn should_soft_delete_a_confirmed_transaction_and_restore_the_balance(pool
     )
     .await
     .unwrap_err();
-    let outcome = run(
+    let outcome = answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -1151,7 +1237,7 @@ async fn should_cancel_a_debt_payment_deleted_through_the_chat_tool(pool: PgPool
     .await
     .unwrap_err();
     assert_eq!(challenge.code(), "CONFIRMATION_REQUIRED");
-    run(
+    answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -1464,7 +1550,7 @@ async fn should_challenge_a_debt_delete_and_keep_it_apart(pool: PgPool) {
     let turns = store();
 
     // A transaction challenge under the same id says nothing about the debt.
-    turns.challenge(SESSION, &debt, crate::owe1::session::now_secs());
+    turns.challenge(SESSION, &debt, TURN, crate::owe1::session::now_secs());
     let error = run(
         &pool,
         &turns,
@@ -1479,7 +1565,7 @@ async fn should_challenge_a_debt_delete_and_keep_it_apart(pool: PgPool) {
     assert_eq!(target["contact"], "Budi");
     assert!(target["remaining"].contains("25"));
 
-    run(
+    answer(
         &pool,
         &turns,
         "delete_debt",
@@ -1538,7 +1624,7 @@ async fn should_show_a_split_before_writing_it(pool: PgPool) {
 
     let mut confirmed = split.clone();
     confirmed["confirmed"] = json!(true);
-    let outcome = run(&pool, &turns, "split_bill", confirmed.clone())
+    let outcome = answer(&pool, &turns, "split_bill", confirmed.clone())
         .await
         .unwrap();
     let receivables = outcome.result["receivables"].as_array().unwrap();
@@ -1553,4 +1639,146 @@ async fn should_show_a_split_before_writing_it(pool: PgPool) {
         .await
         .unwrap_err();
     assert_eq!(error.code(), "CONFIRMATION_REQUIRED");
+}
+
+// ------------------------------------------------------------------ TXN-28
+
+/// "500k at the supermarket, 40k of it cigarettes" is one transaction with
+/// one categorised item, and the read tools answer from its shares (D123).
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_create_a_transaction_with_categorised_items_and_report_its_shares(pool: PgPool) {
+    fixture(&pool).await;
+    sqlx::query(
+        "INSERT INTO categories (id, workspace_id, name, type)
+         VALUES ('cat_smoke', $1, 'Cigarettes', 'expense')",
+    )
+    .bind(WORKSPACE)
+    .execute(&pool)
+    .await
+    .unwrap();
+    for (id, category) in [("bud_food", "cat_food"), ("bud_smoke", "cat_smoke")] {
+        sqlx::query(
+            "INSERT INTO budgets (id, workspace_id, category_id, amount)
+             VALUES ($1, $2, $3, 1000000)",
+        )
+        .bind(id)
+        .bind(WORKSPACE)
+        .bind(category)
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+    let turns = store();
+
+    let created = run(
+        &pool,
+        &turns,
+        "create_transaction",
+        json!({
+            "type": "expense",
+            "amount": "500000",
+            "wallet_id": "wal_cash",
+            "category_id": "cat_food",
+            "date": "2026-11-10",
+            "name": "Superindo",
+            "items": [{ "name": "Rokok", "amount": "40000", "category_id": "cat_smoke" }]
+        }),
+    )
+    .await
+    .unwrap();
+    let id = created.result["id"].as_str().unwrap().to_string();
+
+    // One row, one wallet movement, one item with its own category and the
+    // amount exactly as it was sent.
+    let items: Vec<(String, String, Option<String>)> = sqlx::query_as(
+        "SELECT name, amount::text, category_id FROM transaction_items WHERE transaction_id = $1",
+    )
+    .bind(&id)
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        items,
+        [(
+            "Rokok".to_string(),
+            "40000.0000".to_string(),
+            Some("cat_smoke".to_string())
+        )]
+    );
+    let balance: Decimal = sqlx::query_scalar("SELECT balance FROM wallets WHERE id = 'wal_cash'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        balance,
+        Decimal::ZERO,
+        "the items moved no money of their own"
+    );
+
+    let summary = run(
+        &pool,
+        &turns,
+        "get_spending_summary",
+        json!({ "from": "2026-11-01", "to": "2026-11-30", "group_by": "category" }),
+    )
+    .await
+    .unwrap();
+    let group = |label: &str| {
+        summary.result["groups"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|group| group["label"] == label)
+            .unwrap_or_else(|| panic!("no {label} group"))
+            .clone()
+    };
+    assert_eq!(summary.result["spent_formatted"], "Rp 500.000");
+    assert_eq!(group("Food")["total_formatted"], "Rp 460.000");
+    assert_eq!(group("Cigarettes")["total_formatted"], "Rp 40.000");
+
+    let status = run(
+        &pool,
+        &turns,
+        "get_budget_status",
+        json!({ "month": "2026-11" }),
+    )
+    .await
+    .unwrap();
+    let budget = |category: &str| {
+        status.result["budgets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|line| line["category_id"] == category)
+            .unwrap_or_else(|| panic!("no {category} budget"))
+            .clone()
+    };
+    assert_eq!(budget("cat_food")["spent_formatted"], "Rp 460.000");
+    assert_eq!(budget("cat_smoke")["spent_formatted"], "Rp 40.000");
+}
+
+/// An item's category is checked like the transaction's own: one from
+/// another workspace, or one that does not exist, writes nothing.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_an_item_category_the_workspace_does_not_have(pool: PgPool) {
+    fixture(&pool).await;
+
+    let error = run(
+        &pool,
+        &store(),
+        "create_transaction",
+        json!({
+            "type": "expense", "amount": "500000", "wallet_id": "wal_cash",
+            "items": [{ "name": "Rokok", "amount": "40000", "category_id": "cat_elsewhere" }]
+        }),
+    )
+    .await
+    .unwrap_err();
+
+    assert_eq!(error.code(), "CATEGORY_NOT_FOUND");
+    let rows: i64 = sqlx::query_scalar("SELECT count(*) FROM transactions")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(rows, 0);
 }

@@ -10,6 +10,7 @@ import 'package:oewang/core/result/app_error.dart';
 import 'package:oewang/core/result/result.dart';
 import 'package:oewang/data/repositories_remote/dio_error_mapper.dart';
 import 'package:oewang/data/services/api/api_client.dart';
+import 'package:oewang/data/services/api/auth_interceptor.dart';
 import 'package:oewang/data/services/db/app_database.dart';
 
 typedef Json = Map<String, dynamic>;
@@ -118,6 +119,10 @@ class SyncService {
     // network error is shown.
     final canQueue = _canWrite();
     final busy = (await db.entries(ws)).any((e) => e.isPending);
+    // Switched during the awaits above: the token is the other workspace's.
+    if (workspaceId != ws) {
+      return const Failure(UnknownError('The workspace changed; not saved'));
+    }
     if (!canQueue || (_online && !busy)) {
       final outcome = await _send(entry, ifMatch: false);
       switch (outcome) {
@@ -195,6 +200,12 @@ class SyncService {
       }
 
       await db.setEntry(next.id, status: QueueStatus.sending);
+      // A switch swaps the bearer token: what is left of this workspace's
+      // queue waits for it, rather than going out as the other workspace.
+      if (workspaceId != ws) {
+        await db.setEntry(next.id, status: QueueStatus.queued);
+        return;
+      }
       final outcome = await _send(next, ifMatch: true);
       switch (outcome) {
         case _Done(:final row):
@@ -241,15 +252,17 @@ class SyncService {
         ? '/${e.kind}'
         : '/${e.kind}/${e.entityId}';
     final base = e.baseUpdatedAt;
+    final extra = {AuthInterceptor.workspace: e.workspaceId};
     try {
       final res = await switch (e.op) {
-        QueueOp.create => _api.post(path, data: e.payload),
+        QueueOp.create => _api.post(path, data: e.payload, extra: extra),
         QueueOp.update => _api.patch(
           path,
           data: e.payload,
           headers: ifMatch && base != null ? {'If-Match': base} : null,
+          extra: extra,
         ),
-        QueueOp.delete => _api.delete(path),
+        QueueOp.delete => _api.delete(path, extra: extra),
       };
       return _Done(envelopeData(res) as Json?);
     } on DioException catch (ex) {

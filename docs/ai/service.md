@@ -136,7 +136,7 @@ Twenty-one tools (D17, D88, D103, D120): eleven cut down from thirty-four in the
 
 | Tool | Arguments | Role |
 |---|---|---|
-| `create_transaction` | `type`, `amount`, `to_amount`, `wallet_id`, `to_wallet_id`, `category_id`, `date`, `name`, `description` | admin+ |
+| `create_transaction` | `type`, `amount`, `to_amount`, `wallet_id`, `to_wallet_id`, `category_id`, `date`, `name`, `description`, `items[]` (optional: `name`, `amount`, `quantity`, `category_id`) | admin+. Items are written with the transaction in one database write (TXN-28) |
 | `update_transaction` | `transaction_id` plus any creatable field, `to_amount` included | admin+ |
 | `delete_transaction` | `transaction_id`, `confirmed` | admin+, plus confirmation (CHAT-6) |
 | `add_transaction_items` | `transaction_id`, `items[]` | admin+ |
@@ -355,9 +355,9 @@ Indonesian bank statements split debit and credit into two columns, which the ol
 |---|---|---|---|
 | `POST /receipt/parse` | [ladder](#extraction-quality-ladder) | none | merchant, date, total, subtotal, tax, currency, line items, quality score |
 | `POST /import/extract` | [ladder](#extraction-quality-ladder) | none | rows of date, description, amount, direction, quality score |
-| `POST /receipt/categorize` | `AI_CHAT_MODEL`, one call | none | `{ category, model, usage }`: one of the given names exactly, or null |
+| `POST /receipt/categorize` | `AI_CHAT_MODEL`, one call | none | `{ category, items, model, usage }`. Without `per_item`: `category` is one of the given names exactly, or null, and `items` is empty. With `per_item: true`: `items` is one name or null per item sent, in order, and `category` is null (TXN-27) |
 
-The first two take the same body, because both run the same ladder over the same kind of document (`/receipt/categorize` takes `{ request_id, workspace_id, merchant, items, categories }`, strings only):
+The first two take the same body, because both run the same ladder over the same kind of document (`/receipt/categorize` takes `{ request_id, workspace_id, merchant, items, categories, per_item }`, strings only):
 
 ```json
 {

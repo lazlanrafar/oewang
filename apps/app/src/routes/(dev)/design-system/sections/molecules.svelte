@@ -333,6 +333,9 @@
 		<SelectCurrency currencies={['IDR', 'USD', 'SGD', 'EUR']} bind:value={currency} />
 		<SelectColumn columns={['Date', 'Description', 'Amount', 'Balance']} bind:value={column} />
 		<SelectContact contacts={sampleContacts} bind:value={contact} />
+		<!-- Clearable: `clearLabel` adds a first row that holds no category,
+		     as a line item's picker does. -->
+		<SelectCategory {categories} bind:value={picked} clearLabel="No category" />
 	</div>
 </Specimen>
 

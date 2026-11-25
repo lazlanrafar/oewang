@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:oewang/config/dependencies.dart';
@@ -9,6 +10,7 @@ import 'package:oewang/core/router/app_router.dart';
 import 'package:oewang/data/repositories_fake/auth_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/device_tokens_repository_fake.dart';
 import 'package:oewang/data/repositories_fake/workspaces_repository_fake.dart';
+import 'package:oewang/data/services/db/app_database.dart';
 import 'package:oewang/data/services/push/push_messaging.dart';
 import 'package:oewang/data/services/push/push_service.dart';
 import 'package:oewang/domain/models/session.dart';
@@ -63,6 +65,7 @@ void main() {
     late _LoggingAuth auth;
     late _FakeMessaging messaging;
     late ProviderContainer container;
+    late AppDatabase db;
 
     ProviderContainer build({
       String? loginWorkspaceId = 'ws-1',
@@ -81,6 +84,9 @@ void main() {
             DeviceTokensRepositoryFake(log),
           ),
           pushMessagingProvider.overrideWithValue(messaging),
+          appDatabaseProvider.overrideWithValue(
+            db = AppDatabase(NativeDatabase.memory()),
+          ),
         ],
       );
     }
@@ -96,7 +102,10 @@ void main() {
     SessionController session() =>
         container.read(sessionControllerProvider.notifier);
 
-    tearDown(() => container.dispose());
+    tearDown(() async {
+      container.dispose();
+      await db.close();
+    });
 
     test('registers after sign-in, asking permission then', () async {
       container = build();
@@ -145,6 +154,26 @@ void main() {
       await session().clear();
 
       expect(log, ['register tok-1 ios', 'unregister tok-1', 'logout']);
+    });
+
+    test('OEW-121 sign-out wipes the offline store, queue included', () async {
+      container = build();
+      await session().enter(await signIn());
+      await db.putRow('ws-1', 'wallets', {'id': 'w1', 'name': 'Cash'});
+      await db.enqueue(
+        const QueueEntry(
+          workspaceId: 'ws-1',
+          kind: 'wallets',
+          op: QueueOp.create,
+          entityId: 'w1',
+        ),
+      );
+      expect(await db.unsentCount(), 1);
+
+      await session().clear();
+
+      expect(await db.rows('ws-1', 'wallets'), isEmpty);
+      expect(await db.unsentCount(), 0);
     });
 
     test('a refreshed token is registered while in a workspace', () async {

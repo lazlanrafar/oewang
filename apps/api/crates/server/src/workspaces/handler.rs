@@ -319,10 +319,11 @@ pub async fn delete_workspace(
     auth: AuthOwner,
     request_id: RequestId,
 ) -> std::result::Result<StatusCode, ApiError> {
-    accounts::soft_delete_workspace(&state.db, &auth.workspace_id)
+    let actor = Actor::web(&auth.workspace_id, &auth.user_id);
+    service::delete(&state.db, actor)
         .await
-        .map_err(|e| ApiError::new(internal(e), request_id.0))?;
-    Ok(StatusCode::NO_CONTENT)
+        .map(|_| StatusCode::NO_CONTENT)
+        .map_err(|error| ApiError::new(error, request_id.0))
 }
 
 pub async fn list_members(

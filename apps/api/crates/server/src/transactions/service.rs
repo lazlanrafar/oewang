@@ -10,14 +10,16 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use oewang_db::{
-    repositories::{accounts, audit, categories, debts, transactions as repo, vault, wallets},
+    repositories::{
+        accounts, audit, categories, debts, items, transactions as repo, vault, wallets,
+    },
     PgPool,
 };
 use oewang_domain::{
     csv_import::{transform, ColumnMapping, RawRow},
     ledger::{
-        fingerprint, net, reverse, round_money, BalanceDelta, ForeignEntry, ProposedShape,
-        TransactionShape, TransactionType,
+        fingerprint, net, nth_fingerprint, reverse, round_money, BalanceDelta, ForeignEntry,
+        ProposedShape, TransactionShape, TransactionType,
     },
     AppError, Result,
 };
@@ -354,9 +356,12 @@ pub(crate) async fn write_created(
 /// reversal is the negation of an effect and nothing else.
 ///
 /// `if_match` is the `updated_at` the client last read (D115). It is checked
-/// on the row read here and again by the update statement under its row
-/// lock, which also proves the balance reversed below is the row's current
-/// effect. Without it the edit is last-write-wins, as it always was.
+/// on the row read here and again by the update statement. Without it the
+/// edit is last-write-wins, as it always was.
+///
+/// The row is locked before any wallet, so a concurrent edit or delete of it
+/// waits here and then reverses what the first one wrote, never a stale
+/// amount. Lock order is always transaction rows, then wallets ascending.
 pub async fn update(
     pool: &PgPool,
     actor: Actor<'_>,
@@ -370,7 +375,7 @@ pub async fn update(
     let mut tx = pool.begin().await.map_err(internal)?;
     ensure_currency(&mut tx, actor.workspace_id, &prepared.workspace_currency).await?;
 
-    let Some(before) = repo::find(&mut *tx, actor.workspace_id, id)
+    let Some(before) = repo::find_for_update(&mut *tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
     else {
@@ -540,7 +545,7 @@ pub(crate) async fn delete_in(
     actor: Actor<'_>,
     id: &str,
 ) -> Result<()> {
-    let before = repo::find(&mut **tx, actor.workspace_id, id)
+    let before = repo::find_for_update(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?
         .ok_or(AppError::TransactionNotFound)?;
@@ -548,8 +553,8 @@ pub(crate) async fn delete_in(
     let moves = net(reverse(&effect_of(&before)?));
     apply_moves(tx, actor.workspace_id, &moves).await?;
 
-    // A second delete of the same row waited on the wallet lock and finds it
-    // already gone: refusing here rolls back the balance it just reversed.
+    // Unreachable while the read above holds the row lock; kept so a row
+    // that is somehow already gone rolls back the balance just reversed.
     let deleted = repo::soft_delete(&mut **tx, actor.workspace_id, id)
         .await
         .map_err(internal)?;
@@ -643,11 +648,18 @@ pub async fn bulk_create(
     let mut tx = pool.begin().await.map_err(internal)?;
     ensure_currency(&mut tx, actor.workspace_id, &workspace.currency_code).await?;
 
+    // How often each plain print has come up in this batch, so identical rows
+    // in one file each get their own print instead of collapsing into one.
+    let mut occurrences = std::collections::HashMap::<String, usize>::new();
+
     for (index, input) in inputs.iter().enumerate() {
         match prepare_import_row(&mut tx, actor.workspace_id, &workspace.currency_code, input).await
         {
             Ok(prepared) => {
-                let print = fingerprint_for(input, &prepared);
+                let base = fingerprint_for(input, &prepared);
+                let occurrence = occurrences.entry(base.clone()).or_default();
+                *occurrence += 1;
+                let print = nth_fingerprint(&base, input.kind.as_str(), *occurrence);
 
                 // The unique index is the real guard; this read makes a
                 // duplicate a counted outcome instead of a failed statement
@@ -911,8 +923,8 @@ pub async fn bulk_delete(pool: &PgPool, actor: Actor<'_>, ids: &[String]) -> Res
     let moves = net(all);
     apply_moves(&mut tx, actor.workspace_id, &moves).await?;
 
-    // Rows another delete took while this one waited on the wallet locks
-    // were reversed twice above; refusing rolls the whole selection back.
+    // The rows are locked by the read above, so this should not trip; if it
+    // does, refusing rolls the whole selection back rather than reverse twice.
     let deleted = repo::soft_delete_many(&mut *tx, actor.workspace_id, ids)
         .await
         .map_err(internal)?;
@@ -1500,6 +1512,127 @@ pub async fn delete_item(
 
     tx.commit().await.map_err(internal)?;
     Ok(())
+}
+
+/// A category id for each of `names`, in the order given (TXN-27, TXN-29).
+///
+/// History answers first: an item whose key was categorised before takes
+/// that category, so a correction made once holds. The model is asked only
+/// about the names history does not know, and only for one of the
+/// workspace's own categories of `kind`; its answer comes back as a name
+/// and is kept when it is exactly one of them. No answer is `None`, which
+/// leaves the item in its transaction's category.
+pub async fn suggest_item_categories(
+    ai: &oewang_clients::Owe1Client,
+    meter: crate::usage::Meter<'_>,
+    request_id: &str,
+    kind: &str,
+    merchant: Option<&str>,
+    names: &[&str],
+) -> Result<Vec<Option<String>>> {
+    let mut chosen = items::last_categories(meter.pool, meter.workspace_id, names)
+        .await
+        .map_err(internal)?;
+
+    let unknown: Vec<usize> = (0..names.len())
+        .filter(|&index| chosen[index].is_none() && !names[index].trim().is_empty())
+        .collect();
+    if unknown.is_empty() {
+        return Ok(chosen);
+    }
+
+    let offered = categories::list_categories(meter.pool, meter.workspace_id, Some(kind))
+        .await
+        .map_err(internal)?;
+    let offered_names: Vec<&str> = offered
+        .iter()
+        .map(|category| category.name.as_str())
+        .collect();
+    let asked: Vec<&str> = unknown.iter().map(|&index| names[index]).collect();
+
+    let answers = crate::ai::extraction::categorize_items(
+        ai,
+        meter,
+        request_id,
+        merchant,
+        &asked,
+        &offered_names,
+    )
+    .await;
+
+    for (index, answer) in unknown.into_iter().zip(answers) {
+        chosen[index] = answer
+            .and_then(|name| offered.iter().find(|category| category.name == name))
+            .map(|category| category.id.clone());
+    }
+
+    Ok(chosen)
+}
+
+/// Propose and write a category for each item of one transaction that has
+/// none (TXN-27). An item that already has one is never touched.
+///
+/// The model is asked before the database transaction opens, so no row is
+/// held while a network call is in flight. The write then sets a category
+/// only where there still is none, so an edit made in between wins.
+pub async fn categorize_items(
+    pool: &PgPool,
+    ai: &oewang_clients::Owe1Client,
+    actor: Actor<'_>,
+    request_id: &str,
+    transaction_id: &str,
+) -> Result<Vec<ItemRow>> {
+    let transaction = find(pool, actor.workspace_id, transaction_id).await?;
+    let open: Vec<ItemRow> = vault::list_items(pool, actor.workspace_id, transaction_id)
+        .await
+        .map_err(internal)?
+        .into_iter()
+        .filter(|item| item.category_id.is_none())
+        .collect();
+
+    let names: Vec<&str> = open.iter().map(|item| item.name.as_str()).collect();
+    let chosen = suggest_item_categories(
+        ai,
+        crate::usage::Meter::new(pool, actor.workspace_id, Some(actor.user_id)),
+        request_id,
+        &transaction.r#type,
+        transaction.name.as_deref(),
+        &names,
+    )
+    .await?;
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    require_transaction(&mut tx, actor.workspace_id, transaction_id).await?;
+
+    for (before, category_id) in open.iter().zip(chosen) {
+        let Some(category_id) = category_id else {
+            continue;
+        };
+        let Some(after) =
+            vault::set_item_category(&mut *tx, actor.workspace_id, &before.id, &category_id)
+                .await
+                .map_err(internal)?
+        else {
+            continue;
+        };
+
+        log(
+            &mut tx,
+            actor,
+            "transaction_item.updated",
+            ITEM_ENTITY,
+            &before.id,
+            snapshot(before)?,
+            snapshot(&after)?,
+        )
+        .await?;
+    }
+
+    tx.commit().await.map_err(internal)?;
+
+    vault::list_items(pool, actor.workspace_id, transaction_id)
+        .await
+        .map_err(internal)
 }
 
 fn validate_item(input: &ItemInput<'_>) -> Result<()> {

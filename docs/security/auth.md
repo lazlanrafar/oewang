@@ -51,7 +51,7 @@ HS256, signed with `JWT_SECRET` (at least 32 characters, validated at startup).
 | `exp` | Expiry. 15 minutes (D38) |
 | `jti` | Token ID, logged on issue so a session can be traced |
 
-**`role` is a snapshot.** If an owner demotes a member while that member holds a live token, the old role stays in the token until it expires or is refreshed. For write-sensitive operations the API re-reads the membership row, so a demotion takes effect immediately on writes. Read endpoints accept the snapshot. This is the deliberate trade: one database read on every write, none on every read.
+**`role` is a snapshot.** If an owner demotes a member while that member holds a live token, the old role stays in the token until it expires or is refreshed. For write-sensitive operations the API re-reads the membership row, so a demotion takes effect immediately on writes. Read endpoints accept the snapshot. This is the deliberate trade: one database read on every write, none on every read. A membership in a soft-deleted workspace is not live, so deleting a workspace (owner only, one transaction with its `workspace.deleted` audit row) stops every member's writes, refreshes and switches into it at once.
 
 ## The session cookies
 
@@ -92,6 +92,8 @@ flowchart TD
 ```
 
 A token used twice means either a stolen copy or a race. Both are handled the same way: the entire family, meaning every token descended from that login, is revoked and the user signs in again. The cost of a false positive is one re-login. The cost of ignoring it is an attacker keeping a parallel session alive indefinitely.
+
+So the app never races itself. `src/hooks.server.ts` holds one pending rotation per refresh token: parallel requests that arrive without the access cookie (several uploads, two tabs, a preload and its click) share it, and the result is kept ten seconds after it settles for a request that left the browser just before the new cookies arrived. That state lives in the one app process. The access cookie also ends 30 seconds before its token, so a request never carries a token the API has just expired, whose 401 would clear both cookies.
 
 ### Revocation
 
@@ -194,7 +196,7 @@ A row that exists in another workspace returns 404, never 403 (VLT-4). A 403 wou
 `POST /v1/auth/switch-workspace` with a target workspace ID:
 
 1. Read the live membership row for `(user_id, workspace_id)`.
-2. No live row, or a soft-deleted one: `NOT_A_MEMBER`.
+2. No live row, a soft-deleted one, or a deleted workspace: `NOT_A_MEMBER`.
 3. Issue a new token with the new `wid` and the role from that row.
 4. SvelteKit replaces the cookie.
 

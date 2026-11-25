@@ -45,6 +45,10 @@ export const load: PageServerLoad = async ({ depends, locals, url, parent }) => 
 		const totals = walletTotals(all, base, await ledger.walletRates(all, base, token));
 		return { totals, currency: base };
 	});
+	// If the awaited report below throws, nothing else ever handles this
+	// rejection, and an unhandled one ends the server process. The page's
+	// {#await} still sees it.
+	balance.catch(() => {});
 
 	/*
 	 * The debt balance card (DEBT-13): the net position the debts page shows

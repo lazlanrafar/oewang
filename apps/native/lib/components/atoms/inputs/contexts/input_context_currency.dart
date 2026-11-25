@@ -161,6 +161,10 @@ class _AmountKeypadState extends ConsumerState<AmountKeypad> {
   String _pending = '';
   String? _op;
 
+  /// True right after an operator, until a digit or backspace: a second
+  /// operator then replaces the first instead of evaluating against 0.
+  bool _awaitingOperand = false;
+
   String _initialDisplay() {
     final v = widget.initial ?? Decimal.zero;
     return v == Decimal.zero ? '0' : v.toString();
@@ -177,6 +181,7 @@ class _AmountKeypadState extends ConsumerState<AmountKeypad> {
 
   void _onDigit(String d) {
     setState(() {
+      _awaitingOperand = false;
       if (d == '.') {
         if (_display.contains('.')) return;
         _display = '$_display.';
@@ -191,6 +196,7 @@ class _AmountKeypadState extends ConsumerState<AmountKeypad> {
 
   void _onBackspace() {
     setState(() {
+      _awaitingOperand = false;
       _display = _display.length <= 1
           ? '0'
           : _display.substring(0, _display.length - 1);
@@ -200,9 +206,13 @@ class _AmountKeypadState extends ConsumerState<AmountKeypad> {
 
   void _onOp(String op) {
     setState(() {
-      _pending = _display;
+      if (!_awaitingOperand) {
+        // Fold the operator already pending, so 100 × 3 + 50 is 350, not 53.
+        _pending = _evaluate().toString();
+        _display = '0';
+      }
       _op = op;
-      _display = '0';
+      _awaitingOperand = true;
     });
     _emit();
   }
@@ -232,6 +242,7 @@ class _AmountKeypadState extends ConsumerState<AmountKeypad> {
       _display = _evaluate().toString();
       _pending = '';
       _op = null;
+      _awaitingOperand = false;
     });
     _emit();
   }

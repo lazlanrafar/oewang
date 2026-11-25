@@ -70,6 +70,28 @@ class _Stub extends Interceptor {
 
 void main() {
   group('MOB-4 TransactionDto', () {
+    test('MOB-11 reads the other-category count and the matched portion', () {
+      final plain = TransactionDto.fromJson(view()).toDomain();
+      expect(plain.otherCategoryCount, 0);
+      expect(plain.matchedAmount, isNull);
+
+      final split = TransactionDto.fromJson({
+        ...view(),
+        'other_category_count': 2,
+        'matched_amount': '12500.5000',
+      }).toDomain();
+      expect(split.otherCategoryCount, 2);
+      expect(split.matchedAmount!.amount, Decimal.parse('12500.5'));
+      expect(split.matchedAmount!.currency, 'IDR');
+
+      final whole = TransactionDto.fromJson({
+        ...view(),
+        'other_category_count': 0,
+        'matched_amount': null,
+      }).toDomain();
+      expect(whole.matchedAmount, isNull);
+    });
+
     test('maps a TransactionView with joined wallet and category', () {
       final tx = TransactionDto.fromJson(view()).toDomain();
       expect(tx.type, TransactionType.expense);

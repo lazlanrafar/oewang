@@ -472,10 +472,14 @@ class SessionController extends Notifier<AsyncValue<Session?>> {
     await ref.read(pushServiceProvider).signingOut();
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncValue.data(null);
+    await ref.read(appDatabaseProvider).wipe();
   }
 
   /// The tokens are already gone (a refused refresh).
-  void signedOut() => state = const AsyncValue.data(null);
+  void signedOut() {
+    state = const AsyncValue.data(null);
+    unawaited(ref.read(appDatabaseProvider).wipe());
+  }
 }
 
 final sessionControllerProvider =

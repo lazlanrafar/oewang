@@ -10,7 +10,7 @@
 
 use std::collections::BTreeMap;
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
@@ -169,7 +169,8 @@ fn optional_amount(raw: &str) -> Result<Option<Decimal>, RowError> {
 ///
 /// `1.234.567,89`, `1,234,567.89`, `1234567.89` and `(1.234)` all mean what
 /// they look like. Which of `.` and `,` is the decimal point is decided by
-/// which comes last, because no locale puts the decimal point first.
+/// which comes last, because no locale puts the decimal point first. A
+/// trailing `-` or a trailing `DB`/`DR` debit marker is negative; `CR` is not.
 pub fn parse_amount(raw: &str) -> Option<Decimal> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
@@ -194,7 +195,11 @@ pub fn parse_amount(raw: &str) -> Option<Decimal> {
         return None;
     }
 
-    let negative = bracketed || cleaned.starts_with('-');
+    // The trailing run of letters, so `IDR` is a currency and not a debit.
+    let mut letters = body.trim_end().rsplit(|c: char| !c.is_ascii_alphabetic());
+    let marker = letters.next().unwrap_or_default();
+    let debit = marker.eq_ignore_ascii_case("DB") || marker.eq_ignore_ascii_case("DR");
+    let negative = bracketed || debit || cleaned.starts_with('-') || cleaned.ends_with('-');
     let digits: String = cleaned.chars().filter(|c| *c != '-' && *c != '+').collect();
 
     let last_dot = digits.rfind('.');
@@ -245,8 +250,12 @@ pub fn parse_date(raw: &str) -> Option<NaiveDate> {
     for format in [
         "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%Y/%m/%d", "%d/%m/%y",
     ] {
+        // chrono's `%Y` takes `26` as the year 26, so a short year would
+        // never reach `%y`; no statement predates 1900.
         if let Ok(date) = NaiveDate::parse_from_str(head, format) {
-            return Some(date);
+            if date.year() >= 1900 {
+                return Some(date);
+            }
         }
     }
 
@@ -306,6 +315,15 @@ mod tests {
             Some(decimal("-50000")),
             "brackets mean negative"
         );
+        assert_eq!(parse_amount("150,000.00 DB"), Some(decimal("-150000")));
+        assert_eq!(parse_amount("150.000,00 DR"), Some(decimal("-150000")));
+        assert_eq!(parse_amount("150.000,00 CR"), Some(decimal("150000")));
+        assert_eq!(parse_amount("1.234,56-"), Some(decimal("-1234.56")));
+        assert_eq!(
+            parse_amount("150.000 IDR"),
+            Some(decimal("150000")),
+            "a currency code ending in DR is not a debit"
+        );
         assert_eq!(parse_amount("  "), None);
         assert_eq!(parse_amount("n/a"), None);
     }
@@ -318,6 +336,17 @@ mod tests {
         assert_eq!(parse_date("02-11-2026"), Some(second_of_november));
         assert_eq!(parse_date("02.11.2026"), Some(second_of_november));
         assert_eq!(parse_date("2026-11-02T09:30:00Z"), Some(second_of_november));
+        assert_eq!(
+            parse_date("02/11/26"),
+            Some(second_of_november),
+            "a short year is this century, not the year 26"
+        );
+        assert_eq!(parse_date("02-11-26"), None, "no short-year format here");
+        // Why the year floor exists: chrono's `%Y` reads `26` as year 26.
+        assert_eq!(
+            NaiveDate::parse_from_str("02/11/26", "%d/%m/%Y").map(|d| d.year()),
+            Ok(26)
+        );
         assert_eq!(parse_date("second of November"), None);
     }
 

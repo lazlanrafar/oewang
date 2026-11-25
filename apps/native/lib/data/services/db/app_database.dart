@@ -220,6 +220,20 @@ class AppDatabase extends GeneratedDatabase {
   Future<void> deleteEntry(int id) =>
       customStatement('DELETE FROM write_queue WHERE id = ?', [id]);
 
+  /// Entries not yet on the API, in every workspace: what a sign-out drops.
+  Future<int> unsentCount() async => (await customSelect(
+    'SELECT COUNT(*) AS n FROM write_queue',
+  ).getSingle()).read<int>('n');
+
+  // ------------------------------------------------------------------ wipe
+
+  /// On sign-out: the next person on this phone must neither see this
+  /// user's cached rows nor replay their queue under their own token.
+  Future<void> wipe() => transaction(() async {
+    await customStatement('DELETE FROM cached_rows');
+    await customStatement('DELETE FROM write_queue');
+  });
+
   static String? _encode(Object? json) =>
       json == null ? null : jsonEncode(json);
   static Map<String, dynamic>? _decode(String? s) =>

@@ -755,6 +755,38 @@ async fn should_give_the_exact_balance_when_two_writes_race(pool: PgPool) {
     assert_eq!(balance(&pool, &cash).await, decimal("-8000"));
 }
 
+/// Parallel edits of one row leave the balance the row's final amount says.
+///
+/// Each edit reverses the amount it read. Read without the row lock, two
+/// edits reverse the same old amount and the wallet drifts for good.
+/// TXN-4, TXN-6
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_reverse_the_current_amount_when_two_edits_race(pool: PgPool) {
+    fixture(&pool, "IDR").await;
+    let cash = wallet(&pool, "w_cash", "IDR").await;
+    let id = service::create(&pool, actor(), expense(&cash, "1000"))
+        .await
+        .unwrap()
+        .id;
+
+    let mut handles = Vec::new();
+    for step in 2..10 {
+        let (pool, cash, id) = (pool.clone(), cash.clone(), id.clone());
+        handles.push(tokio::spawn(async move {
+            let amount = format!("{step}000");
+            service::update(&pool, actor(), &id, expense(&cash, &amount), None)
+                .await
+                .unwrap();
+        }));
+    }
+    for handle in handles {
+        handle.await.unwrap();
+    }
+
+    let amount = service::find(&pool, WORKSPACE, &id).await.unwrap().amount;
+    assert_eq!(balance(&pool, &cash).await, -amount);
+}
+
 /// Two transfers in opposite directions cannot deadlock, because both lock
 /// their wallets in ascending ID order (D13).
 /// TXN-6
@@ -801,27 +833,35 @@ async fn should_not_deadlock_on_opposite_transfers(pool: PgPool) {
 
 // -------------------------------------------------------------------- bulk
 
+/// Two identical rows in one file are two transactions (two Rp 15,000
+/// GOPAY debits on one day); the same file again is all duplicates.
+/// TXN-16
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_skip_a_duplicate_rather_than_fail_the_import(pool: PgPool) {
     fixture(&pool, "IDR").await;
     let cash = wallet(&pool, "w_cash", "IDR").await;
 
-    let rows = vec![
-        expense(&cash, "50000"),
-        // Identical to the first, which is what a re-imported statement
-        // looks like.
-        expense(&cash, "50000"),
-        expense(&cash, "87500"),
-    ];
+    let rows = || {
+        vec![
+            expense(&cash, "50000"),
+            expense(&cash, "50000"),
+            expense(&cash, "87500"),
+        ]
+    };
 
-    let outcome = service::bulk_create(&pool, actor(), rows, IMPORT_LIMIT)
+    let outcome = service::bulk_create(&pool, actor(), rows(), IMPORT_LIMIT)
         .await
         .unwrap();
-
-    assert_eq!(outcome.created, 2);
-    assert_eq!(outcome.duplicates, 1);
+    assert_eq!((outcome.created, outcome.duplicates), (3, 0));
     assert!(outcome.skipped.is_empty());
-    assert_eq!(balance(&pool, &cash).await, decimal("-137500"));
+
+    // A re-imported statement: every row, the repeated one included, is
+    // a duplicate rather than a failed statement.
+    let again = service::bulk_create(&pool, actor(), rows(), IMPORT_LIMIT)
+        .await
+        .unwrap();
+    assert_eq!((again.created, again.duplicates), (0, 3));
+    assert_eq!(balance(&pool, &cash).await, decimal("-187500"));
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -1547,7 +1587,7 @@ async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPoo
         row("01/11/2026", "GAJI", "", "9.500.000", ""),
         // Unreadable: reported, not fatal.
         row("whenever", "BROKEN", "1.000", "", ""),
-        // A duplicate of the first, which is what a re-upload looks like.
+        // The same row again in one file is a second purchase (TXN-16).
         row("02/11/2026", "WARUNG TEKKO", "50.000", "", "Food"),
     ];
 
@@ -1565,11 +1605,8 @@ async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPoo
     .await
     .unwrap();
 
-    assert_eq!(outcome.created, 2);
-    assert_eq!(
-        outcome.duplicates, 1,
-        "the same row twice is counted, not failed"
-    );
+    assert_eq!(outcome.created, 3);
+    assert_eq!(outcome.duplicates, 0);
     assert_eq!(outcome.skipped.len(), 1);
     assert_eq!(
         outcome.skipped[0].index, 2,
@@ -1578,7 +1615,7 @@ async fn should_import_a_statement_and_report_what_it_could_not_read(pool: PgPoo
 
     // The debit became an expense and the credit an income, and the sign
     // rule is in code rather than in the model (D28).
-    assert_eq!(balance(&pool, &cash).await, decimal("9450000"));
+    assert_eq!(balance(&pool, &cash).await, decimal("9400000"));
 
     let categorised: Option<String> =
         sqlx::query_scalar("SELECT category_id FROM transactions WHERE name = 'WARUNG TEKKO'")
@@ -2457,5 +2494,484 @@ mod offline_writes {
         assert_eq!(details["current"]["id"], ID);
         assert_eq!(details["current"]["amount"], "60000.0000");
         assert_eq!(balance(&pool, &cash).await, decimal("-60000"));
+    }
+}
+
+/// Category shares (D123): an item with its own category counts under it.
+mod category_shares {
+    use std::collections::BTreeMap;
+
+    use super::*;
+    use crate::{
+        budgets,
+        transactions::service::{ItemInput, TransactionFilters},
+    };
+
+    fn item<'a>(name: &'a str, amount: &str, category_id: Option<&'a str>) -> ItemInput<'a> {
+        ItemInput {
+            name,
+            brand: None,
+            quantity: None,
+            unit: None,
+            unit_price: None,
+            amount: decimal(amount),
+            category_id,
+            notes: None,
+        }
+    }
+
+    /// Expense totals by category id; `-` is the uncategorised group.
+    async fn by_category(
+        pool: &PgPool,
+        filters: &TransactionFilters<'_>,
+    ) -> BTreeMap<String, Decimal> {
+        let (_, rows) = service::summary(pool, WORKSPACE, filters).await.unwrap();
+        rows.into_iter()
+            .map(|row| (row.category_id.unwrap_or_else(|| "-".into()), row.total))
+            .collect()
+    }
+
+    fn totals(pairs: &[(&str, &str)]) -> BTreeMap<String, Decimal> {
+        pairs
+            .iter()
+            .map(|(id, total)| ((*id).to_string(), decimal(total)))
+            .collect()
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_count_an_item_under_its_own_category(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let groceries = category(&pool, "c_groceries", "expense").await;
+        let cigarettes = category(&pool, "c_cigarettes", "expense").await;
+        let health = category(&pool, "c_health", "expense").await;
+
+        let row = service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                category_id: Some(&groceries),
+                ..expense(&cash, "500000")
+            },
+            &[
+                item("Sampoerna Mild", "40000", Some(&cigarettes)),
+                item("Vitamin C", "30000", Some(&health)),
+                item("Plaster", "20000", Some(&health)),
+                // Its own category and no category both stay with the row.
+                item("Beras", "150000", Some(&groceries)),
+                item("Telur", "60000", None),
+                // A discount line is in no share.
+                item("Diskon", "-10000", Some(&cigarettes)),
+            ],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            by_category(&pool, &Default::default()).await,
+            totals(&[
+                ("c_groceries", "410000"),
+                ("c_cigarettes", "40000"),
+                ("c_health", "50000"),
+            ]),
+        );
+
+        // The row still reads as one transaction, with a count of the others.
+        let detail = service::find(&pool, WORKSPACE, &row.id).await.unwrap();
+        assert_eq!(detail.other_category_count, 2);
+        assert_eq!(detail.amount, decimal("500000"));
+
+        // The filter matches through the item; the totals count the portion.
+        let ids = [cigarettes.clone()];
+        let filters = TransactionFilters {
+            category_ids: Some(&ids),
+            ..Default::default()
+        };
+        let (rows, total) = service::list(
+            &pool,
+            WORKSPACE,
+            &filters,
+            Default::default(),
+            Default::default(),
+            Page::new(None, None),
+        )
+        .await
+        .unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(rows[0].amount, decimal("500000"));
+        assert_eq!(rows[0].matched_amount, Some(decimal("40000")));
+
+        let (by_type, _) = service::summary(&pool, WORKSPACE, &filters).await.unwrap();
+        assert_eq!(by_type[0].total, decimal("40000"));
+        assert_eq!(
+            by_category(&pool, &filters).await,
+            totals(&[("c_cigarettes", "40000")]),
+            "the other shares of a matched row are not what was asked for"
+        );
+
+        // Budgets read the same shares (BUD-6).
+        for id in [&groceries, &cigarettes] {
+            budgets::service::create(&pool, actor(), id, decimal("1000000"))
+                .await
+                .unwrap();
+        }
+        let status = budgets::service::status(
+            &pool,
+            WORKSPACE,
+            oewang_domain::budget::Month::parse("2026-11").unwrap(),
+            None,
+            budgets::service::Sort::default(),
+        )
+        .await
+        .unwrap();
+        let spent: BTreeMap<_, _> = status
+            .budgets
+            .iter()
+            .map(|line| (line.category_id.clone(), line.spent))
+            .collect();
+        assert_eq!(
+            spent,
+            totals(&[("c_groceries", "410000"), ("c_cigarettes", "40000")])
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_floor_the_remainder_at_zero_and_keep_the_items_as_written(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let groceries = category(&pool, "c_groceries", "expense").await;
+        let cigarettes = category(&pool, "c_cigarettes", "expense").await;
+
+        service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                category_id: Some(&groceries),
+                ..expense(&cash, "500000")
+            },
+            &[item("Rokok", "520000", Some(&cigarettes))],
+        )
+        .await
+        .unwrap();
+
+        // Nothing is prorated, and the emptied own share is not listed.
+        assert_eq!(
+            by_category(&pool, &Default::default()).await,
+            totals(&[("c_cigarettes", "520000")]),
+        );
+        // The by-type total stays the wallet movement.
+        assert_eq!(total_expense(&pool).await, decimal("500000"));
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_convert_a_share_at_the_transactions_own_ratio(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        cache_rate(&pool, "USD", "IDR", "2026-11-02", "16000").await;
+        let usd = wallet(&pool, "w_usd", "USD").await;
+        let cigarettes = category(&pool, "c_cigarettes", "expense").await;
+
+        let row = service::create_with_items(
+            &pool,
+            actor(),
+            expense(&usd, "10"),
+            &[item("Rokok", "3.33", Some(&cigarettes))],
+        )
+        .await
+        .unwrap();
+        assert_eq!(row.base_amount, decimal("160000"));
+
+        let shares = by_category(&pool, &Default::default()).await;
+        assert_eq!(shares["c_cigarettes"], decimal("53280"));
+        assert_eq!(
+            shares.values().sum::<Decimal>(),
+            row.base_amount,
+            "the shares add up to the stored base amount"
+        );
+    }
+}
+
+/// A category for every item (TXN-27, TXN-29): history first, then the
+/// model, for the receipt draft and for one transaction's items.
+mod item_categories {
+    use std::sync::Mutex;
+
+    use axum::extract::{Path, State};
+    use oewang_domain::Role;
+    use serde_json::{json, Value};
+
+    use super::*;
+    use crate::{
+        auth::extractor::AuthWrite, response::RequestId, test_support, transactions::handler,
+        transactions::service::ItemInput, usage::Meter,
+    };
+
+    fn item<'a>(name: &'a str, amount: &str, category_id: Option<&'a str>) -> ItemInput<'a> {
+        ItemInput {
+            name,
+            brand: None,
+            quantity: None,
+            unit: None,
+            unit_price: None,
+            amount: decimal(amount),
+            category_id,
+            notes: None,
+        }
+    }
+
+    /// Every item list the stub was asked to categorise, by request id, so
+    /// tests running side by side read only their own.
+    static ASKED: Mutex<Vec<(String, Value)>> = Mutex::new(Vec::new());
+
+    fn asked(request_id: &str) -> Vec<Value> {
+        ASKED
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(id, _)| id == request_id)
+            .map(|(_, items)| items.clone())
+            .collect()
+    }
+
+    /// The AI service. It reads a two-line receipt, knows that vitamin C is
+    /// health, invents a category for "Mystery" and is unsure of the rest.
+    /// The category helper names a category by its id.
+    fn model(path: &str, body: &Value) -> Value {
+        if path == "/receipt/parse" {
+            return json!({
+                "draft": {
+                    "merchant": "Superindo",
+                    "date": "2026-11-20",
+                    "currency": "IDR",
+                    "total": "70000",
+                    "line_items": [
+                        { "name": "SAMPOERNA MILD", "amount": "40000" },
+                        { "name": "Vitamin C", "amount": "30000" },
+                    ],
+                },
+                "quality": { "score": 95 },
+            });
+        }
+
+        assert_eq!(body["per_item"], true);
+        ASKED.lock().unwrap().push((
+            body["request_id"].as_str().unwrap_or_default().to_string(),
+            body["items"].clone(),
+        ));
+        let answers: Vec<Value> = body["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|name| match name.as_str() {
+                Some("Vitamin C") => json!("c_health"),
+                Some("Mystery") => json!("Not a category"),
+                _ => Value::Null,
+            })
+            .collect();
+        json!({ "category": null, "items": answers, "usage": { "input": 40, "output": 8 } })
+    }
+
+    /// A workspace that bought Sampoerna Mild once, filed under cigarettes.
+    async fn history(pool: &PgPool) -> (String, crate::state::AppState) {
+        fixture(pool, "IDR").await;
+        let cash = wallet(pool, "w_cash", "IDR").await;
+        for id in ["c_groceries", "c_cigarettes", "c_health", "c_treats"] {
+            category(pool, id, "expense").await;
+        }
+        service::create_with_items(
+            pool,
+            actor(),
+            expense(&cash, "50000"),
+            &[item("Sampoerna Mild", "40000", Some("c_cigarettes"))],
+        )
+        .await
+        .unwrap();
+
+        let ai = test_support::ai_service(pool.clone(), model).await;
+        (cash, test_support::state(pool.clone(), &ai))
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_take_the_category_last_given_to_the_same_item_without_asking_the_model(
+        pool: PgPool,
+    ) {
+        let (cash, state) = history(&pool).await;
+        // A later purchase of the same item, recategorised: the newest wins.
+        let newer = service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                date: day(5),
+                ..expense(&cash, "45000")
+            },
+            &[item(" sampoerna mild", "45000", Some("c_treats"))],
+        )
+        .await
+        .unwrap();
+        let meter = Meter::new(&pool, WORKSPACE, Some(USER));
+
+        let chosen = service::suggest_item_categories(
+            &state.ai,
+            meter,
+            "req_history",
+            "expense",
+            Some("Superindo"),
+            &["SAMPOERNA MILD ", "Vitamin C", "Mystery"],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            chosen,
+            [Some("c_treats".to_string()), Some("c_health".into()), None],
+            "history, then the model's pick from the list, and an invented name is nothing"
+        );
+        assert_eq!(
+            asked("req_history"),
+            [json!(["Vitamin C", "Mystery"])],
+            "the item history answered is not sent to the model"
+        );
+
+        // Live rows only: with the newer purchase deleted, the older answers,
+        // and nothing is left to ask.
+        service::delete(&pool, actor(), &newer.id).await.unwrap();
+        let chosen = service::suggest_item_categories(
+            &state.ai,
+            meter,
+            "req_history_deleted",
+            "expense",
+            None,
+            &["Sampoerna Mild"],
+        )
+        .await
+        .unwrap();
+        assert_eq!(chosen, [Some("c_cigarettes".to_string())]);
+        assert!(asked("req_history_deleted").is_empty());
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_hand_the_app_a_receipt_draft_with_a_category_on_every_item(pool: PgPool) {
+        let (_, state) = history(&pool).await;
+        let store = crate::vault::tests::MemoryStore::default();
+        let file_id = uploaded_file(&pool, &store).await;
+
+        let outcome = crate::ai::service::parse_receipt(
+            &pool,
+            &store,
+            &state.ai,
+            "req_receipt",
+            WORKSPACE,
+            Some(USER),
+            &file_id,
+        )
+        .await
+        .unwrap();
+
+        // The wire shape the confirmation sheet reads.
+        let items = serde_json::to_value(&outcome.draft.line_items).unwrap();
+        assert_eq!(items[0]["name"], "SAMPOERNA MILD");
+        assert_eq!(items[0]["category_id"], "c_cigarettes", "from history");
+        assert_eq!(items[1]["category_id"], "c_health", "from the model");
+        assert!(items[0]["amount"].is_string(), "money stays a string (D12)");
+        assert_eq!(asked("req_receipt"), [json!(["Vitamin C"])]);
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_categorise_the_uncategorised_items_of_one_transaction(pool: PgPool) {
+        let (cash, state) = history(&pool).await;
+        let row = service::create_with_items(
+            &pool,
+            actor(),
+            TransactionInput {
+                category_id: Some("c_groceries"),
+                // Before the history purchase, so that one is the newest.
+                date: day(1),
+                ..expense(&cash, "500000")
+            },
+            &[
+                item("Sampoerna Mild", "40000", None),
+                item("Vitamin C", "30000", None),
+                item("Mystery", "5000", None),
+                // Already categorised, and not as history would: left alone.
+                item("sampoerna mild", "41000", Some("c_treats")),
+            ],
+        )
+        .await
+        .unwrap();
+
+        let auth = AuthWrite {
+            user_id: USER.into(),
+            workspace_id: WORKSPACE.into(),
+            role: Role::Admin,
+            source: "web",
+        };
+        let Ok(axum::Json(envelope)) = handler::categorize_items(
+            State(state.clone()),
+            auth,
+            Path(row.id.clone()),
+            RequestId("req_route".into()),
+        )
+        .await
+        else {
+            panic!("categorize failed");
+        };
+
+        let items = serde_json::to_value(&envelope.data).unwrap();
+        let listed = serde_json::to_value(
+            service::list_items(&pool, WORKSPACE, &row.id)
+                .await
+                .unwrap()
+                .into_iter()
+                .map(handler::ItemView::from)
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+        assert_eq!(
+            items, listed,
+            "the same shape and rows the item list answers"
+        );
+
+        let by_name = |name: &str| {
+            items
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|item| item["name"] == name)
+                .unwrap()
+                .clone()
+        };
+        assert_eq!(by_name("Sampoerna Mild")["category_id"], "c_cigarettes");
+        assert_eq!(by_name("Vitamin C")["category_id"], "c_health");
+        assert_eq!(by_name("Mystery")["category_id"], Value::Null);
+        assert_eq!(by_name("sampoerna mild")["category_id"], "c_treats");
+        assert_eq!(by_name("Sampoerna Mild")["amount"], "40000.0000");
+        assert_eq!(asked("req_route"), [json!(["Vitamin C", "Mystery"])]);
+
+        // One audit row per item that changed, none for the others.
+        let created = vec!["transaction_item.created".to_string()];
+        let updated = [
+            created.clone(),
+            vec!["transaction_item.updated".to_string()],
+        ]
+        .concat();
+        for (name, expected) in [
+            ("Sampoerna Mild", &updated),
+            ("Vitamin C", &updated),
+            ("Mystery", &created),
+            ("sampoerna mild", &created),
+        ] {
+            let id = by_name(name)["id"].as_str().unwrap().to_string();
+            assert_eq!(&audit_actions(&pool, &id).await, expected, "{name}");
+        }
+
+        // The cigarettes left the groceries share (D123).
+        let (_, shares) = service::summary(&pool, WORKSPACE, &Default::default())
+            .await
+            .unwrap();
+        let cigarettes = shares
+            .iter()
+            .find(|share| share.category_id.as_deref() == Some("c_cigarettes"))
+            .unwrap();
+        // 40,000 from the history purchase and 40,000 from this one.
+        assert_eq!(cigarettes.total, decimal("80000"));
     }
 }

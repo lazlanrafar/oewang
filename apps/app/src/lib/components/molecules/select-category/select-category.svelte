@@ -31,6 +31,7 @@
 		onChange,
 		onCreate,
 		createLabel,
+		clearLabel,
 		placeholder = 'Select category',
 		disabled = false,
 		updating = false,
@@ -56,6 +57,12 @@
 		onCreate?: (name: string) => void;
 		/** The create row's text, resolved by the caller (UI-1). */
 		createLabel?: (typed: string) => string;
+		/**
+		 * Makes the picker clearable: a first row with this text that holds
+		 * the empty value, for a field where no category is an answer. The
+		 * text is resolved by the caller (UI-1).
+		 */
+		clearLabel?: string;
 		placeholder?: string;
 		disabled?: boolean;
 		updating?: boolean;
@@ -86,8 +93,10 @@
 		})
 	);
 
-	const items = $derived(
-		options.map((category) => {
+	const items = $derived([
+		// Grey, so the row that means "none" does not wear a type's colour.
+		...(clearLabel === undefined ? [] : [{ value: '', label: clearLabel, colorClass: categoryColorClass(undefined) }]),
+		...options.map((category) => {
 			const known = typeOf.get(category.id);
 			return {
 				value: category.id,
@@ -95,7 +104,7 @@
 				colorClass: known ? categoryColorClass(known) : category.colorClass
 			};
 		})
-	);
+	]);
 
 	/*
 	 * A created category needs a type, and only the caller knows which, so

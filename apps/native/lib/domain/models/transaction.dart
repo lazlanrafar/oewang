@@ -77,6 +77,8 @@ class Transaction extends Equatable {
     this.toWallet,
     this.category,
     this.attachments = const [],
+    this.otherCategoryCount = 0,
+    this.matchedAmount,
   }) : baseAmount = baseAmount ?? amount.amount;
 
   final String id;
@@ -105,6 +107,14 @@ class Transaction extends Equatable {
   final NamedRef? category;
   final List<TransactionAttachment> attachments;
 
+  /// How many categories other than [category] the line items span (TXN-26).
+  /// Counted by the API, never here.
+  final int otherCategoryCount;
+
+  /// Under a category filter, the part of [amount] that falls in the filtered
+  /// categories (TXN-25). Null with no filter, or when it is the whole amount.
+  final Money? matchedAmount;
+
   bool get isIncome => type == TransactionType.income;
   bool get isExpense => type == TransactionType.expense;
 
@@ -124,6 +134,8 @@ class Transaction extends Equatable {
     toWallet,
     category,
     attachments,
+    otherCategoryCount,
+    matchedAmount,
   ];
 }
 

@@ -20,7 +20,8 @@ export type IssuedSession = {
 	role: 'owner' | 'admin' | 'member' | null;
 };
 
-const secure = process.env.APP_ENV === 'production';
+// Only an explicit `development` drops Secure; unset is production (OEW-122).
+const secure = process.env.APP_ENV !== 'development';
 
 /*
  * `__Host-` in production: the browser then refuses the cookie unless it is
@@ -49,7 +50,8 @@ function base(maxAge: number) {
 export function setSession(cookies: Cookies, session: IssuedSession): void {
 	const now = Math.floor(Date.now() / 1000);
 
-	cookies.set(ACCESS_COOKIE, session.access_token, base(session.access_expires_at - now));
+	// 30 seconds early, so a request never carries a token the API has just expired.
+	cookies.set(ACCESS_COOKIE, session.access_token, base(session.access_expires_at - now - 30));
 	cookies.set(REFRESH_COOKIE, session.refresh_token, base(session.refresh_expires_at - now));
 }
 

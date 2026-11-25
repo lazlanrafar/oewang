@@ -17,4 +17,7 @@ ENV CARGO_TARGET_DIR=/cargo-target
 
 EXPOSE 3002
 
-CMD ["cargo", "watch", "-x", "run --bin oewang-api"]
+# Only what the binary is built from. Watching all of /app restarted the api
+# mid-e2e on bind-mount metadata events (`/app/ MODIFY,ISDIR`) that change
+# no code, and the journeys running then died on ECONNREFUSED.
+CMD ["cargo", "watch", "-w", "crates", "-w", "migrations", "-w", ".sqlx", "-w", "Cargo.toml", "-w", "Cargo.lock", "-x", "run --bin oewang-api"]

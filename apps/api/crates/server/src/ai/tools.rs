@@ -85,7 +85,7 @@ pub struct ToolRequest<'a> {
 }
 
 /// What the AI service hands back to the model.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ToolOutcome {
     pub result: Value,
     /// One line the UI can show on a collapsed tool card, and the model can
@@ -122,20 +122,33 @@ pub async fn execute(
     let call = ToolCall::parse(tool, request.args)?;
     check_amount_ceiling(&call, max_amount)?;
 
+    // The AI service retries a call once after a transport error, and a
+    // timed-out write may have landed. The same call id in the same turn
+    // gets the first outcome back instead of writing twice.
+    let Some(call_id) = request.call_id.filter(|_| tool.is_write()) else {
+        return run(pool, turns, max_amount, &request, tool, call).await;
+    };
+    if let Some(done) = turns.begin_write(request.turn_id, call_id)? {
+        return Ok(done);
+    }
+    let outcome = run(pool, turns, max_amount, &request, tool, call).await;
+    turns.finish_write(request.turn_id, call_id, outcome.as_ref().ok());
+    outcome
+}
+
+async fn run(
+    pool: &PgPool,
+    turns: &TurnStore,
+    max_amount: Decimal,
+    request: &ToolRequest<'_>,
+    tool: Tool,
+    call: ToolCall,
+) -> Result<ToolOutcome> {
     // Layer 3. A delete or a split is challenged before it costs the turn
     // anything, so asking the user does not spend the turn's budget (D20,
     // D122).
     if let Some((key, confirmed)) = call.confirmation() {
-        confirm(
-            pool,
-            turns,
-            request.workspace_id,
-            request.session_id,
-            &call,
-            &key,
-            confirmed,
-        )
-        .await?;
+        confirm(pool, turns, request, &call, &key, confirmed).await?;
     }
 
     // Layer 2.
@@ -153,15 +166,15 @@ pub async fn execute(
         ToolCall::SearchTransactions(args) => search(pool, request.workspace_id, args).await,
         ToolCall::GetSpendingSummary(args) => summary(pool, request.workspace_id, args).await,
         ToolCall::GetSpendingAnalysis(args) => {
-            analysis(pool, turns, &request, Analysis::Spending, args).await
+            analysis(pool, turns, request, Analysis::Spending, args).await
         }
         ToolCall::GetIncomeSummary(args) => {
-            analysis(pool, turns, &request, Analysis::Income, args).await
+            analysis(pool, turns, request, Analysis::Income, args).await
         }
         ToolCall::GetBurnRate(args) => {
-            analysis(pool, turns, &request, Analysis::BurnRate, args).await
+            analysis(pool, turns, request, Analysis::BurnRate, args).await
         }
-        ToolCall::GetBudgetStatus(month) => budget_status(pool, turns, &request, month).await,
+        ToolCall::GetBudgetStatus(month) => budget_status(pool, turns, request, month).await,
         ToolCall::CreateTransaction(args) => create_transaction(pool, actor, args).await,
         ToolCall::UpdateTransaction(args) => update_transaction(pool, actor, args).await,
         ToolCall::DeleteTransaction(args) => {
@@ -188,7 +201,9 @@ pub async fn execute(
 fn check_amount_ceiling(call: &ToolCall, max_amount: Decimal) -> Result<()> {
     let amounts: Vec<Option<Decimal>> = match call {
         ToolCall::CreateTransaction(args) | ToolCall::UpdateTransaction(args) => {
-            vec![args.amount, args.to_amount]
+            let mut amounts = vec![args.amount, args.to_amount];
+            amounts.extend(args.items.iter().map(|item| Some(item.amount)));
+            amounts
         }
         ToolCall::AddTransactionItems(args) => {
             args.items.iter().map(|item| Some(item.amount)).collect()
@@ -230,27 +245,32 @@ fn above_ceiling(max_amount: Decimal) -> AppError {
 /// The confirmation gate (CHAT-6, D20, D122).
 ///
 /// `confirmed: true` is honoured only for a key this session has already
-/// been challenged on: a row's id, or a split's argument hash. A model that
-/// sets the flag on a first call is told to ask, and the challenge is
-/// issued at the same time, so the user sees what they are being asked
-/// about.
+/// been challenged on, in an earlier turn: a row's id, or a split's argument
+/// hash. A model that sets the flag on a first call, or again in the turn
+/// that was challenged, is told to ask, and the challenge is issued at the
+/// same time, so the user sees what they are being asked about.
 async fn confirm(
     pool: &PgPool,
     turns: &TurnStore,
-    workspace_id: &str,
-    session_id: &str,
+    request: &ToolRequest<'_>,
     call: &ToolCall,
     key: &str,
     confirmed: bool,
 ) -> Result<()> {
-    if confirmed && turns.challenged(session_id, key, now_secs()) {
+    let ToolRequest {
+        workspace_id,
+        session_id,
+        turn_id,
+        ..
+    } = *request;
+    if confirmed && turns.challenged(session_id, key, turn_id, now_secs()) {
         return Ok(());
     }
 
     // Read it first: a challenge naming a row that does not exist would
     // teach the model nothing and leak the shape of other workspaces.
     let target = describe(pool, workspace_id, call).await?;
-    turns.challenge(session_id, key, now_secs());
+    turns.challenge(session_id, key, turn_id, now_secs());
     Err(AppError::ConfirmationRequired(target))
 }
 
@@ -812,7 +832,25 @@ async fn create_transaction(
         attachment_ids: None,
     };
 
-    let row = transactions::service::create(pool, actor, input).await?;
+    // One write for the transaction and its items (TXN-28). The amounts are
+    // the ones the model was given: nothing here adds them up or works out
+    // a remainder (D27); the share view does that when a figure is read.
+    let items: Vec<transactions::service::ItemInput<'_>> = args
+        .items
+        .iter()
+        .map(|item| transactions::service::ItemInput {
+            name: &item.name,
+            brand: None,
+            quantity: item.quantity,
+            unit: None,
+            unit_price: None,
+            amount: item.amount,
+            category_id: item.category_id.as_deref(),
+            notes: None,
+        })
+        .collect();
+
+    let row = transactions::service::create_with_items(pool, actor, input, &items).await?;
     let detail = transactions::service::find(pool, actor.workspace_id, &row.id).await?;
 
     Ok(written(&detail, "Created"))

@@ -17,7 +17,7 @@ A budget is a monthly spending limit on one expense category, in the workspace c
 | One live budget per expense category; an income category is refused | `budgets_one_per_category_idx`, `budgets::service::create` |
 | Only the limit is editable; another category is another budget | `PATCH /v1/budgets/{id}` takes `amount` only |
 | Limit above zero, at most four decimal places | `budgets::service::validate_amount`, `CHECK (amount > 0)` |
-| Spent = `sum(base_amount)` of live `expense` transactions in the category, `date >= first day` and `< first day of next month`, UTC | `repositories::budgets::usage` |
+| Spent = `sum(base_amount)` of the category's [shares](../data-model.md#category-shares) of live `expense` transactions (BUD-6, D123): an item categorised elsewhere leaves, an item categorised into it enters, `date >= first day` and `< first day of next month`, UTC | `repositories::budgets::usage` |
 | Percent = spent / limit × 100, whole, half away from zero; 0 when there is no limit | `domain::budget::used_percent` |
 | State: `warning` from 80%, `over` past 100% (exactly 100% is `warning`) | `domain::budget::BudgetState` |
 | Deleting a category deletes its budget, audited | `budgets::service::delete_for_category`, called from `delete_category` |

@@ -259,7 +259,12 @@ pub async fn enforce(
     };
 
     let config = &state.config;
-    let source = source_ip(config.trust_proxy_headers, request.headers(), peer);
+    let source = source_ip(
+        config.trust_proxy_headers,
+        config.trusted_proxy_hops,
+        request.headers(),
+        peer,
+    );
     let caller = relayed_client_ip(config.app_relay_key.as_ref(), request.headers());
 
     if let Err(error) = state.rate_limits.count(bucket, caller, source, now_secs()) {
@@ -298,20 +303,30 @@ pub fn relayed_client_ip(key: Option<&Secret>, headers: &HeaderMap) -> Option<Ip
 ///
 /// Behind a reverse proxy every request arrives from the proxy, so the
 /// forwarded header is read **only** when the deployment says there is a
-/// proxy in front. And only its last entry, the one the proxy itself
-/// appended: anything to the left of it came from the caller, and a
-/// limiter that believes a caller's header is one anyone can step around.
-fn source_ip(trust_proxy_headers: bool, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
-    if !trust_proxy_headers {
+/// proxy in front. And only the entry `hops` from the right, the one the
+/// outermost trusted proxy appended: anything to the left of it came from
+/// the caller, and a limiter that believes a caller's header is one anyone
+/// can step around.
+///
+/// A header shorter than `hops` is a request that skipped the outer proxy
+/// (Traefik rewrites the header of a caller that bypassed Cloudflare to the
+/// one address it saw), so its leftmost entry is the caller. The peer is
+/// used only when there is no readable header at all.
+fn source_ip(trust: bool, hops: usize, headers: &HeaderMap, peer: SocketAddr) -> IpAddr {
+    if !trust {
         return peer.ip();
     }
 
-    headers
+    let Some(forwarded) = headers
         .get("x-forwarded-for")
         .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.rsplit(',').next())
-        .and_then(|value| value.trim().parse::<IpAddr>().ok())
-        .unwrap_or_else(|| peer.ip())
+    else {
+        return peer.ip();
+    };
+    let entries: Vec<&str> = forwarded.split(',').map(str::trim).collect();
+    entries[entries.len().saturating_sub(hops)]
+        .parse()
+        .unwrap_or_else(|_| peer.ip())
 }
 
 /// Drop aged-out windows on a timer, so a long-running process does not
@@ -538,7 +553,7 @@ mod whose_address_tests {
         let map = headers(&[(CLIENT_IP, browser), (RELAY_KEY, key)]);
         let secret = Secret::new(KEY);
         let caller = relayed_client_ip(Some(&secret), &map);
-        let source = source_ip(false, &map, APP.parse().unwrap());
+        let source = source_ip(false, 1, &map, APP.parse().unwrap());
         limiter.count(Bucket::Credential, caller, source, 1_000)
     }
 
@@ -632,7 +647,7 @@ mod whose_address_tests {
             let outcome = limiter.count(
                 Bucket::Credential,
                 relayed_client_ip(Some(&secret), &map),
-                source_ip(false, &map, peer),
+                source_ip(false, 1, &map, peer),
                 1_000,
             );
             assert_eq!(outcome.is_ok(), n < 3, "attempt {n}");
@@ -644,9 +659,29 @@ mod whose_address_tests {
         let peer: SocketAddr = "172.18.0.2:443".parse().unwrap();
         let map = headers(&[("x-forwarded-for", "1.2.3.4, 198.51.100.7")]);
         assert_eq!(
-            source_ip(true, &map, peer),
+            source_ip(true, 1, &map, peer),
             "198.51.100.7".parse::<IpAddr>().unwrap()
         );
-        assert_eq!(source_ip(false, &map, peer), peer.ip());
+        assert_eq!(source_ip(false, 1, &map, peer), peer.ip());
+    }
+
+    /// Cloudflare then Traefik: `<forged>, <client>, <cloudflare edge>`.
+    #[test]
+    fn should_read_the_client_two_hops_from_the_right() {
+        let peer: SocketAddr = "172.18.0.2:443".parse().unwrap();
+        let ip = |value: &str| value.parse::<IpAddr>().unwrap();
+
+        let through_cloudflare =
+            headers(&[("x-forwarded-for", "6.6.6.6, 203.0.113.9, 172.68.1.1")]);
+        assert_eq!(
+            source_ip(true, 2, &through_cloudflare, peer),
+            ip("203.0.113.9")
+        );
+
+        // Straight at the origin: Traefik replaced the header with one entry.
+        let direct = headers(&[("x-forwarded-for", "198.51.100.7")]);
+        assert_eq!(source_ip(true, 2, &direct, peer), ip("198.51.100.7"));
+
+        assert_eq!(source_ip(true, 2, &headers(&[]), peer), peer.ip());
     }
 }

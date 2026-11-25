@@ -232,6 +232,7 @@ Only these are returned in plaintext, because the caller may have no working key
 | `TOOL_FORBIDDEN` | 403 | The caller's role cannot run this tool (CHAT-4) |
 | `CONFIRMATION_REQUIRED` | 409 | A destructive tool was called without confirmation (CHAT-6). `fields` carries the target row's description: `date`, `name`, `amount`, `wallet` |
 | `TOOL_CAP_EXCEEDED` | 409 | A per-turn blast-radius cap was reached (D25). The model reports it and stops; it does not retry |
+| `TOOL_CALL_IN_PROGRESS` | 409 | A write with this `call_id` is still running in the turn (a transport retry of a slow call). Its outcome is not known yet; the model says so and does not call it again |
 
 ### Integrations
 

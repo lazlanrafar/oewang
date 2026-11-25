@@ -77,6 +77,10 @@ pub struct LineItem {
     pub quantity: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::str_option")]
     pub unit_price: Option<Decimal>,
+    /// A proposal, filled by the API after the arithmetic: what the same
+    /// item was filed under before, else the model's pick from the
+    /// workspace's own categories, else null (TXN-27, TXN-29).
+    pub category_id: Option<String>,
 }
 
 /// The checked draft. Absent beats guessed in every field: the confirmation
@@ -202,6 +206,7 @@ pub fn check(raw: RawDraft, fallback_currency: &str, today: NaiveDate) -> Checke
             amount: decimal(raw_item.amount.as_deref()),
             quantity: decimal(raw_item.quantity.as_deref()),
             unit_price: decimal(raw_item.unit_price.as_deref()),
+            category_id: None,
         };
 
         // Unit price times quantity is the line's own arithmetic. When it

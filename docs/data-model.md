@@ -401,12 +401,17 @@ fingerprint = sha256(
     normalize(name)        || "|" ||
     normalize(counterparty)
   ) truncated to 24 hex characters
+
+-- the nth row in one import with the same fingerprint, n >= 2
+fingerprint_n = sha256(fingerprint || "|" || normalize(type) || "|" || n)
+  truncated to 24 hex characters
 ```
 
 Rules:
 
 - Set on `import` and `receipt` rows. Null for manual and chat entry, where a user creating two identical expenses on purpose is legitimate.
 - Computed from the **transformed** values, after date parsing and sign normalization, so two files with different date formats produce the same hash for the same transaction.
+- Identical rows in one file are separate transactions (two Rp 15,000 GOPAY debits on one day). The first keeps the plain fingerprint, so files imported before this rule still dedupe; the nth repeat in the same import gets `fingerprint_n`, so re-importing the file is still a no-op.
 - A collision on insert is counted as `skipped`, not as an error.
 - The index is partial on `deleted_at IS NULL`, so deleting an imported row makes it importable again.
 
@@ -430,6 +435,16 @@ This is adapted from Midday's `internal_id` ([research](research/midday.md#32-de
 | `created_at`, `updated_at`, `deleted_at` | timestamp | |
 
 Item totals are not forced to match the transaction amount. A mismatch raises a warning badge in the UI, nothing more (TXN-12).
+
+##### Category shares
+
+`transaction_category_shares` is a view, not a table (D123, TXN-24, migration 0021). It answers `(workspace_id, transaction_id, category_id, is_own, amount, base_amount)`, over live rows only. An item with a negative amount (a discount line) is in no share.
+
+- One row per item category that differs from the transaction's own: the sum of those items' `amount`.
+- One row for the transaction's own category: `greatest(amount - sum of the rows above, 0)`. Always present, so a transaction with no categorised item has exactly this row, equal to itself.
+- `base_amount` is `amount × transactions.base_amount / transactions.amount`, the transaction's own stored ratio, rounded to 4 places. The own-category row takes what is left of `base_amount`, floored at zero, so rounding never invents a cent.
+
+Every query that groups or filters by category joins this view instead of reading `transactions.category_id`. A query that reads the column directly for a figure fails review.
 
 #### `transaction_attachments`
 

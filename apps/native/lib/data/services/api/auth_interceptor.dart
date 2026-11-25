@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:oewang/core/logging/app_logger.dart';
 import 'package:oewang/data/services/api/owe1/owe1_interceptor.dart';
@@ -25,6 +27,12 @@ class AuthInterceptor extends Interceptor {
   /// Set on a request that must go out without the bearer and must never
   /// trigger a refresh (the refresh call itself).
   static const skip = 'auth.skip';
+
+  /// The workspace a queued write belongs to. The request is cancelled
+  /// before it leaves when the stored token is for another workspace, so a
+  /// switch during a replay cannot send one workspace's write with the
+  /// other's token. A cancel is transient to the sync queue: it stays queued.
+  static const workspace = 'auth.workspace';
   static const _retried = 'auth.retried';
 
   Future<_Refresh>? _inflight;
@@ -38,6 +46,17 @@ class AuthInterceptor extends Interceptor {
     if (options.extra[skip] != true) {
       final token = await storage.readAccessToken();
       if (token != null && token.isNotEmpty) {
+        final expected = options.extra[workspace];
+        final wid = decodeJwtClaims(token)['wid'];
+        if (expected is String && wid is String && wid != expected) {
+          return handler.reject(
+            DioException(
+              requestOptions: options,
+              type: DioExceptionType.cancel,
+              message: 'the session moved to another workspace',
+            ),
+          );
+        }
         options.headers['Authorization'] = 'Bearer $token';
       }
     }
@@ -111,3 +130,17 @@ class AuthInterceptor extends Interceptor {
 }
 
 enum _Refresh { done, refused, unreachable }
+
+/// The payload of a JWT, unverified. Empty when it is not one.
+Map<String, dynamic> decodeJwtClaims(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return const {};
+    final decoded = jsonDecode(
+      utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+    );
+    return decoded is Map<String, dynamic> ? decoded : const {};
+  } on FormatException {
+    return const {};
+  }
+}

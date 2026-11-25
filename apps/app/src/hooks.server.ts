@@ -63,6 +63,34 @@ function isOnboarding(pathname: string): boolean {
 	return ONBOARDING_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+/**
+ * One rotation per refresh token. The API treats a second use of a refresh
+ * token as theft and revokes the whole family, so parallel requests (several
+ * uploads, two tabs, a preload and its click) must share the first one's
+ * result. It is kept a few seconds after it settles, for a request that
+ * left the browser with the old cookie just before the new one arrived.
+ *
+ * shortcut: module state dedupes within one app process only, move it to a
+ * shared store if the app ever runs more than one replica.
+ */
+const refreshes = new Map<string, Promise<IssuedSession | null>>();
+const REFRESH_REUSE_MS = 10_000;
+
+function refreshOnce(refreshToken: string): Promise<IssuedSession | null> {
+	const shared = refreshes.get(refreshToken);
+	if (shared) return shared;
+
+	const pending = api<IssuedSession>({
+		method: 'POST',
+		path: '/v1/auth/refresh',
+		body: { refresh_token: refreshToken }
+	}).then((result) => result.data);
+	refreshes.set(refreshToken, pending);
+	const forget = () => setTimeout(() => refreshes.delete(refreshToken), REFRESH_REUSE_MS);
+	pending.then(forget, forget);
+	return pending;
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	const { cookies, url } = event;
 
@@ -82,14 +110,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const refreshToken = readRefreshToken(cookies);
 		if (refreshToken) {
 			try {
-				const result = await api<IssuedSession>({
-					method: 'POST',
-					path: '/v1/auth/refresh',
-					body: { refresh_token: refreshToken }
-				});
-				if (result.data) {
-					setSession(cookies, result.data);
-					accessToken = result.data.access_token;
+				const session = await refreshOnce(refreshToken);
+				if (session) {
+					setSession(cookies, session);
+					accessToken = session.access_token;
 				}
 			} catch (error) {
 				// A refused refresh means revoked, expired or reused. All three

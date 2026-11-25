@@ -98,6 +98,8 @@ Twenty-one tools (D17, D88, D103, D120), listed with their schemas in [AI servic
 | Write | `create_transaction`, `update_transaction`, `delete_transaction`, `add_transaction_items`, `create_wallet`, `create_category`, `create_debt`, `pay_debt`, `update_debt`, `delete_debt`, `split_bill` |
 | Interaction | `present_choices` |
 
+`create_transaction` takes optional `items`, each a name, an amount as a string and its own `category_id`, so "500k at the supermarket, 40k of it cigarettes" is one transaction with one categorised item (TXN-28). The model sends only the parts the user named; it never works out the rest, which the [category shares](../data-model.md#category-shares) do when a figure is read (D27, D123). An item's category is checked like the transaction's own, and `update_transaction` refuses `items`: afterwards they change through `add_transaction_items`. `get_spending_summary` and `get_budget_status` answer from the shares. Telegram runs the same executor, so it takes the same arguments.
+
 Every tool runs through `POST /v1/internal/tools/execute` in the API (CHAT-4). The API validates the arguments against the schema, checks the role, performs the work through the same services the web UI uses, and writes an audit row with `source: "chat"`.
 
 ### Role gating

@@ -105,9 +105,10 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 
 | Variable | Required | Notes |
 |---|---|---|
-| `APP_ENV` | yes | `production`. Several checks below only bite when this is set correctly |
+| `APP_ENV` | no | Only `development` relaxes anything; any other value, a typo or no value at all is production, so the checks below fail closed. The same rule holds on `app` (Secure cookies, pinned keys) |
 | `API_PORT` | no | Defaults to 3002 |
 | `DATABASE_URL` | yes, **secret** | The application role. Owns no DDL rights; see [Migrations](#migrations) |
+| `MIGRATION_DATABASE_URL` | yes, **secret** | The migration role. Required in production, so a release never starts without applying its migrations; see [Migrations](#migrations) |
 | `DB_MAX_CONNECTIONS`, `DB_ACQUIRE_TIMEOUT_SECS`, `DB_STATEMENT_TIMEOUT_SECS` | no | Pool shape |
 | `JWT_SECRET` | yes, **secret** | Minimum 32 characters. Rotating it invalidates every session |
 | `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL` | no | Defaults 15m and 30d |
@@ -119,7 +120,7 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `CRYPTO_SIGNING_KEY_FILE` | yes | Path to the mounted PEM. See [Signing keys](#owe1-signing-keys) |
 | `AI_SIGNING_PUBLIC_KEYS` | yes | The AI service's pinned public keys, `kid:base64url` pairs, comma separated. A production client with none refuses to start |
 | `OWE1_ENABLED` | no | Must be `true` outside development; the config refuses otherwise |
-| `STORAGE_BACKEND` | yes | `s3` |
+| `STORAGE_BACKEND` | yes | `s3`. Production refuses `local`, which writes inside the container and loses every file on the next deploy |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION` | yes | See [Object storage](#object-storage-cloudflare-r2) |
 | `S3_ACCESS_KEY_ID` | yes, **secret** | R2 access key id |
 | `S3_SECRET_ACCESS_KEY` | yes, **secret** | R2 secret access key |
@@ -128,7 +129,8 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `FX_API_URL` | no | Defaults to `https://api.apilayer.net/exchangerate` (D96) |
 | `FX_ACCESS_KEY` | yes, **secret** | APILayer Exchange Rate key. Without it no rates are fetched; writes still work from the cache or a typed rate (TXN-22). The free plan is 100 calls a month and the job spends about 30, so one key covers production and one local machine, not more |
 | `FCM_SERVICE_ACCOUNT_JSON` | no, **secret** | Push to the mobile app (D116). The whole JSON key file of a Firebase service account with the Cloud Messaging role (Firebase console, Project settings, Service accounts, Generate new private key), on one line. Unset turns push off and the API logs `push off` at startup; nothing else changes. Set but unreadable stops the start |
-| `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, the last `x-forwarded-for` entry is read, the one the proxy appended, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
+| `TRUST_PROXY_HEADERS` | yes | **Set this to `true`.** Behind a proxy every request arrives from the proxy, so with it off the rate limiter buckets the whole internet together. With it on, the `x-forwarded-for` entry `TRUSTED_PROXY_HOPS` from the right is read, the one the outermost trusted proxy appended, which is only safe because the proxy is the only thing that can reach the port. Both halves of that sentence have to be true at once |
+| `TRUSTED_PROXY_HOPS` | yes behind Cloudflare | Default `1`. The number of proxies that append to `x-forwarded-for`. **Set `2` behind Cloudflare and Traefik**: Traefik trusts Cloudflare's ranges, so the header arrives as `<client>, <cloudflare edge>` and the last entry is Cloudflare's, which would put every caller in one bucket. A header with fewer entries (a caller that bypassed Cloudflare, whose header Traefik rewrote to the one address it saw) is read from its leftmost entry |
 | `APP_RELAY_KEY` | yes | At least 32 random characters, the same value as on `app`. The API refuses to start in production without it. It is what makes the app's `x-client-ip` believable, so the rate limits count each browser rather than the app's one address ([hardening](security/hardening.md#whose-address-is-counted), D112) |
 | `RATE_LIMIT_*`, `UPLOADS_PER_WORKSPACE_PER_DAY`, `REQUEST_TIMEOUT_SECS`, `BODY_LIMIT_BYTES` | no | Limits, documented in [hardening](security/hardening.md#rate-limits-and-resource-limits) |
 | `RUST_LOG` | no | Production wants something quieter than the development default, for example `oewang_api=info,warn`. The binary is `oewang-api`, so its log target is `oewang_api`; a filter naming `oewang_server` silences every line |
@@ -204,7 +206,13 @@ Two roles on the same database:
 | Migration role (`oewang_migrator`) | Owns the schema, full DDL | `MIGRATION_DATABASE_URL` |
 | Application role (`oewang_app`) | `SELECT`, `INSERT`, `UPDATE` on every table, `DELETE` on `telegram_updates` only, `USAGE` on sequences. No `CREATE`, no `DROP`, no `ALTER` | `DATABASE_URL` |
 
-The step: when `MIGRATION_DATABASE_URL` is set, `api` applies its embedded migrations over one connection as that role, closes it, and only then opens the application pool. A migration that fails stops the process, so the old container keeps serving.
+The step: `api` applies its embedded migrations over one connection as the `MIGRATION_DATABASE_URL` role, closes it, and only then opens the application pool. The variable is required in production; in development the step is skipped when it is unset. A migration that fails stops the process, so the old container keeps serving.
+
+A migration the binary does not know is ignored rather than refused, so rolling back to an older image after a newer one migrated still starts. That is only safe while every migration is backward compatible with the release before it, so:
+
+- Add first, remove later. A new column is nullable or has a default, so the previous release can still insert without it.
+- **A column drop ships one release after the code stops reading it.** Release N stops reading and writing the column; release N+1 drops it. Rolling back from N+1 lands on N, which does not need it.
+- The same holds for a renamed column or table: add the new one, move the code, drop the old one a release later.
 
 Both URLs sit in the `api` container's environment. The split therefore does not protect against someone who controls that container, who holds the data either way. It protects against SQL that reaches the application pool: an injected statement runs as a role that cannot drop or alter anything.
 
@@ -286,7 +294,7 @@ Coolify's proxy terminates TLS and is the only thing that may reach a container 
 Three further proxy requirements:
 
 - **Do not buffer responses.** Chat streams server-sent events through `app` from `api`. A buffering proxy turns a streamed answer into a long pause and then a wall of text.
-- **Set `x-forwarded-for` honestly**, and set `TRUST_PROXY_HEADERS=true` on the API so the rate limiter reads it. The API reads only the last entry, the one the proxy appended. The header is only trustworthy because nothing else can reach the port; if that ever stops being true, this setting has to come back off.
+- **Set `x-forwarded-for` honestly**, and set `TRUST_PROXY_HEADERS=true` on the API so the rate limiter reads it. The API reads only the entry `TRUSTED_PROXY_HOPS` from the right, the one the outermost trusted proxy appended. The header is only trustworthy because nothing else can reach the port; if that ever stops being true, this setting has to come back off.
 - **Cloudflare is in front of Traefik.** Both domains are proxied by Cloudflare, so Traefik's peer is a Cloudflare edge. Traefik discards forwarded headers from a peer it does not trust and writes its own, which makes every browser's address a Cloudflare edge's. Trust Cloudflare's published ranges on Traefik's entry points (`--entrypoints.http.forwardedHeaders.trustedIPs=...` and the same for `https`, from cloudflare.com/ips) and set `XFF_DEPTH=2` on `app`: Cloudflare's entry is then second from the right, and anything a browser sent sits to its left, unread. `CF-Connecting-IP` is not used, because anyone who finds the origin's address can send it straight to Traefik; a request that skips Cloudflare has one entry, so adapter-node finds no address at depth 2 and the API counts it against the app's own (D112).
 - **Leave the security headers to the application.** The CSP is issued by SvelteKit with a per-request nonce (`apps/app/vite.config.ts`, SEC-15). A proxy that adds its own `Content-Security-Policy` will fight it and break hydration quietly.
 
@@ -360,13 +368,22 @@ Off until the signing fingerprint is known (D119). When it is:
 
 Invitation links on Android become verified app links at step 2 as well; until then they open in the browser.
 
+## Backups
+
+Configured in Coolify on the shared PostgreSQL instance (project `infrastructure`), not in this repository:
+
+- **Daily, `oewang_v2` only**, at 18:00 UTC (01:00 WIB), to the R2 storage Coolify already uses. Seven dumps kept on the server, thirty days in R2. Added on 2026-11-25; the first run succeeded.
+- **Weekly, every database** (`pg-dump-all`), to the same storage, from the instance's own schedule.
+
+The daily schedule that existed before covers only another project's database, so until 2026-11-25 `oewang_v2` was in the weekly dump alone. Uploaded files live in R2 and are not part of either dump.
+
 ## Open questions
 
 Each of these needs the repository owner's decision. None of them is a value this document should guess.
 
 - **A private R2 bucket.** Production uses the old app's bucket `oewang` and its access key, because no other key exists yet. That bucket has a public custom domain (`cdn.oewang.com`), which breaks [the rule above](#object-storage-cloudflare-r2): an object's bytes are reachable by anyone who learns its key. The fix is a new bucket with no custom domain and a token scoped to it, created in the Cloudflare dashboard.
 - **A second copy of the signing keys.** The only copy outside Coolify is on the owner's laptop. A password manager entry would survive losing it.
-- **Database backup and restore.** Nothing in the repository covers backup schedule, retention or a tested restore. A finance app without a tested restore is an open risk, not a detail.
+- **A tested restore.** Backups run in Coolify on the shared instance (see [Backups](#backups)); no restore has been rehearsed yet. A finance app without a tested restore is an open risk, not a detail.
 - **`bun audit` is gated at `--audit-level=high` in CI**, not at any advisory. [Hardening](security/hardening.md#dependencies) says a known vulnerability fails the build. Today the tree carries one low-severity advisory, `GHSA-gcqx-w48m-w2h4` in `deepmerge`, reached through `@sveltejs/vite-plugin-svelte`, a build-time dependency. Either the threshold stays and hardening is amended to say so, or the threshold comes off and that advisory gets resolved first.
 - **`cargo audit` ignores RUSTSEC-2023-0071** (Marvin attack, `rsa`, medium). Since sqlx 0.9 the only path left is `rsa` 0.10.0-rc.19 through `webauthn-rs` -> `crypto-glue`, which is compiled and used to verify passkey RS256 signatures with public keys. The attack needs an RSA private key to time, and the API holds none. The fix is `rsa` 0.10.0, which `crypto-glue` 0.2.2 cannot resolve to; the ignore is written into `.github/workflows/ci.yml` with its reason and should come off when webauthn-rs moves to `rsa` 0.10.0. (`libsqlite3-sys`, RUSTSEC-2026-0459, was fixed by the same sqlx upgrade: it is 0.40 in `Cargo.lock` and never compiled, since sqlx 0.9 no longer pulls the SQLite or MySQL drivers into a PostgreSQL-only build.)
 - **Log destination and retention.** The API emits structured JSON in production. Nothing says where it goes or how long it is kept, and [hardening](security/hardening.md#logging) sets rules about what must never appear in it.
