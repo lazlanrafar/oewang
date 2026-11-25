@@ -22,6 +22,13 @@ async fn user(pool: &PgPool, role: Option<&str>) {
     .unwrap();
 }
 
+fn filter(search: Option<&str>) -> oewang_db::repositories::console::UserFilter<'_> {
+    oewang_db::repositories::console::UserFilter {
+        search,
+        ..Default::default()
+    }
+}
+
 async fn permissions(pool: &PgPool) -> Vec<ConsolePermission> {
     let row = service::operator(pool, USER).await.unwrap();
     Operator::new(row, "req".into()).permissions
@@ -162,7 +169,7 @@ async fn should_list_and_search_users_with_their_workspaces(pool: PgPool) {
     customers(&pool).await;
 
     let page = oewang_domain::Page::new(None, None);
-    let (rows, total) = service::users(&pool, Some("RINA"), UserSort::Email, false, page)
+    let (rows, total) = service::users(&pool, filter(Some("RINA")), UserSort::Email, false, page)
         .await
         .unwrap();
     assert_eq!(total, 1);
@@ -171,7 +178,7 @@ async fn should_list_and_search_users_with_their_workspaces(pool: PgPool) {
     assert_eq!(rows[0].workspaces, 1);
     assert_eq!(rows[0].console_role, None);
 
-    let (all, total) = service::users(&pool, None, UserSort::CreatedAt, true, page)
+    let (all, total) = service::users(&pool, filter(None), UserSort::CreatedAt, true, page)
         .await
         .unwrap();
     assert_eq!((all.len(), total), (2, 2));
@@ -245,7 +252,7 @@ async fn should_never_answer_with_a_users_money_or_ledger_text(pool: PgPool) {
 
     let answers = [
         serde_json::to_value(
-            service::users(&pool, None, UserSort::CreatedAt, true, page)
+            service::users(&pool, filter(None), UserSort::CreatedAt, true, page)
                 .await
                 .unwrap()
                 .0,
@@ -763,4 +770,38 @@ async fn should_grant_and_revoke_operators_with_the_guards(pool: PgPool) {
         .unwrap();
     assert_eq!(rows.len() as i64, total);
     assert_eq!(rows[0].operator_email, "usr_owner@example.com");
+}
+
+/// CSL-3, CSL-11: the operator picker asks for enabled non-operators only.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_narrow_users_to_who_can_become_an_operator(pool: PgPool) {
+    use oewang_db::repositories::console::UserFilter;
+    user(&pool, Some("owner")).await;
+    customers(&pool).await;
+    person(&pool, "usr_gone", None).await;
+    service::set_disabled(&pool, USER, "usr_gone", true)
+        .await
+        .unwrap();
+    let page = oewang_domain::Page::new(None, None);
+
+    let candidates = UserFilter {
+        search: None,
+        disabled: Some(false),
+        operator: Some(false),
+    };
+    let (rows, total) = service::users(&pool, candidates, UserSort::Email, false, page)
+        .await
+        .unwrap();
+    let ids: Vec<&str> = rows.iter().map(|row| row.id.as_str()).collect();
+    assert_eq!((ids, total), (vec![OWNER], 1));
+
+    let entry = service::operator_audit(&pool, page)
+        .await
+        .unwrap()
+        .0
+        .remove(0);
+    let read = service::operator_audit_entry(&pool, &entry.id)
+        .await
+        .unwrap();
+    assert_eq!(read.action, "user.disabled");
 }

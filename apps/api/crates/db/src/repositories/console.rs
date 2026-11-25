@@ -78,8 +78,36 @@ const USER_SELECT: &str =
    LEFT JOIN console_roles r ON r.id = u.console_role_id AND r.deleted_at IS NULL
   WHERE true";
 
-fn push_user_search(builder: &mut QueryBuilder<sqlx::Postgres>, search: Option<&str>) {
-    if let Some(search) = search {
+/// What a user list is narrowed to.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UserFilter<'a> {
+    pub search: Option<&'a str>,
+    /// `Some(true)` only disabled accounts, `Some(false)` only enabled ones.
+    pub disabled: Option<bool>,
+    /// `Some(true)` only operators, `Some(false)` only everyone else.
+    pub operator: Option<bool>,
+}
+
+fn push_user_search(builder: &mut QueryBuilder<sqlx::Postgres>, filter: UserFilter<'_>) {
+    match filter.disabled {
+        Some(true) => {
+            builder.push(" AND u.disabled_at IS NOT NULL");
+        }
+        Some(false) => {
+            builder.push(" AND u.disabled_at IS NULL");
+        }
+        None => {}
+    }
+    match filter.operator {
+        Some(true) => {
+            builder.push(" AND u.console_role_id IS NOT NULL");
+        }
+        Some(false) => {
+            builder.push(" AND u.console_role_id IS NULL");
+        }
+        None => {}
+    }
+    if let Some(search) = filter.search {
         let pattern = super::contains_pattern(search);
         builder
             .push(" AND (u.email ILIKE ")
@@ -92,14 +120,14 @@ fn push_user_search(builder: &mut QueryBuilder<sqlx::Postgres>, search: Option<&
 
 pub async fn list_users(
     executor: impl PgExecutor<'_>,
-    search: Option<&str>,
+    filter: UserFilter<'_>,
     sort: UserSort,
     descending: bool,
     limit: i64,
     offset: i64,
 ) -> Result<Vec<ConsoleUserRow>, sqlx::Error> {
     let mut builder = QueryBuilder::new(USER_SELECT);
-    push_user_search(&mut builder, search);
+    push_user_search(&mut builder, filter);
     let direction = if descending { "DESC" } else { "ASC" };
     builder.push(match sort {
         UserSort::CreatedAt => format!(" ORDER BY u.created_at {direction}, u.id"),
@@ -112,10 +140,10 @@ pub async fn list_users(
 
 pub async fn count_users(
     executor: impl PgExecutor<'_>,
-    search: Option<&str>,
+    filter: UserFilter<'_>,
 ) -> Result<i64, sqlx::Error> {
     let mut builder = QueryBuilder::new("SELECT count(*) FROM users u WHERE true");
-    push_user_search(&mut builder, search);
+    push_user_search(&mut builder, filter);
     builder.build_query_scalar().fetch_one(executor).await
 }
 
@@ -948,4 +976,20 @@ pub async fn count_operator_audit(executor: impl PgExecutor<'_>) -> Result<i64, 
     sqlx::query_scalar("SELECT count(*) FROM operator_audit")
         .fetch_one(executor)
         .await
+}
+
+pub async fn find_operator_audit(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<OperatorAuditRow>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT a.id, a.operator_id, u.email AS operator_email, a.action, a.entity,
+                a.entity_id, a.before, a.after, a.created_at
+           FROM operator_audit a
+           JOIN users u ON u.id = a.operator_id
+          WHERE a.id = $1",
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await
 }

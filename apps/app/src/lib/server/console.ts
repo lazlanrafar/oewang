@@ -427,6 +427,11 @@ export function revokeConsoleOperator(userId: string, token?: string) {
 }
 
 /** `page` and `per_page`; newest first. */
+/** One audit entry, so `?entry=` opens whatever page it is on; null when unknown. */
+export function consoleAuditEntry(id: string, token?: string): Promise<ConsoleAuditEntry | null> {
+	return consoleRecord(`/v1/console/audit/${encodeURIComponent(id)}`, token);
+}
+
 export function listConsoleAudit(query: URLSearchParams, token?: string): Promise<Envelope<ConsoleAuditEntry[]>> {
 	return consoleRead('/v1/console/audit', token, query);
 }

@@ -574,7 +574,7 @@ The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, 
 | Method | Path | Permission | Purpose |
 |---|---|---|---|
 | GET | `/v1/console/me` | any operator | `{ id, email, name, role: { id, name }, permissions: string[] }`. The app builds its menu from `permissions` (CSL-2) |
-| GET | `/v1/console/users` | `console.read` | Paged. `search` (email or name), `sort` `created_at` (default, newest first) or `email`, `order`. Rows `{ id, email, name, created_at, disabled_at, console_role, workspaces, last_active_at }`: `workspaces` counts live memberships of live workspaces, `last_active_at` is the newest refresh token (CSL-3) |
+| GET | `/v1/console/users` | `console.read` | Paged. `search` (email or name), `status` `active` or `disabled`, `operator` `true` or `false`, `sort` `created_at` (default, newest first) or `email`, `order`. Rows `{ id, email, name, created_at, disabled_at, console_role, workspaces, last_active_at }`: `workspaces` counts live memberships of live workspaces, `last_active_at` is the newest refresh token (CSL-3) |
 | GET | `/v1/console/users/{id}` | `console.read` | The row plus `memberships: [{ workspace_id, workspace_name, role, joined_at, workspace_deleted_at }]`, deleted workspaces included. 404 `NOT_FOUND` |
 | GET | `/v1/console/workspaces` | `console.read` | Paged. `search` (name or slug), `status` `active`, `suspended` or `deleted` (absent is all), `sort` `created_at` (default, newest first) or `name`, `order`. Rows `{ id, name, slug, currency_code, created_at, deleted_at, suspended_at, members, owner_email, last_activity_at }`; `last_activity_at` is the newest audit row (CSL-4) |
 | GET | `/v1/console/workspaces/{id}` | `console.read` | The row plus `member_list: [{ user_id, email, name, role, joined_at }]`, `counts: { wallets, transactions }`, `storage: { bytes, files }` and `tokens_month: { input, output }`. Counts only, never an amount (CSL-13). 404 `NOT_FOUND` |
@@ -595,6 +595,7 @@ The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, 
 | PUT | `/v1/console/operators/{user_id}` | `console.operators.manage` | `{ role_id }`: grant or change a registered user's role. Returns the operator row. Refused for oneself and for a disabled user (`VALIDATION_FAILED`), `CONSOLE_FORBIDDEN` when either the old or the new role holds a permission the caller does not, `LAST_OWNER` when it would leave no owner. Audited `operator.granted` / `operator.changed` |
 | DELETE | `/v1/console/operators/{user_id}` | `console.operators.manage` | 204. Revokes the role, with the same guards. Audited `operator.revoked` |
 | GET | `/v1/console/audit` | `console.audit.read` | Paged, newest first: `[{ id, operator_id, operator_email, action, entity, entity_id, before, after, created_at }]` (CSL-14) |
+| GET | `/v1/console/audit/{id}` | `console.audit.read` | One entry, so a link opens it whatever page it is on. 404 `NOT_FOUND` |
 
 ## Internal
 

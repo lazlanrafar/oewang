@@ -61,8 +61,11 @@ pub async fn me(
 #[derive(Debug, Deserialize)]
 pub struct ListQuery {
     pub search: Option<String>,
-    /// Workspaces only: `active`, `suspended` or `deleted`; absent is all.
+    /// Workspaces: `active`, `suspended` or `deleted`. Users: `active` or
+    /// `disabled`. Absent is all.
     pub status: Option<String>,
+    /// Users only: `true` operators only, `false` everyone else.
+    pub operator: Option<String>,
     pub sort: Option<String>,
     pub order: Option<String>,
     pub page: Option<u32>,
@@ -89,9 +92,30 @@ pub async fn users(
         } else {
             default_desc
         };
+        let disabled = match non_empty(&query.status) {
+            None => None,
+            Some("active") => Some(false),
+            Some("disabled") => Some(true),
+            Some(_) => {
+                return Err(AppError::validation([(
+                    "status",
+                    "Use active or disabled.",
+                )]))
+            }
+        };
+        let operator = match non_empty(&query.operator) {
+            None => None,
+            Some("true") => Some(true),
+            Some("false") => Some(false),
+            Some(_) => return Err(AppError::validation([("operator", "Use true or false.")])),
+        };
+        let filter = oewang_db::repositories::console::UserFilter {
+            search: non_empty(&query.search),
+            disabled,
+            operator,
+        };
         let page = Page::new(query.page, query.per_page);
-        let (rows, total) =
-            service::users(&state.db, non_empty(&query.search), sort, desc, page).await?;
+        let (rows, total) = service::users(&state.db, filter, sort, desc, page).await?;
         Ok((rows, total, page))
     }
     .await;
@@ -593,6 +617,22 @@ pub async fn feedback_item(
 ) -> std::result::Result<Json<Envelope<ConsoleFeedbackRow>>, ApiError> {
     operator.require(ConsolePermission::Read)?;
     match service::feedback_item(&state.db, &feedback_id).await {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `GET /v1/console/audit/{id}` (CSL-14), so a link opens one entry
+/// whatever page it is on.
+pub async fn audit_entry(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(entry_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<oewang_db::repositories::console::OperatorAuditRow>>, ApiError>
+{
+    operator.require(ConsolePermission::AuditRead)?;
+    match service::operator_audit_entry(&state.db, &entry_id).await {
         Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
         Err(error) => Err(ApiError::new(error, request_id.0)),
     }

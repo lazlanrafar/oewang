@@ -2,12 +2,8 @@
 	/**
 	 * The operator audit (CSL-12, US-085), the standard list screen (D81)
 	 * with nothing to filter: the table, newest first, more as it scrolls.
-	 * A row opens its before-and-after sheet, addressed by `?entry=`.
-	 *
-	 * shortcut: the sheet reads its entry from the rows already loaded, since
-	 * the API has no single audit read; a link to an entry past the loaded
-	 * pages opens nothing. Add `GET /v1/console/audit/{id}` if anything links
-	 * to an entry.
+	 * A row opens its before-and-after sheet, addressed by `?entry=` and
+	 * read on its own, so a link opens any entry.
 	 */
 	import { untrack } from 'svelte';
 
@@ -33,7 +29,7 @@
 	const totalPages = $derived(data.meta.total_pages ?? 1);
 
 	const openId = $derived(readText(page.url, 'entry'));
-	const openEntry = $derived(openId ? (held.rows.find((entry) => entry.id === openId) ?? null) : null);
+	const openEntry = $derived(openId ? data.open : null);
 	const openRow = (entry: ConsoleAuditEntry) => writeParams({ entry: entry.id }, { push: true });
 	const closeRow = () => writeParams({ entry: null }, { push: true });
 </script>

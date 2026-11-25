@@ -29,14 +29,14 @@ fn internal(error: sqlx::Error) -> AppError {
 /// A page of users and the total that matches (CSL-3).
 pub async fn users(
     pool: &PgPool,
-    search: Option<&str>,
+    filter: console::UserFilter<'_>,
     sort: UserSort,
     descending: bool,
     page: Page,
 ) -> Result<(Vec<ConsoleUserRow>, i64)> {
     let rows = console::list_users(
         pool,
-        search,
+        filter,
         sort,
         descending,
         i64::from(page.limit),
@@ -44,7 +44,7 @@ pub async fn users(
     )
     .await
     .map_err(internal)?;
-    let total = console::count_users(pool, search).await.map_err(internal)?;
+    let total = console::count_users(pool, filter).await.map_err(internal)?;
     Ok((rows, total))
 }
 
@@ -884,6 +884,13 @@ pub async fn operator_audit(
 
 pub async fn feedback_item(pool: &PgPool, id: &str) -> Result<console::ConsoleFeedbackRow> {
     console::find_feedback(pool, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)
+}
+
+pub async fn operator_audit_entry(pool: &PgPool, id: &str) -> Result<console::OperatorAuditRow> {
+    console::find_operator_audit(pool, id)
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)

@@ -11,14 +11,18 @@ import type { RequestHandler } from './$types';
  * the API (D5).
  */
 export const GET: RequestHandler = async ({ locals, url }) => {
-	const query = new URLSearchParams({ sort: 'email', order: 'asc', per_page: '20' });
+	// Enabled people without a console role: the API narrows it, so twenty
+	// matches are twenty candidates.
+	const query = new URLSearchParams({
+		sort: 'email',
+		order: 'asc',
+		per_page: '20',
+		status: 'active',
+		operator: 'false'
+	});
 	const search = (url.searchParams.get('search') ?? '').trim();
 	if (search) query.set('search', search);
 
 	const users = (await listConsoleUsers(query, locals.accessToken)).data ?? [];
-	return json(
-		users
-			.filter((user) => !user.console_role && !user.disabled_at)
-			.map((user) => ({ id: user.id, email: user.email, name: user.name }))
-	);
+	return json(users.map((user) => ({ id: user.id, email: user.email, name: user.name })));
 };

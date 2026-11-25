@@ -566,6 +566,7 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             put(console::handler::grant).delete(console::handler::revoke),
         )
         .route("/v1/console/audit", get(console::handler::audit))
+        .route("/v1/console/audit/{id}", get(console::handler::audit_entry))
         // Feedback from settings, any role (FB-1).
         .route("/v1/feedback", post(feedback::handler::send))
         // Exchange rates. A suggestion for the form; nothing reads it on
