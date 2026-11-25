@@ -1,12 +1,22 @@
 import { fail, redirect, type Actions } from '@sveltejs/kit';
 
+import type { PageServerLoad } from './$types';
+
 import { api, ApiError } from '$lib/server/api';
+import { isConsoleHost } from '$lib/server/console';
 import { setSession, type IssuedSession } from '$lib/server/session';
 import { safeNext } from '$lib/workspaces';
 
 
+/**
+ * The console host shows the form alone: registering, resetting a password
+ * and passkeys all live on the app host (D124), and a passkey is bound to
+ * the app's origin in any case.
+ */
+export const load: PageServerLoad = ({ url }) => ({ onConsole: isConsoleHost(url.host) });
+
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
+	default: async ({ request, cookies, url }) => {
 		const form = await request.formData();
 		const email = String(form.get('email') ?? '').trim();
 		const password = String(form.get('password') ?? '');
@@ -36,6 +46,12 @@ export const actions: Actions = {
 				return fail(error.status, { email, code: error.code, fields: error.fields });
 			}
 			throw error;
+		}
+
+		// The console needs no workspace, so its sign-in skips the check page
+		// (D124).
+		if (isConsoleHost(url.host)) {
+			redirect(303, next.startsWith('/console') ? next : '/console');
 		}
 
 		// Through the check page, which also handles a session that has no

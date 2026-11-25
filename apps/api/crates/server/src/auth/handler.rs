@@ -149,6 +149,9 @@ pub struct WorkspaceView {
     pub name: String,
     pub slug: String,
     pub currency_code: String,
+    /// An operator suspended it (D127). `role` is then null: the session
+    /// may leave the workspace but not act in it.
+    pub suspended: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -265,15 +268,24 @@ async fn load_me(state: &AppState, auth: &AuthUser) -> Result<MeResponse> {
                 .ok_or(AppError::NotFound)?;
             // Read live rather than echoing the token's snapshot, so the UI
             // shows the role the user actually has.
-            let role = service::current_role(&state.db, workspace_id, &auth.user_id).await?;
+            //
+            // A suspended workspace still answers here, flagged and with no
+            // role, so the app can show why and offer the way out (D127).
+            let (role, suspended) =
+                match service::current_role(&state.db, workspace_id, &auth.user_id).await {
+                    Ok(role) => (Some(role), false),
+                    Err(AppError::WorkspaceSuspended) => (None, true),
+                    Err(error) => return Err(error),
+                };
             (
                 Some(WorkspaceView {
                     id: workspace.id,
                     name: workspace.name,
                     slug: workspace.slug,
                     currency_code: workspace.currency_code,
+                    suspended,
                 }),
-                Some(role),
+                role,
             )
         }
         None => (None, None),

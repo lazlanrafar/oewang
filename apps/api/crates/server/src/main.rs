@@ -10,6 +10,7 @@ mod audit;
 mod auth;
 mod budgets;
 mod config;
+mod console;
 mod contacts;
 mod debts;
 mod feedback;
@@ -512,6 +513,60 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/mcp/connections/{id}",
             axum::routing::delete(mcp::handler::revoke),
         )
+        // The operator console. Every route takes an `Operator`, read from
+        // the database per request, and checks one permission (CSL, D126).
+        .route("/v1/console/me", get(console::handler::me))
+        .route("/v1/console/users", get(console::handler::users))
+        .route("/v1/console/users/{id}", get(console::handler::user))
+        .route("/v1/console/workspaces", get(console::handler::workspaces))
+        .route(
+            "/v1/console/workspaces/{id}",
+            get(console::handler::workspace),
+        )
+        .route(
+            "/v1/console/workspaces/{id}/suspend",
+            post(console::handler::suspend),
+        )
+        .route(
+            "/v1/console/workspaces/{id}/unsuspend",
+            post(console::handler::unsuspend),
+        )
+        .route(
+            "/v1/console/workspaces/{id}/restore",
+            post(console::handler::restore),
+        )
+        .route(
+            "/v1/console/users/{id}/disable",
+            post(console::handler::disable),
+        )
+        .route(
+            "/v1/console/users/{id}/enable",
+            post(console::handler::enable),
+        )
+        .route("/v1/console/feedback", get(console::handler::feedback))
+        .route(
+            "/v1/console/feedback/{id}",
+            get(console::handler::feedback_item).patch(console::handler::update_feedback),
+        )
+        .route("/v1/console/overview", get(console::handler::overview))
+        .route("/v1/console/usage", get(console::handler::usage))
+        .route("/v1/console/health", get(console::handler::health))
+        .route(
+            "/v1/console/roles",
+            get(console::handler::roles).post(console::handler::create_role),
+        )
+        .route(
+            "/v1/console/roles/{id}",
+            axum::routing::patch(console::handler::update_role)
+                .delete(console::handler::delete_role),
+        )
+        .route("/v1/console/operators", get(console::handler::operators))
+        .route(
+            "/v1/console/operators/{id}",
+            put(console::handler::grant).delete(console::handler::revoke),
+        )
+        .route("/v1/console/audit", get(console::handler::audit))
+        .route("/v1/console/audit/{id}", get(console::handler::audit_entry))
         // Feedback from settings, any role (FB-1).
         .route("/v1/feedback", post(feedback::handler::send))
         // Exchange rates. A suggestion for the form; nothing reads it on

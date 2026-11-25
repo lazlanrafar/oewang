@@ -28,6 +28,8 @@ pub struct WorkspaceListItem {
     pub slug: String,
     pub currency_code: String,
     pub role: String,
+    /// Suspended by an operator: shown, but switching into it is refused.
+    pub suspended: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -100,6 +102,7 @@ pub async fn list_workspaces(
             slug: row.slug,
             currency_code: row.currency_code,
             role: row.role,
+            suspended: row.suspended,
         })
         .collect();
 
@@ -137,6 +140,8 @@ pub async fn create_workspace(
                     slug: row.slug,
                     currency_code: row.currency_code,
                     role: Role::Owner.as_str().to_string(),
+                    // Just made: nobody has suspended it.
+                    suspended: false,
                 },
                 request_id.0,
             )),
@@ -175,6 +180,8 @@ pub async fn current_workspace(
                 slug: workspace.slug,
                 currency_code: workspace.currency_code,
                 role: auth.role.as_str().to_string(),
+                // `Auth` refuses a suspended workspace before this runs.
+                suspended: false,
             },
             currency_locked,
         },

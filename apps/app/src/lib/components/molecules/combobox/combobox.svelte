@@ -15,7 +15,7 @@
 	 * beside a name.
 	 */
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 
 	import { Button, type ButtonVariant } from '../../atoms/button/index.js';
 	import * as Command from '../../atoms/command/index.js';
@@ -27,6 +27,7 @@
 		value = $bindable(),
 		onSelect,
 		onCreate,
+		onSearch,
 		placeholder = 'Select item...',
 		searchPlaceholder = 'Search',
 		empty = 'No match.',
@@ -45,6 +46,11 @@
 		onSelect?: (id: string) => void;
 		/** Offers a row that makes a new entry from what was typed. */
 		onCreate?: (label: string) => void;
+		/**
+		 * Told what is typed, for a list too long to hold whole: the caller
+		 * fetches the matches and hands them back as `items`.
+		 */
+		onSearch?: (term: string) => void;
 		placeholder?: string;
 		searchPlaceholder?: string;
 		empty?: string;
@@ -82,6 +88,11 @@
 
 	$effect(() => {
 		if (open) interacted = false;
+	});
+
+	$effect(() => {
+		const term = search;
+		untrack(() => onSearch?.(term));
 	});
 
 	const current = $derived(items.find((entry) => entry.id === value));

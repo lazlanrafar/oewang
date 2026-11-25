@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 177 with test evidence
+- 198 with test evidence
 - 29 verified in browser only
-- 13 not done
+- 14 not done
 
 | ID | Evidence |
 |---|---|
@@ -35,7 +35,7 @@ in browser" box ticked; or a written reason it is not done.
 | AUTH-4 | `apps/api/crates/server/src/auth/workspace_param.rs`, `apps/api/crates/server/src/main.rs` |
 | AUTH-5 | `apps/ai/tests/test_auth_integration.py` |
 | AUTH-6 | `apps/api/crates/server/src/main.rs` |
-| AUTH-7 | `apps/api/crates/server/src/auth/account.rs`, `apps/api/crates/server/src/config.rs`, `apps/app/src/lib/server/session.test.ts` |
+| AUTH-7 | `apps/api/crates/server/src/auth/account.rs`, `apps/api/crates/server/src/config.rs`, `apps/app/src/hooks.server.test.ts`, `apps/app/src/lib/server/session.test.ts` |
 | AUTH-8 | `apps/api/crates/server/src/auth/token.rs` |
 | AUTH-9 | `apps/ai/tests/test_auth_integration.py` |
 | AUTH-10 | `apps/ai/tests/test_auth_integration.py` |
@@ -48,6 +48,7 @@ in browser" box ticked; or a written reason it is not done.
 | BUD-3 | not done: the server sort is parsed in budgets/handler.rs without a test, and the page is UI only; US-057 has no browser box |
 | BUD-4 | `apps/api/crates/server/src/budgets/tests.rs` |
 | BUD-5 | `apps/api/crates/domain/src/tools.rs`, `apps/api/crates/server/src/budgets/service.rs` |
+| BUD-6 | `apps/api/crates/server/src/transactions/tests.rs` |
 | CAT-1 | verified in browser by US-013 |
 | CAT-2 | `apps/api/crates/server/src/accounts/tests.rs` |
 | CAT-3 | `apps/ai/tests/test_auth_integration.py` |
@@ -74,6 +75,20 @@ in browser" box ticked; or a written reason it is not done.
 | CON-2 | `apps/app/src/lib/contacts.test.ts`, `apps/app/src/lib/debts.test.ts` |
 | CON-3 | `apps/api/crates/server/src/debts/tests.rs` |
 | CON-4 | `apps/api/crates/server/src/debts/tests.rs`, `apps/api/crates/server/src/mcp/tests.rs` |
+| CSL-1 | `apps/app/src/hooks.server.test.ts`, `apps/app/src/lib/server/console.test.ts` |
+| CSL-2 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-3 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-4 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-5 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-6 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-7 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-8 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-9 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-10 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-11 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-12 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-13 | `apps/api/crates/server/src/console/tests.rs` |
+| CSL-14 | `apps/api/crates/server/src/console/tests.rs` |
 | DEBT-1 | `apps/api/crates/server/src/debts/tests.rs` |
 | DEBT-2 | `apps/api/crates/domain/src/debt.rs`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/debts/tests.rs` |
 | DEBT-3 | `apps/api/crates/server/src/debts/tests.rs` |
@@ -114,8 +129,9 @@ in browser" box ticked; or a written reason it is not done.
 | MOB-8 | `apps/native/integration_test/m4_ai_flow_test.dart`, `apps/native/test/unit/chat_view_model_test.dart`, `apps/native/test/unit/owe1_stream_test.dart`, `apps/native/test/unit/owe1_vectors_test.dart`, `apps/native/test/unit/receipt_scan_test.dart`, `apps/native/test/unit/vault_repository_remote_test.dart`, `apps/native/test/widget/chat_vault_screens_test.dart` |
 | MOB-9 | `apps/app/src/routes/.well-known/apple-app-site-association/server.test.ts`, `apps/app/src/routes/.well-known/assetlinks.json/server.test.ts`, `apps/native/integration_test/m5_integrations_flow_test.dart`, `apps/native/test/unit/invite_link_test.dart`, `apps/native/test/unit/telegram_view_model_test.dart` |
 | MOB-10 | `apps/native/test/unit/offline_debts_test.dart` |
-| OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
-| OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs` |
+| MOB-11 | `apps/native/test/unit/transaction_dto_test.dart`, `apps/native/test/widget/transactions_row_test.dart` |
+| OPS-1 | `apps/api/crates/server/src/accounts/tests.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/api/crates/server/src/workspaces/tests.rs` |
+| OPS-2 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/workspaces/tests.rs` |
 | OPS-3 | `apps/ai/tests/test_chat_stream.py`, `apps/ai/tests/test_extraction_ladder.py`, `apps/ai/tests/test_extraction_pdf.py`, `apps/ai/tests/test_extraction_routes.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/hardening_tests.rs`, `apps/api/crates/server/src/main.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | OPS-4 | `apps/api/crates/domain/src/envelope.rs`, `apps/api/crates/domain/src/error.rs` |
 | OPS-5 | `apps/api/crates/server/src/main.rs` |
@@ -194,8 +210,14 @@ in browser" box ticked; or a written reason it is not done.
 | TXN-19 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-20 | verified in browser by US-018 |
 | TXN-21 | verified in browser by US-018 |
-| TXN-22 | `apps/api/crates/server/src/transactions/tests.rs` |
+| TXN-22 | `apps/api/crates/server/src/transactions/tests.rs`, `apps/app/src/routes/(dashboard)/transactions/resave.test.ts` |
 | TXN-23 | `apps/api/crates/server/src/transactions/tests.rs` |
+| TXN-24 | not done:  |
+| TXN-25 | `apps/app/src/lib/transactions.test.ts` |
+| TXN-26 | `apps/app/src/lib/transactions.test.ts` |
+| TXN-27 | `apps/ai/tests/test_receipt_categorize.py`, `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/telegram/update_tests.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/app/src/lib/receipt.test.ts` |
+| TXN-28 | `apps/ai/tests/test_chat_tools.py`, `apps/api/crates/server/src/ai/tool_tests.rs`, `apps/api/crates/server/src/mcp/tests.rs` |
+| TXN-29 | `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/transactions/tests.rs` |
 | UI-1 | verified in browser by US-006, US-009, US-013 |
 | UI-2 | verified in browser by US-017, US-018, US-031, US-034 |
 | UI-3 | verified in browser by US-006 |

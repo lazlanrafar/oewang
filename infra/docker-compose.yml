@@ -162,6 +162,9 @@ services:
       ORIGIN: http://localhost:3000
       OWE1_VECTORS_PATH: /contract/owe1-vectors.json
       APP_RELAY_KEY: dev-relay-key-not-a-secret-0123456789
+      # The operator console's host (D124). *.localhost resolves to this
+      # machine, and host-only cookies keep its session apart from the app's.
+      CONSOLE_HOST: console.localhost:3000
     ports:
       - "3000:3000"
     volumes:

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, token FROM device_tokens\n           WHERE user_id = $1 AND deleted_at IS NULL\n           ORDER BY created_at, id",
+  "query": "SELECT d.id, d.token FROM device_tokens d\n           JOIN users u ON u.id = d.user_id AND u.disabled_at IS NULL\n           WHERE d.user_id = $1 AND d.deleted_at IS NULL\n           ORDER BY d.created_at, d.id",
   "describe": {
     "columns": [
       {
@@ -36,5 +36,5 @@
       false
     ]
   },
-  "hash": "77d6fe14100d34cbb8a362b62659a94d5edc86c0ae211ee9e0411cb0959aa6df"
+  "hash": "cf0b6702e52a32f4f1c5c3392521f9179fd2ef3cdd40899292d8d3aca561a58b"
 }

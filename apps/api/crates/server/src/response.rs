@@ -25,7 +25,7 @@ impl RequestId {
         Self(Self::from_parts(request.headers()))
     }
 
-    fn from_parts(headers: &axum::http::HeaderMap) -> String {
+    pub(crate) fn from_parts(headers: &axum::http::HeaderMap) -> String {
         headers
             .get("x-request-id")
             .and_then(|value| value.to_str().ok())

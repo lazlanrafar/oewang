@@ -6,7 +6,7 @@
  * `setSession`; nothing here touches a cookie.
  */
 
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 
 import { api } from './api';
 import type { IssuedSession } from './session';
@@ -24,7 +24,14 @@ export type Me = {
 		income_color: string | null;
 		expense_color: string | null;
 	};
-	workspace: { id: string; name: string; slug: string; currency_code: string };
+	workspace: {
+		id: string;
+		name: string;
+		slug: string;
+		currency_code: string;
+		/** Suspended by an operator (D127): `role` is then null. */
+		suspended?: boolean;
+	};
 	role: Role;
 };
 
@@ -57,6 +64,8 @@ export type WorkspaceItem = {
 	slug: string;
 	currency_code: string;
 	role: Role;
+	/** An operator suspended it (CSL-5): listed, but no session enters it. */
+	suspended: boolean;
 };
 
 export type SessionItem = {
@@ -79,6 +88,9 @@ export function readMe(token?: string) {
  */
 export async function readWorkspaceMe(token: string | undefined, from: URL): Promise<Me> {
 	const me = (await readMe(token)).data!;
+	// The API still answers for a suspended workspace, flagged and with no
+	// role, so the error page can say why rather than the check page (D127).
+	if (me.workspace?.suspended) error(403, 'WORKSPACE_SUSPENDED');
 	if (!me.workspace || !me.role) {
 		redirect(303, `/sync?next=${encodeURIComponent(from.pathname + from.search)}`);
 	}

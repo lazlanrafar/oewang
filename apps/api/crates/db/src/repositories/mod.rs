@@ -3,6 +3,7 @@ pub mod ai;
 pub mod audit;
 pub mod budgets;
 pub mod categories;
+pub mod console;
 pub mod contacts;
 pub mod debts;
 pub mod feedback;

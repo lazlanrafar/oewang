@@ -1,0 +1,28 @@
+import { json } from '@sveltejs/kit';
+
+import { listConsoleUsers } from '$lib/server/console';
+
+import type { RequestHandler } from './$types';
+
+/**
+ * The user picker's matches (US-085): the console user list, searched by
+ * email or name, without the people who cannot be made operators (those
+ * who already are, and disabled accounts). The browser asks here, never
+ * the API (D5).
+ */
+export const GET: RequestHandler = async ({ locals, url }) => {
+	// Enabled people without a console role: the API narrows it, so twenty
+	// matches are twenty candidates.
+	const query = new URLSearchParams({
+		sort: 'email',
+		order: 'asc',
+		per_page: '20',
+		status: 'active',
+		operator: 'false'
+	});
+	const search = (url.searchParams.get('search') ?? '').trim();
+	if (search) query.set('search', search);
+
+	const users = (await listConsoleUsers(query, locals.accessToken)).data ?? [];
+	return json(users.map((user) => ({ id: user.id, email: user.email, name: user.name })));
+};

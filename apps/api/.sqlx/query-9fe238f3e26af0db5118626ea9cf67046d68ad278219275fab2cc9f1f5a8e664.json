@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n             EXISTS (SELECT 1 FROM users WHERE id = $1 AND disabled_at IS NOT NULL) AS \"disabled!\",\n             EXISTS (SELECT 1 FROM workspaces WHERE id = $2 AND suspended_at IS NOT NULL) AS \"suspended!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "disabled!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "suspended!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "9fe238f3e26af0db5118626ea9cf67046d68ad278219275fab2cc9f1f5a8e664"
+}

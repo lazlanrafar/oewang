@@ -1049,3 +1049,56 @@ Requirements: MOB-11
 - [ ] Item writes queue offline with client ids
 - [x] `fvm flutter analyze` and `fvm flutter test` pass
 - [ ] Verified on a device
+
+## M16. Operator console
+
+The console at `console.oewang.com` (D124, D125, D126), tracked as epic OEW-123. Specified in [features/console.md](features/console.md).
+
+### US-080: Console host, roles and the operator lookup (OEW-124)
+Requirements: CSL-1, CSL-2
+
+- [x] Migration 0022: `console_roles`, `console_role_permissions` with the key `CHECK`, `users.console_role_id`, the owner, support and viewer roles seeded
+- [x] `ConsolePermission` in the domain crate; a test keeps it and the `CHECK` in step
+- [x] The `Operator` extractor reads the role and permissions per request; `CONSOLE_FORBIDDEN` without a role or a permission
+- [x] `GET /v1/console/me`
+- [x] `hooks.server.ts` serves the console only on `CONSOLE_HOST`, and verifies the Cloudflare Access token there
+- [x] The console layout and a sidebar built from the operator's permissions
+- [ ] `console.oewang.com` on Coolify and Cloudflare, behind Cloudflare Access; the first owner set by SQL
+- [ ] Verify in browser
+
+### US-081: Users and workspaces (OEW-125)
+Requirements: CSL-3, CSL-4, CSL-13
+
+- [x] User list and detail; workspace list and detail: search, sort, status facet and paging in the URL; the open row is `?user=` / `?workspace=`
+- [x] A test fails when a console response carries an amount, a balance, a note or a transaction's text
+- [x] Verify in browser
+
+### US-082: Suspend, restore and disable (OEW-126)
+Requirements: CSL-5, CSL-6, CSL-7, CSL-14
+
+- [x] Suspend, unsuspend and restore a workspace; disable and enable a user (API)
+- [x] The console's buttons, the app's suspended page and the disabled sign-in message
+- [x] `WORKSPACE_SUSPENDED` and `USER_DISABLED` on every channel: web, mobile, Telegram, MCP and the AI service's callbacks
+- [x] `operator_audit` written in the same transaction as each action
+- [x] Verify in browser
+
+### US-083: Feedback inbox (OEW-127)
+Requirements: CSL-8
+
+- [x] Every workspace's feedback, filtered by status and type; status and internal note
+- [x] Verify in browser
+
+### US-084: Usage and health (OEW-128)
+Requirements: CSL-9, CSL-10
+
+- [x] Tokens by workspace, model, feature and month; overview counts
+- [x] Failed receipt jobs, sign-ups per week, AI calls per day
+- [x] Verify in browser
+
+### US-085: Operators and roles (OEW-129)
+Requirements: CSL-11, CSL-12
+
+- [x] Grant and revoke a role; create, edit and delete roles
+- [x] Guards: own role, last owner, permissions the granter lacks, a role in use
+- [x] Operator audit screen
+- [x] Verify in browser

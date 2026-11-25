@@ -168,7 +168,10 @@ The SvelteKit server reads these from the process environment.
 |---|---|---|
 | `APP_ENV` | yes | `production`. Without it, a missing pinned key degrades instead of refusing |
 | `PORT` | no | adapter-node, defaults to 3000 |
-| `ORIGIN` | yes | The public origin. adapter-node needs it to accept form posts |
+| `HOST_HEADER`, `PROTOCOL_HEADER` | yes | `host` and `x-forwarded-proto`. adapter-node builds each request's URL from them, so `app.oewang.com` and `console.oewang.com` each see their own origin: the host gate (D124) and the form check compare against it. `ORIGIN` is **not** set, because it pins every request to one host and the console would then answer 404 and refuse its own forms. Never `x-forwarded-host`: Traefik trusts Cloudflare's forwarded headers, so a client could send one through Cloudflare and pose as the console host; `Host` is what Cloudflare and Traefik route by |
+| `CONSOLE_HOST` | for the console | `console.oewang.com`. Unset, no host serves the console |
+| `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD` | with `CONSOLE_HOST` | `latoe.cloudflareaccess.com` and the audience tag of the Access application "Oewang Console". Missing either outside development refuses every console request |
+| `CONSOLE_SENTRY_URL`, `CONSOLE_COOLIFY_URL` | no | Links on the console's health page |
 | `API_URL` | yes | Internal URL of `api` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` | yes | The API's pinned public keys. `apps/app/src/lib/server/api.ts` throws at startup when `APP_ENV=production` and this is empty |
 | `OWE1_ENABLED` | no | Anything other than the string `false` is on |
@@ -395,3 +398,13 @@ Each of these needs the repository owner's decision. None of them is a value thi
 - [Payload encryption](api/encryption.md) for the signing keys and for why file bytes go through the API.
 - [API endpoints](api/endpoints.md) for the internal route surface.
 - [Backlog](backlog.md), story US-038.
+
+## The operator console
+
+`console.oewang.com` is a second domain on the Coolify `app` application (D124), with its own DNS record proxied through Cloudflare like `app`. In front of it, the Cloudflare Zero Trust organisation `latoe.cloudflareaccess.com` holds the Access application "Oewang Console" (self-hosted, one-time PIN by email, 24 hour session) whose only policy admits the owner's email. Adding an operator means adding their email to that policy as well as giving them a role in the console.
+
+The first owner is set once, after the release that runs migration 0022, on the production database:
+
+```sql
+UPDATE users SET console_role_id = 'owner' WHERE lower(email) = lower('<owner email>');
+```

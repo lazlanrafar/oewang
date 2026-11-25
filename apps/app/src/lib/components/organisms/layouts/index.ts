@@ -1,5 +1,7 @@
 export { default as AccountMenu } from './layouts-account-menu.svelte';
+export { default as AppShell } from './layouts-app-shell.svelte';
 export { default as AppSidebar } from './layouts-sidebar.svelte';
+export { default as SidebarBrand } from './layouts-sidebar-brand.svelte';
 export { default as SidebarItem } from './layouts-sidebar-item.svelte';
 export { default as SidebarNav } from './layouts-sidebar-nav.svelte';
 export { default as ThemeToggle } from './layouts-theme-toggle.svelte';

@@ -46,11 +46,35 @@ pub async fn current_role(pool: &PgPool, workspace_id: &str, user_id: &str) -> R
         .await
         .map_err(internal)?
         .ok_or(AppError::NotAMember)?;
+    check_access(pool, user_id, Some(workspace_id)).await?;
 
     membership
         .role
         .parse::<Role>()
         .map_err(|error| AppError::Internal(anyhow::anyhow!("unknown role in database: {error}")))
+}
+
+/// Refuse a user an operator disabled, or a workspace an operator suspended
+/// (CSL-5, CSL-7, D127). Every way in reaches one of its callers: the
+/// session extractors, `current_role` and `issue_session`.
+///
+/// Its own errors, never `NotAMember`: a suspension is undone, and a caller
+/// that reads `NotAMember` as "gone" (a Telegram link) would end for good.
+pub async fn check_access(
+    executor: impl sqlx::PgExecutor<'_>,
+    user_id: &str,
+    workspace_id: Option<&str>,
+) -> Result<()> {
+    let (disabled, suspended) = accounts::access_state(executor, user_id, workspace_id)
+        .await
+        .map_err(internal)?;
+    if disabled {
+        Err(AppError::UserDisabled)
+    } else if suspended {
+        Err(AppError::WorkspaceSuspended)
+    } else {
+        Ok(())
+    }
 }
 
 /// Create a user and open a session with no workspace (WS-5, D109).
@@ -140,7 +164,15 @@ pub(crate) async fn sign_in(
     let workspaces = accounts::list_workspaces_for_user(pool, user_id)
         .await
         .map_err(internal)?;
-    let scope = match workspaces.first() {
+    // The first workspace an operator has not suspended, so one suspension
+    // does not lock the person out of the others. With only suspended ones,
+    // the first of those: every route in it refuses, and the app shows why
+    // rather than offering to create a workspace (D127).
+    let chosen = workspaces
+        .iter()
+        .find(|workspace| !workspace.suspended)
+        .or(workspaces.first());
+    let scope = match chosen {
         Some(first) => Some((
             first.id.as_str(),
             first
@@ -274,6 +306,9 @@ pub async fn switch_workspace(
         .role
         .parse::<Role>()
         .map_err(|_| AppError::NotAMember)?;
+    // Choosing a suspended workspace is refused; a session already in one
+    // keeps refreshing so the app can say why (D127).
+    check_access(pool, user_id, Some(workspace_id)).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
     let issued = issue_session(
@@ -382,6 +417,12 @@ async fn issue_session(
     family_id: String,
     session: &SessionContext<'_>,
 ) -> Result<IssuedSession> {
+    // Every session is minted here (sign-up, password, passkey, refresh,
+    // switch), so this one check bars a disabled person from all of them.
+    // A suspended workspace is not refused here: a token scoped to it opens
+    // nothing in it, and refusing the refresh would sign the person out
+    // with no word of why (D127). `switch_workspace` refuses choosing one.
+    check_access(&mut **tx, user_id, None).await?;
     let access = token::issue_access_token(session.jwt_secret, user_id, scope, session.access_ttl)?;
     let refresh = token::issue_refresh_token();
     let refresh_expires_at =

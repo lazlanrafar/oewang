@@ -84,7 +84,7 @@
 						)}
 						aria-current={current ? 'true' : undefined}
 						aria-label={t('workspaces.open', { name: workspace.name })}
-						disabled={target !== ''}
+						disabled={target !== '' || workspace.suspended}
 						onclick={() => choose(workspace.id)}
 					>
 						<span
@@ -100,6 +100,8 @@
 						</span>
 						{#if target === workspace.id}
 							<Loader2 class="size-4 animate-spin text-muted-foreground" />
+						{:else if workspace.suspended}
+							<Badge variant="destructive">{t('workspaces.suspended')}</Badge>
 						{:else if current}
 							<Badge variant="muted">{t('workspaces.current')}</Badge>
 						{:else}

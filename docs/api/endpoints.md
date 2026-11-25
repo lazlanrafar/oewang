@@ -76,7 +76,7 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 
 | Method | Path | Role | Description |
 |---|---|---|---|
-| GET | `/v1/workspaces` | any session | Workspaces the user belongs to, with their role in each |
+| GET | `/v1/workspaces` | any session | Workspaces the user belongs to, with their role in each and `suspended` (true while an operator has suspended it; switching into it answers `WORKSPACE_SUSPENDED`) |
 | POST | `/v1/workspaces` | any session | `{name, currency_code}`. A new workspace the caller owns, seeded; at most 10 owned. The client then switches into it (WS-6) |
 | GET | `/v1/workspaces/current` | any | The current workspace, with `currency_locked`: true once any transaction exists (WAL-6) |
 | PATCH | `/v1/workspaces/current` | admin+ | Update name, slug, country. Currency code only while no transaction exists, otherwise `WORKSPACE_CURRENCY_LOCKED` (WAL-6) |
@@ -566,6 +566,36 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 | POST | `/v1/oauth/token` | none | `grant_type` `authorization_code` (`code`, `redirect_uri`, `code_verifier`, `client_id`) or `refresh_token` (`refresh_token`, `client_id`). `data` is `{ access_token, token_type, expires_in, refresh_token, scope }` or an RFC 6749 error |
 
 The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, `/oauth/token`, `/oauth/authorize`); these routes are what they relay to, over OWE1.
+
+## Console
+
+[features/console.md](../features/console.md), D124 to D126. Called by the app on `console.oewang.com` only. Every route takes the session and an operator role read from the database per request; "Permission" is the key the route checks. A person without a role, or without the permission, gets 403 `CONSOLE_FORBIDDEN`. Nothing here names a workspace through the token: the console reads across workspaces, and never returns an amount, a balance, a note or the text of a transaction (CSL-13).
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| GET | `/v1/console/me` | any operator | `{ id, email, name, role: { id, name }, permissions: string[] }`. The app builds its menu from `permissions` (CSL-2) |
+| GET | `/v1/console/users` | `console.read` | Paged. `search` (email or name), `status` `active` or `disabled`, `operator` `true` or `false`, `sort` `created_at` (default, newest first) or `email`, `order`. Rows `{ id, email, name, created_at, disabled_at, console_role, workspaces, last_active_at }`: `workspaces` counts live memberships of live workspaces, `last_active_at` is the newest refresh token (CSL-3) |
+| GET | `/v1/console/users/{id}` | `console.read` | The row plus `memberships: [{ workspace_id, workspace_name, role, joined_at, workspace_deleted_at }]`, deleted workspaces included. 404 `NOT_FOUND` |
+| GET | `/v1/console/workspaces` | `console.read` | Paged. `search` (name or slug), `status` `active`, `suspended` or `deleted` (absent is all), `sort` `created_at` (default, newest first) or `name`, `order`. Rows `{ id, name, slug, currency_code, created_at, deleted_at, suspended_at, members, owner_email, last_activity_at }`; `last_activity_at` is the newest audit row (CSL-4) |
+| GET | `/v1/console/workspaces/{id}` | `console.read` | The row plus `member_list: [{ user_id, email, name, role, joined_at }]`, `counts: { wallets, transactions }`, `storage: { bytes, files }` and `tokens_month: { input, output }`. Counts only, never an amount (CSL-13). 404 `NOT_FOUND` |
+| POST | `/v1/console/workspaces/{id}/suspend`, `/unsuspend` | `console.workspaces.suspend` | Returns the workspace row. A deleted workspace is refused (`VALIDATION_FAILED`, `fields.workspace`). Asking for the current state changes nothing and writes no audit row. Audited `workspace.suspended` / `workspace.unsuspended` in `operator_audit` (CSL-5, CSL-14) |
+| POST | `/v1/console/workspaces/{id}/restore` | `console.workspaces.restore` | Clears `deleted_at`; a live workspace is left alone. Audited `workspace.restored` (CSL-6) |
+| POST | `/v1/console/users/{id}/disable`, `/enable` | `console.users.disable` | Returns the user row. Disabling revokes every refresh token, Telegram link and MCP token; an operator, the caller included, is refused (`VALIDATION_FAILED`, `fields.user`). Audited `user.disabled` / `user.enabled` (CSL-7) |
+| GET | `/v1/console/feedback` | `console.read` | Paged, newest first. `search` (message, sender email or workspace name), `status` `open` or `done`, `type` `bug`, `feature` or `other`. Rows `{ id, type, message, status, operator_note, created_at, resolved_at, user_id, user_email, workspace_id, workspace_name }` (CSL-8) |
+| GET | `/v1/console/feedback/{id}` | `console.read` | One row, so a link opens it whatever the list shows. 404 `NOT_FOUND` |
+| PATCH | `/v1/console/feedback/{id}` | `console.feedback.write` | `{ status?: open\|done, operator_note?: string\|null }`. Absent leaves a field alone; an empty note clears it; 2000 characters at most. `resolved_at` is set when it first becomes done and cleared when reopened. Audited `feedback.updated` when anything changed. Returns the row |
+| GET | `/v1/console/overview` | `console.read` | `{ users: { total, new_7d }, workspaces: { total, active, suspended, deleted }, feedback_open, tokens_month: { input, output }, signups_by_week: [{ week_start, count }] }`, twelve ISO weeks in UTC, oldest first, empty weeks included (CSL-10) |
+| GET | `/v1/console/usage` | `console.read` | `month` `YYYY-MM`, the current month in UTC when absent. `{ month, totals: { input, output, calls }, by_workspace: [{ workspace_id, workspace_name, input, output, calls }] (top 50), by_model: [{ model, ... }], by_feature: [{ feature, ... }] }`, each by tokens descending. Tokens, never money (CSL-9) |
+| GET | `/v1/console/health` | `console.read` | `{ receipt_jobs: { pending, failed_24h, failed_7d }, ai_calls_by_day: [{ day, calls, input, output }] }`, fourteen UTC days, oldest first, empty days included (CSL-10) |
+| GET | `/v1/console/roles` | `console.roles.manage` or `console.operators.manage` | Live roles: `[{ id, name, description, is_system, permissions, operators, created_at }]`, the system role first (CSL-12) |
+| POST | `/v1/console/roles` | `console.roles.manage` | `{ name, description?, permissions: string[] }`. 201 with the role. A permission the caller does not hold: `CONSOLE_FORBIDDEN`. Name 1 to 60 characters, unique among live roles. Audited `role.created` |
+| PATCH | `/v1/console/roles/{id}` | `console.roles.manage` | `{ name?, description?, permissions? }`; `permissions` replaces the set. Refused for a system role and for the role the caller holds (`VALIDATION_FAILED`, `fields.role`), and `CONSOLE_FORBIDDEN` when the role holds or would hold a permission the caller does not. Audited `role.updated` |
+| DELETE | `/v1/console/roles/{id}` | `console.roles.manage` | 204. Soft. A system role: `VALIDATION_FAILED`; a role someone holds: `CONSOLE_ROLE_IN_USE`. Audited `role.deleted` |
+| GET | `/v1/console/operators` | `console.operators.manage` | `[{ user_id, email, name, role_id, role_name, last_active_at }]` (CSL-11) |
+| PUT | `/v1/console/operators/{user_id}` | `console.operators.manage` | `{ role_id }`: grant or change a registered user's role. Returns the operator row. Refused for oneself and for a disabled user (`VALIDATION_FAILED`), `CONSOLE_FORBIDDEN` when either the old or the new role holds a permission the caller does not, `LAST_OWNER` when it would leave no owner. Audited `operator.granted` / `operator.changed` |
+| DELETE | `/v1/console/operators/{user_id}` | `console.operators.manage` | 204. Revokes the role, with the same guards. Audited `operator.revoked` |
+| GET | `/v1/console/audit` | `console.audit.read` | Paged, newest first: `[{ id, operator_id, operator_email, action, entity, entity_id, before, after, created_at }]` (CSL-14) |
+| GET | `/v1/console/audit/{id}` | `console.audit.read` | One entry, so a link opens it whatever page it is on. 404 `NOT_FOUND` |
 
 ## Internal
 

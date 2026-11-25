@@ -242,6 +242,12 @@ impl Run {
 
         let rows: Vec<BTreeMap<String, String>> = answer.rows.iter().map(shape).collect();
 
+        // Extraction can take minutes. A workspace suspended or a person
+        // disabled meanwhile gets no rows written: the job fails with that
+        // code (D127).
+        crate::auth::service::check_access(&self.pool, &self.user_id, Some(&self.workspace_id))
+            .await?;
+
         let outcome = service::import_rows(
             &self.pool,
             Actor {

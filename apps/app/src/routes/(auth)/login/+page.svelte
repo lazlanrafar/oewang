@@ -16,7 +16,7 @@
 	import { pageTitle } from '$lib/page-title';
 	import { passkeySignInError, passkeysSupported, signInWithPasskey } from '$lib/passkeys';
 
-	let { form } = $props();
+	let { data, form } = $props();
 
 	let submitting = $state(false);
 	const next = $derived(page.url.searchParams.get('next') ?? '');
@@ -85,9 +85,11 @@
 	<div>
 		<div class="mb-1.5 flex items-baseline justify-between">
 			<label for="password" class="block text-sm font-medium">{t('auth.password')}</label>
-			<a href="/forgot-password" class="text-muted-foreground text-xs underline">
-				{t('auth.forgot_password')}
-			</a>
+			{#if !data.onConsole}
+				<a href="/forgot-password" class="text-muted-foreground text-xs underline">
+					{t('auth.forgot_password')}
+				</a>
+			{/if}
 		</div>
 		<PasswordInput
 			id="password"
@@ -104,6 +106,7 @@
 	</Button>
 </form>
 
+{#if !data.onConsole}
 <!-- The old app's divider between the form and its other ways in. -->
 <div class="relative py-5 text-center">
 	<div class="absolute inset-0 flex items-center">
@@ -131,3 +134,4 @@
 		class="text-foreground underline">{t('auth.sign_up')}</a
 	>
 </p>
+{/if}

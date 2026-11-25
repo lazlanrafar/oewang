@@ -61,6 +61,11 @@ impl FromRequestParts<AppState> for Auth {
         let (Some(workspace_id), Some(role)) = (claims.wid, claims.role) else {
             return Err(ApiError::new(AppError::NoWorkspace, request_id));
         };
+        // One read per request, so a suspension or a disabled account stops
+        // reads too, not only writes (D127).
+        crate::auth::service::check_access(&state.db, &claims.sub, Some(&workspace_id))
+            .await
+            .map_err(|error| ApiError::new(error, request_id.clone()))?;
 
         Ok(Auth {
             user_id: claims.sub,
@@ -91,7 +96,13 @@ impl FromRequestParts<AppState> for AuthUser {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let (claims, _) = verified_claims(parts, state)?;
+        let (claims, request_id) = verified_claims(parts, state)?;
+        // A disabled person is refused everywhere; a suspended workspace is
+        // not checked here, so its members can still list, switch and sign
+        // out (D127).
+        crate::auth::service::check_access(&state.db, &claims.sub, None)
+            .await
+            .map_err(|error| ApiError::new(error, request_id))?;
         Ok(AuthUser {
             user_id: claims.sub,
             workspace_id: claims.wid,

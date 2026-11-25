@@ -16,10 +16,14 @@
 	import { t, type TranslationKey } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 
-	type Kind = 'not_found' | 'unauthorized' | 'forbidden' | 'unavailable' | 'server' | 'other';
+	type Kind = 'not_found' | 'unauthorized' | 'forbidden' | 'suspended' | 'unavailable' | 'server' | 'other';
 
 	const kind = $derived<Kind>(
-		page.status === 404
+		// An operator suspended the workspace (CSL-5): the dashboard layout's
+		// own 403, with its own copy and its own ways out.
+		page.error?.message === 'WORKSPACE_SUSPENDED'
+			? 'suspended'
+			: page.status === 404
 			? 'not_found'
 			: page.status === 401
 				? 'unauthorized'
@@ -32,8 +36,13 @@
 							: 'other'
 	);
 
+	/** The console is its own home, and its 403 is about a console role (D125). */
+	const inConsole = $derived(page.url.pathname.startsWith('/console'));
+
 	const key = (part: 'lead' | 'emphasis' | 'description') =>
-		`error_page.${kind}_${part}` as TranslationKey;
+		(inConsole && kind === 'forbidden' && part === 'description'
+			? 'error_page.console_forbidden_description'
+			: `error_page.${kind}_${part}`) as TranslationKey;
 
 	/** A failure worth repeating gets "try again"; a missing page does not. */
 	const retryable = $derived(kind === 'server' || kind === 'unavailable');
@@ -68,15 +77,28 @@
 		<div class="mt-8 flex flex-wrap items-center justify-center gap-2">
 			{#if kind === 'unauthorized'}
 				<Button href="/login">{t('error_page.sign_in')}</Button>
+			{:else if kind === 'suspended'}
+				<!-- /overview would only come back here: another workspace, or out. -->
+				<Button href="/workspaces">{t('error_page.pick_workspace')}</Button>
+				<form method="POST" action="/logout">
+					<Button type="submit" variant="outline">{t('nav.sign_out')}</Button>
+				</form>
+			{:else if inConsole && kind === 'forbidden'}
+				<!-- Signed in without a console role: the way out is to sign out,
+				     because /login sends a session straight back to /console. -->
+				<form method="POST" action="/logout">
+					<Button type="submit">{t('console.sign_out')}</Button>
+				</form>
 			{:else}
-				<Button href="/overview">{t('error_page.go_home')}</Button>
+				<Button href={inConsole ? '/console' : '/overview'}>{t('error_page.go_home')}</Button>
 			{/if}
 
 			{#if retryable}
 				<Button variant="outline" onclick={() => location.reload()}>
 					{t('error_page.try_again')}
 				</Button>
-			{:else}
+			{:else if kind !== 'suspended'}
+				<!-- Back would land in the suspended workspace again. -->
 				<Button variant="outline" onclick={() => history.back()}>
 					{t('error_page.go_back')}
 				</Button>

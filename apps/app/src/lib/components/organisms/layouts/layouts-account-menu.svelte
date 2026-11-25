@@ -4,6 +4,9 @@
 	 * `AccountSwitcher` (D94): the name and email on top, then Account, the
 	 * theme, and Log out in red. Billing, notifications and language are not
 	 * here, because each belongs to a feature this product does not have.
+	 *
+	 * The console uses it too, with a line for the operator's role and
+	 * without Account and MCP, which live on the app's host only (D124).
 	 */
 	import Check from '@lucide/svelte/icons/check';
 	import CircleUser from '@lucide/svelte/icons/circle-user';
@@ -21,12 +24,18 @@
 	let {
 		name,
 		email,
-		photo
+		photo,
+		subtitle,
+		accountLinks = true
 	}: {
 		name: string | null;
 		email: string;
 		/** The photo's own URL on this app, or null for the initial. */
 		photo: string | null;
+		/** A third line under the email, such as the operator's console role. */
+		subtitle?: string;
+		/** Account and MCP; off where those pages are not served. */
+		accountLinks?: boolean;
 	} = $props();
 
 	let logout = $state<HTMLFormElement | null>(null);
@@ -59,26 +68,29 @@
 			<div class="grid min-w-0 flex-1 text-left text-sm leading-tight">
 				<span class="truncate font-semibold">{name || email}</span>
 				<span class="truncate text-muted-foreground text-xs">{email}</span>
+				{#if subtitle}<span class="truncate text-muted-foreground text-xs">{subtitle}</span>{/if}
 			</div>
 		</div>
 		<DropdownMenu.Separator />
-		<DropdownMenu.Item>
-			{#snippet child({ props })}
-				<a {...props} href="/account/profile">
-					<CircleUser />
-					{t('account.menu_account')}
-				</a>
-			{/snippet}
-		</DropdownMenu.Item>
-		<!-- MCP is the person's, like the account, so it sits beside it (D106). -->
-		<DropdownMenu.Item>
-			{#snippet child({ props })}
-				<a {...props} href="/account/mcp">
-					<Plug />
-					{t('account.menu_mcp')}
-				</a>
-			{/snippet}
-		</DropdownMenu.Item>
+		{#if accountLinks}
+			<DropdownMenu.Item>
+				{#snippet child({ props })}
+					<a {...props} href="/account/profile">
+						<CircleUser />
+						{t('account.menu_account')}
+					</a>
+				{/snippet}
+			</DropdownMenu.Item>
+			<!-- MCP is the person's, like the account, so it sits beside it (D106). -->
+			<DropdownMenu.Item>
+				{#snippet child({ props })}
+					<a {...props} href="/account/mcp">
+						<Plug />
+						{t('account.menu_mcp')}
+					</a>
+				{/snippet}
+			</DropdownMenu.Item>
+		{/if}
 		<DropdownMenu.Sub>
 			<DropdownMenu.SubTrigger>
 				<Sun />

@@ -69,6 +69,10 @@ pub async fn handle(state: &AppState, bot: &Bot, message: Message) -> Result<()>
             say(bot, chat_id, render::NO_LONGER_MEMBER).await;
             return Ok(());
         }
+        Err(AppError::WorkspaceSuspended | AppError::UserDisabled) => {
+            say(bot, chat_id, render::SUSPENDED).await;
+            return Ok(());
+        }
         Err(error) => return Err(error),
     };
 

@@ -58,3 +58,39 @@ describe('handle', () => {
 		expect(second.event.cookies.get(REFRESH_COOKIE)).toBe('refresh-new');
 	});
 });
+
+// CSL-1, D124
+describe('handle on two hosts', () => {
+	function request(href: string) {
+		const event = {
+			cookies: { get: () => undefined, set: () => {}, delete: () => {} },
+			url: new URL(href),
+			request: new Request(href),
+			locals: {} as { accessToken?: string }
+		};
+		const resolve = async () => new Response('ok');
+		return (handle as (input: unknown) => Promise<Response>)({ event, resolve });
+	}
+
+	it('should hide the console from the app host and the app from the console host', async () => {
+		vi.stubEnv('CONSOLE_HOST', 'console.oewang.test');
+		vi.stubEnv('APP_ENV', 'development');
+		try {
+			expect((await request('http://app.oewang.test/console')).status).toBe(404);
+			expect((await request('http://console.oewang.test/transactions')).status).toBe(404);
+			expect((await request('http://console.oewang.test/health')).status).toBe(200);
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+
+	it('should refuse the console host without a Cloudflare Access token outside development', async () => {
+		vi.stubEnv('CONSOLE_HOST', 'console.oewang.test');
+		vi.stubEnv('APP_ENV', 'production');
+		try {
+			expect((await request('http://console.oewang.test/health')).status).toBe(403);
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+});
