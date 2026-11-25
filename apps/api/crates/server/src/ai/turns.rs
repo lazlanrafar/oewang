@@ -64,8 +64,9 @@ pub const MAX_ARTIFACTS_PER_TURN: usize = 8;
 struct Inner {
     turns: HashMap<String, Counters>,
     /// Keyed by session and transaction together, so a confirmation cannot
-    /// be carried from one row to another (CHAT-6).
-    challenges: HashMap<(String, String), i64>,
+    /// be carried from one row to another (CHAT-6). Holds when it was issued
+    /// and by which turn, because only a later turn can answer it.
+    challenges: HashMap<(String, String), (i64, String)>,
 }
 
 #[derive(Clone, Default)]
@@ -157,22 +158,34 @@ impl TurnStore {
             .and_then(|counters| counters.artifacts.remove(call_id))
     }
 
-    /// Record that this exact row has been put to the user.
-    pub fn challenge(&self, session_id: &str, transaction_id: &str, now: i64) {
+    /// Record that this exact row has been put to the user, by this turn.
+    pub fn challenge(&self, session_id: &str, transaction_id: &str, turn_id: &str, now: i64) {
         let mut guard = self.inner.write().expect("turn store poisoned");
-        guard
-            .challenges
-            .insert((session_id.to_string(), transaction_id.to_string()), now);
+        guard.challenges.insert(
+            (session_id.to_string(), transaction_id.to_string()),
+            (now, turn_id.to_string()),
+        );
     }
 
-    /// Has this exact row been challenged recently enough to be confirmed?
-    pub fn challenged(&self, session_id: &str, transaction_id: &str, now: i64) -> bool {
+    /// Has this exact row been challenged recently enough to be confirmed,
+    /// by a turn other than this one? The user answers between turns, so a
+    /// confirmation in the turn that asked came from the model, not from
+    /// them (docs/security/ai-safety.md).
+    pub fn challenged(
+        &self,
+        session_id: &str,
+        transaction_id: &str,
+        turn_id: &str,
+        now: i64,
+    ) -> bool {
         let guard = self.inner.read().expect("turn store poisoned");
 
         guard
             .challenges
             .get(&(session_id.to_string(), transaction_id.to_string()))
-            .is_some_and(|issued_at| now - issued_at <= CONFIRMATION_TTL_SECS)
+            .is_some_and(|(issued_at, asked_by)| {
+                now - issued_at <= CONFIRMATION_TTL_SECS && asked_by != turn_id
+            })
     }
 
     /// Spend the challenge. One confirmation answers one delete; a second
@@ -195,7 +208,7 @@ impl TurnStore {
             .retain(|_, counters| now - counters.opened_at <= TURN_TTL_SECS);
         guard
             .challenges
-            .retain(|_, issued_at| now - *issued_at <= CONFIRMATION_TTL_SECS);
+            .retain(|_, (issued_at, _)| now - *issued_at <= CONFIRMATION_TTL_SECS);
 
         before - (guard.turns.len() + guard.challenges.len())
     }
@@ -335,35 +348,43 @@ mod tests {
     #[test]
     fn should_answer_a_challenge_only_for_the_row_it_was_issued_for() {
         let store = store();
-        store.challenge(SESSION, "txn_a", 0);
+        store.challenge(SESSION, "txn_a", TURN, 0);
 
-        assert!(store.challenged(SESSION, "txn_a", 0));
+        assert!(store.challenged(SESSION, "txn_a", "turn_2", 0));
         assert!(
-            !store.challenged(SESSION, "txn_b", 0),
+            !store.challenged(SESSION, "txn_b", "turn_2", 0),
             "a confirmation does not transfer"
         );
         assert!(
-            !store.challenged("ses_other", "txn_a", 0),
+            !store.challenged("ses_other", "txn_a", "turn_2", 0),
             "nor does it cross sessions"
         );
+    }
+
+    /// SEC-25: the user answers between turns, never inside the one that asked.
+    #[test]
+    fn should_refuse_a_confirmation_in_the_turn_that_asked() {
+        let store = store();
+        store.challenge(SESSION, "txn_a", TURN, 0);
+        assert!(!store.challenged(SESSION, "txn_a", TURN, 0));
     }
 
     /// SEC-25
     #[test]
     fn should_expire_a_challenge() {
         let store = store();
-        store.challenge(SESSION, "txn_a", 0);
+        store.challenge(SESSION, "txn_a", TURN, 0);
 
-        assert!(store.challenged(SESSION, "txn_a", CONFIRMATION_TTL_SECS));
-        assert!(!store.challenged(SESSION, "txn_a", CONFIRMATION_TTL_SECS + 1));
+        assert!(store.challenged(SESSION, "txn_a", "turn_2", CONFIRMATION_TTL_SECS));
+        assert!(!store.challenged(SESSION, "txn_a", "turn_2", CONFIRMATION_TTL_SECS + 1));
     }
 
     #[test]
     fn should_spend_a_challenge_when_it_is_answered() {
         let store = store();
-        store.challenge(SESSION, "txn_a", 0);
+        store.challenge(SESSION, "txn_a", TURN, 0);
         store.clear_challenge(SESSION, "txn_a");
-        assert!(!store.challenged(SESSION, "txn_a", 0));
+        assert!(!store.challenged(SESSION, "txn_a", "turn_2", 0));
     }
 
     #[test]
@@ -371,11 +392,11 @@ mod tests {
         let store = TurnStore::new();
         store.open("turn_old", 0);
         store.open("turn_new", 1_000);
-        store.challenge(SESSION, "txn_a", 0);
-        store.challenge(SESSION, "txn_b", 1_000);
+        store.challenge(SESSION, "txn_a", "turn_old", 0);
+        store.challenge(SESSION, "txn_b", "turn_new", 1_000);
 
         assert_eq!(store.sweep(1_000), 2);
         assert!(store.reserve("turn_new", Tool::CreateWallet, 1_000).is_ok());
-        assert!(store.challenged(SESSION, "txn_b", 1_000));
+        assert!(store.challenged(SESSION, "txn_b", "turn_next", 1_000));
     }
 }

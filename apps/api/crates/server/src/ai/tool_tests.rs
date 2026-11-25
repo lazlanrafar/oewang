@@ -25,6 +25,8 @@ const OWNER: &str = "usr_owner";
 const MEMBER: &str = "usr_member";
 const SESSION: &str = "ses_1";
 const TURN: &str = "turn_1";
+/// Where a person's answer to a challenge arrives: never the turn that asked.
+const NEXT_TURN: &str = "turn_2";
 
 fn ceiling() -> Decimal {
     oewang_domain::tools::default_max_tool_amount()
@@ -33,6 +35,7 @@ fn ceiling() -> Decimal {
 fn store() -> TurnStore {
     let store = TurnStore::new();
     store.open(TURN, crate::owe1::session::now_secs());
+    store.open(NEXT_TURN, crate::owe1::session::now_secs());
     store
 }
 
@@ -46,11 +49,33 @@ async fn run(
     call_as(pool, turns, OWNER, "owner", tool, args).await
 }
 
+/// One call, for the owner, in the turn after the one that asked.
+async fn answer(
+    pool: &PgPool,
+    turns: &TurnStore,
+    tool: &str,
+    args: Value,
+) -> oewang_domain::Result<ToolOutcome> {
+    call_in(pool, turns, OWNER, "owner", NEXT_TURN, tool, args).await
+}
+
 async fn call_as(
     pool: &PgPool,
     turns: &TurnStore,
     user_id: &str,
     claimed_role: &str,
+    tool: &str,
+    args: Value,
+) -> oewang_domain::Result<ToolOutcome> {
+    call_in(pool, turns, user_id, claimed_role, TURN, tool, args).await
+}
+
+async fn call_in(
+    pool: &PgPool,
+    turns: &TurnStore,
+    user_id: &str,
+    claimed_role: &str,
+    turn_id: &str,
     tool: &str,
     args: Value,
 ) -> oewang_domain::Result<ToolOutcome> {
@@ -63,7 +88,7 @@ async fn call_as(
             user_id,
             claimed_role,
             session_id: SESSION,
-            turn_id: TURN,
+            turn_id,
             call_id: None,
             tool,
             args: &args,
@@ -348,7 +373,7 @@ async fn should_refuse_a_second_delete_in_one_turn(pool: PgPool) {
         );
     }
 
-    run(
+    answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -357,7 +382,7 @@ async fn should_refuse_a_second_delete_in_one_turn(pool: PgPool) {
     .await
     .unwrap();
 
-    let error = run(
+    let error = answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -487,6 +512,30 @@ async fn should_not_carry_a_confirmation_to_another_row(pool: PgPool) {
     assert_eq!(error.code(), "CONFIRMATION_REQUIRED");
 }
 
+/// SEC-25: the model cannot answer its own challenge. The person answers
+/// between turns, so a confirmation inside the turn that asked is asked again.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_confirmation_in_the_turn_that_asked(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+    let id = an_expense(&pool, &turns, "1000", "Lunch").await;
+
+    let ask = json!({ "transaction_id": id });
+    let error = run(&pool, &turns, "delete_transaction", ask).await;
+    assert_eq!(error.unwrap_err().code(), "CONFIRMATION_REQUIRED");
+
+    let confirmed = json!({ "transaction_id": id, "confirmed": true });
+    let error = run(&pool, &turns, "delete_transaction", confirmed).await;
+    assert_eq!(error.unwrap_err().code(), "CONFIRMATION_REQUIRED");
+
+    let live = count(
+        &pool,
+        "SELECT count(*) FROM transactions WHERE deleted_at IS NULL",
+    )
+    .await;
+    assert_eq!(live, 1, "nothing deleted");
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_soft_delete_a_confirmed_transaction_and_restore_the_balance(pool: PgPool) {
     fixture(&pool).await;
@@ -501,7 +550,7 @@ async fn should_soft_delete_a_confirmed_transaction_and_restore_the_balance(pool
     )
     .await
     .unwrap_err();
-    let outcome = run(
+    let outcome = answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -1151,7 +1200,7 @@ async fn should_cancel_a_debt_payment_deleted_through_the_chat_tool(pool: PgPool
     .await
     .unwrap_err();
     assert_eq!(challenge.code(), "CONFIRMATION_REQUIRED");
-    run(
+    answer(
         &pool,
         &turns,
         "delete_transaction",
@@ -1464,7 +1513,7 @@ async fn should_challenge_a_debt_delete_and_keep_it_apart(pool: PgPool) {
     let turns = store();
 
     // A transaction challenge under the same id says nothing about the debt.
-    turns.challenge(SESSION, &debt, crate::owe1::session::now_secs());
+    turns.challenge(SESSION, &debt, TURN, crate::owe1::session::now_secs());
     let error = run(
         &pool,
         &turns,
@@ -1479,7 +1528,7 @@ async fn should_challenge_a_debt_delete_and_keep_it_apart(pool: PgPool) {
     assert_eq!(target["contact"], "Budi");
     assert!(target["remaining"].contains("25"));
 
-    run(
+    answer(
         &pool,
         &turns,
         "delete_debt",
@@ -1538,7 +1587,7 @@ async fn should_show_a_split_before_writing_it(pool: PgPool) {
 
     let mut confirmed = split.clone();
     confirmed["confirmed"] = json!(true);
-    let outcome = run(&pool, &turns, "split_bill", confirmed.clone())
+    let outcome = answer(&pool, &turns, "split_bill", confirmed.clone())
         .await
         .unwrap();
     let receivables = outcome.result["receivables"].as_array().unwrap();

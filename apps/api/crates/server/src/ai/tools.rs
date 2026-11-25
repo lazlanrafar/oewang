@@ -131,6 +131,7 @@ pub async fn execute(
             turns,
             request.workspace_id,
             request.session_id,
+            request.turn_id,
             &call,
             &key,
             confirmed,
@@ -232,27 +233,28 @@ fn above_ceiling(max_amount: Decimal) -> AppError {
 /// The confirmation gate (CHAT-6, D20, D122).
 ///
 /// `confirmed: true` is honoured only for a key this session has already
-/// been challenged on: a row's id, or a split's argument hash. A model that
-/// sets the flag on a first call is told to ask, and the challenge is
-/// issued at the same time, so the user sees what they are being asked
-/// about.
+/// been challenged on, in an earlier turn: a row's id, or a split's argument
+/// hash. A model that sets the flag on a first call, or again in the turn
+/// that was challenged, is told to ask, and the challenge is issued at the
+/// same time, so the user sees what they are being asked about.
 async fn confirm(
     pool: &PgPool,
     turns: &TurnStore,
     workspace_id: &str,
     session_id: &str,
+    turn_id: &str,
     call: &ToolCall,
     key: &str,
     confirmed: bool,
 ) -> Result<()> {
-    if confirmed && turns.challenged(session_id, key, now_secs()) {
+    if confirmed && turns.challenged(session_id, key, turn_id, now_secs()) {
         return Ok(());
     }
 
     // Read it first: a challenge naming a row that does not exist would
     // teach the model nothing and leak the shape of other workspaces.
     let target = describe(pool, workspace_id, call).await?;
-    turns.challenge(session_id, key, now_secs());
+    turns.challenge(session_id, key, turn_id, now_secs());
     Err(AppError::ConfirmationRequired(target))
 }
 

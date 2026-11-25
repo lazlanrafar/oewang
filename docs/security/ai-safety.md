@@ -81,6 +81,7 @@ The challenge the API records is keyed by the chat session and the transaction I
 
 - A confirmation cannot be carried from one row to another. The key holds the ID.
 - A confirmation cannot be carried from one session to another. The key holds the session, so a challenge raised in one conversation does nothing in a second one opened alongside it.
+- A confirmation cannot come from the turn that asked. The challenge records the `turn_id` that raised it, and `confirmed: true` is honoured only from a different turn, because the person answers between turns; inside the asking turn only the model could have set the flag.
 - A confirmation cannot be replayed. The delete that answers a challenge consumes it, so deleting the same row again starts at the first step again.
 - `confirmed: true` on a call the API has not previously challenged for that exact ID is not honoured. It is answered with `CONFIRMATION_REQUIRED`, which is the first step of the flow rather than a refusal of it: the model gets the row's description and has to ask the user.
 
@@ -175,6 +176,7 @@ Each case names the test that holds it. A control is tested where it is enforced
 | A `member` session asking for any write | `TOOL_FORBIDDEN`, and the assistant reports the refusal | `should_refuse_every_write_tool_for_a_member` |
 | A delete with `confirmed: true` on the first call | `CONFIRMATION_REQUIRED`. The flag is not honoured unchallenged | `should_not_honour_a_confirmed_flag_on_a_first_call` |
 | A confirmation token reused for a different transaction ID | Rejected | `should_not_carry_a_confirmation_to_another_row` |
+| A delete confirmed in the same turn that was challenged | `CONFIRMATION_REQUIRED` again; nothing deleted | `should_refuse_a_confirmation_in_the_turn_that_asked` |
 | Four write tool calls in one turn | The fourth is refused by the cap | `should_refuse_the_fourth_write_in_one_turn` |
 | A tool argument with a 13-digit amount | Refused by the amount cap | `should_refuse_an_amount_above_the_ceiling` |
 | A model emitting `<img onerror=…>` in its reply | Sanitized before rendering | `apps/app`, the markdown tests |
