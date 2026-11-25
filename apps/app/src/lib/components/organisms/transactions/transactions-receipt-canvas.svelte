@@ -24,6 +24,7 @@
 		type ReceiptForm,
 		type ReceiptRequest
 	} from '$lib/receipt.js';
+	import { localToday } from '$lib/debts.js';
 	import { messageForCode } from '$lib/errors.js';
 	import { t } from '$lib/i18n';
 
@@ -126,7 +127,7 @@
 			wallets,
 			categories,
 			baseCurrency,
-			today: new Date().toISOString().slice(0, 10)
+			today: localToday()
 		});
 		onParsed?.(form);
 	}

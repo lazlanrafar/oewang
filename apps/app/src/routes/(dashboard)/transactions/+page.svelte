@@ -183,6 +183,20 @@
 
 	const dateRange = $derived(readRange(page.url));
 
+	/*
+	 * Without a range the load opens on the server's UTC month, named in
+	 * `filterKey`. When the reader's own calendar is in another month (near
+	 * midnight at a month's end, far from UTC), the page writes theirs, as
+	 * /debts does `today`.
+	 */
+	$effect(() => {
+		if (readText(page.url, 'start_date') || readText(page.url, 'end_date')) return;
+		const local = currentMonth();
+		if (!data.filterKey.includes(`start_date=${local.start}`)) {
+			untrack(() => writeParams({ start_date: local.start, end_date: local.end }));
+		}
+	});
+
 	/**
 	 * The sort, read from the URL and written back to it.
 	 *

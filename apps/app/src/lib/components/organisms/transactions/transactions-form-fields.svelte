@@ -1,4 +1,6 @@
 <script lang="ts" module>
+	import { localToday } from '$lib/debts.js';
+
 	export type TransactionDraft = {
 		id?: string;
 		type: 'expense' | 'income' | 'transfer';
@@ -34,7 +36,7 @@
 		toAccountId: '',
 		toAmount: '',
 		categoryId,
-		date: new Date().toISOString().slice(0, 10),
+		date: localToday(),
 		notes: '',
 	});
 </script>

@@ -14,7 +14,7 @@
 	import { deserialize } from '$app/forms';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
-	import { getContext } from 'svelte';
+	import { getContext, untrack } from 'svelte';
 
 	import { parseDate } from '@internationalized/date';
 	import { toast } from 'svelte-sonner';
@@ -32,9 +32,10 @@
 	} from '$lib/components/organisms/overview';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { t } from '$lib/i18n';
+	import { currentMonth } from '$lib/month-range';
 	import { pageTitle } from '$lib/page-title';
 	import { rangeLabel } from '$lib/reports';
-	import { readParam, writeParams } from '$lib/url-state';
+	import { readParam, readText, writeParams } from '$lib/url-state';
 
 	let { data } = $props();
 
@@ -72,6 +73,19 @@
 		end: parseDate(data.range.end)
 	});
 	const words = $derived(rangeLabel(data.range.start, data.range.end));
+
+	/*
+	 * Without `?from&to` the load opens on the server's UTC month. When the
+	 * reader's own calendar is in another month (near midnight at a month's
+	 * end, far from UTC), the page writes theirs, as /debts does `today`.
+	 */
+	$effect(() => {
+		if (readText(page.url, 'from') || readText(page.url, 'to')) return;
+		const local = currentMonth();
+		if (data.range.start !== local.start) {
+			untrack(() => writeParams({ from: local.start, to: local.end }));
+		}
+	});
 
 	/**
 	 * Start a conversation with this question and open it.

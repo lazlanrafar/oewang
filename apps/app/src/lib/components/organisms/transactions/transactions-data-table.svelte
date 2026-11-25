@@ -22,7 +22,6 @@
 	import Download from '@lucide/svelte/icons/download';
 	import Ellipsis from '@lucide/svelte/icons/ellipsis';
 	import Plus from '@lucide/svelte/icons/plus';
-	import { getLocalTimeZone } from '@internationalized/date';
 
 	import { Badge } from '../../atoms/badge/index.js';
 	import { Button } from '../../atoms/button/index.js';
@@ -282,8 +281,9 @@
 		{ id: 'wallet', label: 'Wallet', options: wallets }
 	]);
 
-	function isoDay(date: { toDate: (zone: string) => Date }): string {
-		return date.toDate(getLocalTimeZone()).toISOString().slice(0, 10);
+	// The picked date's own day. Its UTC instant is the day before east of UTC.
+	function isoDay(date: { toString: () => string }): string {
+		return date.toString().slice(0, 10);
 	}
 
 	/** Ascending, then descending, then back to the order the rows came in. */
