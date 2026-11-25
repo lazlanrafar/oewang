@@ -546,7 +546,7 @@ fn protected_routes(state: AppState) -> Router<AppState> {
         .route("/v1/console/feedback", get(console::handler::feedback))
         .route(
             "/v1/console/feedback/{id}",
-            axum::routing::patch(console::handler::update_feedback),
+            get(console::handler::feedback_item).patch(console::handler::update_feedback),
         )
         .route("/v1/console/overview", get(console::handler::overview))
         .route("/v1/console/usage", get(console::handler::usage))

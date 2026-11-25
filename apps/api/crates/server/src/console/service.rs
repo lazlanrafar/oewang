@@ -881,3 +881,10 @@ pub async fn operator_audit(
         .map_err(internal)?;
     Ok((rows, total))
 }
+
+pub async fn feedback_item(pool: &PgPool, id: &str) -> Result<console::ConsoleFeedbackRow> {
+    console::find_feedback(pool, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)
+}

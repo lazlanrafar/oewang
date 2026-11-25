@@ -582,3 +582,18 @@ pub async fn audit(
         .map(|(rows, total)| (rows, total, page));
     paged(result, request_id.0)
 }
+
+/// `GET /v1/console/feedback/{id}` (CSL-8), so a link opens one item
+/// whatever the list's filters.
+pub async fn feedback_item(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(feedback_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<ConsoleFeedbackRow>>, ApiError> {
+    operator.require(ConsolePermission::Read)?;
+    match service::feedback_item(&state.db, &feedback_id).await {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
