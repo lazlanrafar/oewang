@@ -20,7 +20,8 @@ export type IssuedSession = {
 	role: 'owner' | 'admin' | 'member' | null;
 };
 
-const secure = process.env.APP_ENV === 'production';
+// Only an explicit `development` drops Secure; unset is production (OEW-122).
+const secure = process.env.APP_ENV !== 'development';
 
 /*
  * `__Host-` in production: the browser then refuses the cookie unless it is

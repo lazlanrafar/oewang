@@ -111,7 +111,7 @@ async function loadPinnedKeys(): Promise<Map<string, Buffer>> {
 
 	// Development only: trust what the local API publishes. A production
 	// build without pinned keys is refused below.
-	if (process.env.APP_ENV === 'production') {
+	if (process.env.APP_ENV !== 'development') {
 		throw new Error('CRYPTO_SIGNING_PUBLIC_KEYS is required in production');
 	}
 

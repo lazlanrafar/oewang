@@ -71,6 +71,9 @@ services:
     env_file:
       - ../.env
     environment:
+      # Only `development` relaxes the production checks; unset is
+      # production (OEW-122). Set here so the stack never depends on .env.
+      APP_ENV: development
       DATABASE_URL: postgres://oewang:oewang@postgres:5432/oewang
       AI_SERVICE_URL: http://ai:3004
       APP_URL: http://localhost:3000
@@ -154,6 +157,7 @@ services:
     env_file:
       - ../.env
     environment:
+      APP_ENV: development
       API_URL: http://api:3002
       ORIGIN: http://localhost:3000
       OWE1_VECTORS_PATH: /contract/owe1-vectors.json

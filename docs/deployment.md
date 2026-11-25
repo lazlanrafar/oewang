@@ -105,9 +105,10 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 
 | Variable | Required | Notes |
 |---|---|---|
-| `APP_ENV` | yes | `production`. Several checks below only bite when this is set correctly |
+| `APP_ENV` | no | Only `development` relaxes anything; any other value, a typo or no value at all is production, so the checks below fail closed. The same rule holds on `app` (Secure cookies, pinned keys) |
 | `API_PORT` | no | Defaults to 3002 |
 | `DATABASE_URL` | yes, **secret** | The application role. Owns no DDL rights; see [Migrations](#migrations) |
+| `MIGRATION_DATABASE_URL` | yes, **secret** | The migration role. Required in production, so a release never starts without applying its migrations; see [Migrations](#migrations) |
 | `DB_MAX_CONNECTIONS`, `DB_ACQUIRE_TIMEOUT_SECS`, `DB_STATEMENT_TIMEOUT_SECS` | no | Pool shape |
 | `JWT_SECRET` | yes, **secret** | Minimum 32 characters. Rotating it invalidates every session |
 | `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL` | no | Defaults 15m and 30d |
@@ -119,7 +120,7 @@ Values marked **secret** go in Coolify's secret store, not in a plain environmen
 | `CRYPTO_SIGNING_KEY_FILE` | yes | Path to the mounted PEM. See [Signing keys](#owe1-signing-keys) |
 | `AI_SIGNING_PUBLIC_KEYS` | yes | The AI service's pinned public keys, `kid:base64url` pairs, comma separated. A production client with none refuses to start |
 | `OWE1_ENABLED` | no | Must be `true` outside development; the config refuses otherwise |
-| `STORAGE_BACKEND` | yes | `s3` |
+| `STORAGE_BACKEND` | yes | `s3`. Production refuses `local`, which writes inside the container and loses every file on the next deploy |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION` | yes | See [Object storage](#object-storage-cloudflare-r2) |
 | `S3_ACCESS_KEY_ID` | yes, **secret** | R2 access key id |
 | `S3_SECRET_ACCESS_KEY` | yes, **secret** | R2 secret access key |
@@ -205,7 +206,13 @@ Two roles on the same database:
 | Migration role (`oewang_migrator`) | Owns the schema, full DDL | `MIGRATION_DATABASE_URL` |
 | Application role (`oewang_app`) | `SELECT`, `INSERT`, `UPDATE` on every table, `DELETE` on `telegram_updates` only, `USAGE` on sequences. No `CREATE`, no `DROP`, no `ALTER` | `DATABASE_URL` |
 
-The step: when `MIGRATION_DATABASE_URL` is set, `api` applies its embedded migrations over one connection as that role, closes it, and only then opens the application pool. A migration that fails stops the process, so the old container keeps serving.
+The step: `api` applies its embedded migrations over one connection as the `MIGRATION_DATABASE_URL` role, closes it, and only then opens the application pool. The variable is required in production; in development the step is skipped when it is unset. A migration that fails stops the process, so the old container keeps serving.
+
+A migration the binary does not know is ignored rather than refused, so rolling back to an older image after a newer one migrated still starts. That is only safe while every migration is backward compatible with the release before it, so:
+
+- Add first, remove later. A new column is nullable or has a default, so the previous release can still insert without it.
+- **A column drop ships one release after the code stops reading it.** Release N stops reading and writing the column; release N+1 drops it. Rolling back from N+1 lands on N, which does not need it.
+- The same holds for a renamed column or table: add the new one, move the code, drop the old one a release later.
 
 Both URLs sit in the `api` container's environment. The split therefore does not protect against someone who controls that container, who holds the data either way. It protects against SQL that reaches the application pool: an injected statement runs as a role that cannot drop or alter anything.
 
