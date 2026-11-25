@@ -314,8 +314,11 @@
 	 * rupiah and dollars shows both rather than one number that is wrong.
 	 */
 	function dayTotal(dayRows: TransactionRow[], direction: 'in' | 'out'): string {
+		// Under a category filter a row counts for its matched part only (TXN-25).
+		const counted = (row: TransactionRow) => row.matchedAmount ?? amountOf(row);
+
 		const wanted = dayRows.filter((row) => {
-			const amount = amountOf(row);
+			const amount = counted(row);
 			if (isZero(amount)) return false;
 			return direction === 'in' ? !isNegative(amount) : isNegative(amount);
 		});
@@ -323,7 +326,7 @@
 		const byCurrency = new Map<string, string[]>();
 		for (const row of wanted) {
 			const held = byCurrency.get(row.currency) ?? [];
-			held.push(absDecimal(amountOf(row)));
+			held.push(absDecimal(counted(row)));
 			byCurrency.set(row.currency, held);
 		}
 
