@@ -100,14 +100,6 @@ async fn handle(state: &AppState, request: Request, next: Next) -> Result<Respon
         .keys(&session_id, now)
         .ok_or_else(|| fail(AppError::CryptoSessionUnknown))?;
 
-    // Freshness came from the timestamp above; this catches a replay inside
-    // the window, which the timestamp alone cannot.
-    match state.owe1_sessions.observe(&session_id, &request_id, now) {
-        Some(SeenOutcome::Fresh) => {}
-        Some(SeenOutcome::Replay) => return Err(fail(AppError::CryptoReplayDetected)),
-        None => return Err(fail(AppError::CryptoSessionUnknown)),
-    }
-
     let (mut parts, body) = request.into_parts();
     let method = parts.method.as_str().to_string();
     let path = parts.uri.path().to_string();
@@ -150,6 +142,16 @@ async fn handle(state: &AppState, request: Request, next: Next) -> Result<Respon
         )
         .map_err(|_| fail(AppError::CryptoDecryptFailed))?
     };
+
+    // Freshness came from the timestamp above; this catches a replay inside
+    // the window, which the timestamp alone cannot. Only once the query (and
+    // any body) opened under this request id, so an id nobody proved is
+    // never recorded and cannot be burnt ahead of the real request.
+    match state.owe1_sessions.observe(&session_id, &request_id, now) {
+        Some(SeenOutcome::Fresh) => {}
+        Some(SeenOutcome::Replay) => return Err(fail(AppError::CryptoReplayDetected)),
+        None => return Err(fail(AppError::CryptoSessionUnknown)),
+    }
 
     let mut inner = Request::from_parts(parts, Body::from(plaintext_body));
     // Handlers that parse JSON need the plain content type, not ours.
@@ -254,12 +256,9 @@ fn header(headers: &HeaderMap, name: &str) -> Option<String> {
 }
 
 /// Open a header-carried field such as the query string, encoded as
-/// `nonce.ciphertext`.
+/// `nonce.ciphertext`. An empty query is sealed too: an empty header value
+/// opens nothing, so it would bind a bodyless request to no key at all.
 fn open_field(key: &[u8; 32], aad: &[u8], value: &str) -> Result<String, AppError> {
-    if value.is_empty() {
-        return Ok(String::new());
-    }
-
     let (nonce, ciphertext) = value.split_once('.').ok_or(AppError::CryptoDecryptFailed)?;
 
     let body = SealedBody {
@@ -301,6 +300,13 @@ mod tests {
         let aad = aad::query("cs_a", "GET", "/v1/transactions", "req_1", 1);
         let field = sealed_field(&aad, b"");
         assert_eq!(open_field(&KEY, &aad, &field).unwrap(), "");
+    }
+
+    #[test]
+    fn should_reject_an_empty_query_header_value() {
+        let aad = aad::query("cs_a", "GET", "/v1/transactions", "req_1", 1);
+        let error = open_field(&KEY, &aad, "").unwrap_err();
+        assert_eq!(error.code(), "CRYPTO_DECRYPT_FAILED");
     }
 
     #[test]

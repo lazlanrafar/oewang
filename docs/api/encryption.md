@@ -191,7 +191,7 @@ Filters, search text and pagination are query parameters ([conventions](conventi
 
 - The client sends the path only, plus `X-Owe-Query: <nonce>.<ciphertext>`, where the plaintext is the raw query string (`type=expense&search=lunch&page=2`, possibly empty).
 - `AAD = "OWE1|qry|" || session_id || "|" || METHOD || "|" || path || "|" || request_id || "|" || timestamp`, encrypted with `k_c2s`.
-- The header is required on every OWE1 request, even when the query is empty, so an intermediary cannot strip a filter unnoticed.
+- The header is required on every OWE1 request, even when the query is empty, so an intermediary cannot strip a filter unnoticed. An empty query is sealed like any other: an empty header value is `CRYPTO_DECRYPT_FAILED`, because for a request with no body the sealed query is the only proof the request came from the session's key holder.
 - The middleware decrypts it and populates the request's query map, so handlers read parameters normally.
 - A plaintext query string on a protected route is rejected with `CRYPTO_QUERY_NOT_ENCRYPTED`.
 
@@ -220,7 +220,7 @@ Cache-Control: no-store
 ### Replay protection
 
 - `X-Owe-Timestamp` must be within 120 seconds of server time, after the client applies its stored clock offset. Otherwise `CRYPTO_CLOCK_SKEW`, with the server time in the plaintext error so the client can correct and retry once.
-- `X-Owe-Request-Id` must be a ULID not seen in the last 5 minutes for that session. Freshness comes from the timestamp, not from the ID. Seen IDs live in an in-memory LRU. A duplicate returns `CRYPTO_REPLAY_DETECTED`.
+- `X-Owe-Request-Id` must be a ULID not seen in the last 5 minutes for that session. Freshness comes from the timestamp, not from the ID. Seen IDs live in an in-memory LRU. A duplicate returns `CRYPTO_REPLAY_DETECTED`. An ID is recorded only after the request's query and body open under it, so a forged request cannot burn an ID ahead of the real one.
 - A retry always uses a new request ID. Safe retries of creates rely on `Idempotency-Key` ([conventions](conventions.md#idempotency)).
 
 ### Chat stream events
