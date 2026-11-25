@@ -990,3 +990,61 @@ Requirements: DEBT-16, MOB-10
 - [ ] A replay refused by the API (for example `PAYMENT_EXCEEDS_REMAINING`) is marked failed and shown in the sync banner; a `STALE` edit offers discard or apply anyway
 - [x] `fvm flutter analyze` and `fvm flutter test` pass
 - [ ] Verified on a device: pay offline, reconnect, the payment lands once and the balance matches the API
+
+## M15. Category per item
+
+Epic OEW-111. Decision D123, from the scoping interview of 2026-11-25. `transaction_items.category_id` has existed since TXN-12; this milestone makes it count.
+
+### US-074: Category per item specification (OEW-112)
+Requirements: TXN-24 to TXN-28, BUD-6, MOB-11
+
+- [x] D123 in the decision log, with the three rejected designs
+- [x] TXN-24 to TXN-28, BUD-6 and MOB-11 in the PRD
+- [x] The share view in the data model
+- [x] Transactions and budgets docs state the rule
+
+### US-075: Category shares in the API (OEW-113)
+Requirements: TXN-24, TXN-25, TXN-26, BUD-6
+
+- [ ] Migration 0021: the `transaction_category_shares` view
+- [ ] Supermarket 500,000 under Groceries with items Cigarettes 40,000 and Health 50,000: the category summary answers 410,000, 40,000 and 50,000 (Rust test)
+- [ ] Items of 520,000 on a 500,000 transaction: the own-category share is 0, the item shares are untouched (Rust test)
+- [ ] A foreign-currency transaction's shares use its stored ratio and add up to its `base_amount` (Rust test)
+- [ ] Budget usage counts shares: the cigarettes leave the Groceries budget and enter the Cigarettes budget (Rust test)
+- [ ] The category filter matches through an item; the row carries `matched_amount`, the filtered summary counts it (Rust test)
+- [ ] A list row carries `other_category_count` (Rust test)
+- [ ] An item category of the other type is refused with `CATEGORY_TYPE_MISMATCH` (Rust test)
+- [ ] clippy and `cargo test` pass in the containers
+
+### US-076: A category for every receipt item (OEW-114)
+Requirements: TXN-27
+
+- [ ] The categorise call answers one category per item, from the list it was given; an unknown or missing answer becomes empty (pytest)
+- [ ] The extraction call still passes no tools (D24, pytest)
+- [ ] `POST /v1/transactions/{id}/items/categorize` proposes categories for one transaction's uncategorised items and writes them, with an audit row (Rust test)
+- [ ] ruff, pytest, clippy and `cargo test` pass in the containers
+
+### US-077: Item categories in the web app (OEW-115)
+Requirements: TXN-25, TXN-26, TXN-27
+
+- [ ] `select-category` on each item row in the detail sheet and the receipt confirmation sheet, limited to the transaction's type
+- [ ] "Categorise items" in the detail sheet
+- [ ] The category cell shows "+N"; under a category filter the amount cell shows the matched portion
+- [ ] Every string in `en.json`; `bun run check` and `bun run test` pass in the containers
+- [ ] Verified locally in the browser: scan a receipt with cigarettes, confirm, see the budget and the overview chart move
+
+### US-078: Categorised items from chat, MCP and Telegram (OEW-116)
+Requirements: TXN-28
+
+- [ ] `create_transaction` takes optional `items` in the Rust and Python catalogs and in MCP; category names resolve as the transaction's does; amounts stay strings (D12, Rust and pytest tests)
+- [ ] `get_spending_summary` and `get_budget_status` answer from shares (Rust test)
+- [ ] ruff, pytest, clippy and `cargo test` pass in the containers
+- [ ] Verified locally: "belanja Superindo 500rb, 40rb-nya rokok" writes one transaction with one categorised item
+
+### US-079: Item categories on mobile (OEW-117)
+Requirements: MOB-11
+
+- [ ] Category picker per item; "+N" on a row; the matched portion under a category filter
+- [ ] Item writes queue offline with client ids
+- [ ] `fvm flutter analyze` and `fvm flutter test` pass
+- [ ] Verified on a device

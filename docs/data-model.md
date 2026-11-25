@@ -431,6 +431,16 @@ This is adapted from Midday's `internal_id` ([research](research/midday.md#32-de
 
 Item totals are not forced to match the transaction amount. A mismatch raises a warning badge in the UI, nothing more (TXN-12).
 
+##### Category shares
+
+`transaction_category_shares` is a view, not a table (D123, TXN-24). It answers `(workspace_id, transaction_id, category_id, amount, base_amount)`, over live rows only:
+
+- One row per item category that differs from the transaction's own: the sum of those items' `amount`.
+- One row for the transaction's own category: `greatest(amount - sum of the rows above, 0)`. Always present, so a transaction with no categorised item has exactly this row, equal to itself.
+- `base_amount` is `amount × transactions.base_amount / transactions.amount`, the transaction's own stored ratio, rounded to 4 places. The own-category row takes what is left of `base_amount`, floored at zero, so rounding never invents a cent.
+
+Every query that groups or filters by category joins this view instead of reading `transactions.category_id`. A query that reads the column directly for a figure fails review.
+
 #### `transaction_attachments`
 
 | Column | Type | Notes |

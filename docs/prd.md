@@ -179,6 +179,11 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | TXN-21 | The transaction list shows the wallet-currency amount and, when the entry currency differed, the original amount beside it. Totals always render in the workspace currency. |
 | TXN-22 | At write time the rate resolves in a fixed order and a write never fails while any cached rate exists. How the rate was obtained and which day it belongs to are stored on the row, and a stale rate is marked in the UI (D43). |
 | TXN-23 | An import converts each row with the rate for that row's own date. A row with no rate available is skipped and reported (D45). |
+| TXN-24 | A line item whose category differs from its transaction's moves its amount to that category in every figure grouped by category. What is left of the transaction, floored at zero, stays with the transaction's category, as do items with no category. Nothing is prorated: when categorised items exceed the amount, the figures do too (D123). |
+| TXN-25 | The category filter matches a transaction through any of its shares. The row keeps its whole amount and carries the matched portion beside it; filtered totals count the portion. |
+| TXN-26 | A transaction whose items span other categories shows its own category with the count of the others ("Groceries +2"). The count is derived, never stored. |
+| TXN-27 | The receipt scan proposes a category for every item, from the workspace's existing categories only; an item it is unsure of stays empty. The same proposal can be asked for one existing transaction's items. Each item's category is editable with the category picker (D79). An item's category must be of the transaction's type. |
+| TXN-28 | The create-transaction tool in chat, MCP and Telegram takes optional items (name, amount, category), so "500k at the supermarket, 40k of it cigarettes" is one transaction with one categorised item. |
 
 ### 6.5 Files (VLT)
 
@@ -373,6 +378,7 @@ Added by D103, from the old app's budget page. Specified in [features/budgets.md
 | BUD-3 | The page is the old one: three figures, a search, New budget, and a table sortable on the server by category, budget, spent, remaining and percentage. The month, the search and the sort live in the URL; a month stepper moves between months. |
 | BUD-4 | Deleting a category deletes its budget in the same transaction, with its own audit row. |
 | BUD-5 | `get_budget_status` answers for one month (the current one by default) and leaves a `budget` canvas: spent and remaining against the total, a bar per budget with the fullest first, and the API's summary sentence. |
+| BUD-6 | What a budget's category spent is the sum of its category shares (TXN-24), not of the transactions filed under it: an item categorised elsewhere leaves the budget, and an item categorised into it enters. |
 
 ### 6.16 Feedback (FB)
 
@@ -414,6 +420,7 @@ Added by D113, from the old Flutter app. Specified in [features/mobile.md](featu
 | MOB-8 | Chat with streaming answers, receipt scanning from the camera or gallery, and the vault, on the web's routes. |
 | MOB-9 | Passkey sign-in, Telegram linking through its deep link, and invitation links (`/accept-invite?token=`) that open the app: a signed-out person registers or signs in, then the invitation is accepted. The address is not filled in: the API does not tell whoever holds a link which address it was sent to. |
 | MOB-10 | Creating, editing and deleting debts and contacts, paying, cancelling a payment and merging contacts work offline like transactions. Each create carries a client `id` (D114) and each edit `If-Match` (D115). A queued payment's wallet delta joins the balance estimate; a replay the API refuses is shown in the sync banner (D120). |
+| MOB-11 | Mobile shows and edits an item's category, shows the count of other categories on a transaction and the matched portion under a category filter (TXN-24 to TXN-27). Item writes queue offline like every other write. |
 
 ### 6.19 Push notifications (PUSH)
 
