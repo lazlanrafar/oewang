@@ -996,7 +996,7 @@ Requirements: DEBT-16, MOB-10
 Epic OEW-111. Decision D123, from the scoping interview of 2026-11-25. `transaction_items.category_id` has existed since TXN-12; this milestone makes it count.
 
 ### US-074: Category per item specification (OEW-112)
-Requirements: TXN-24 to TXN-28, BUD-6, MOB-11
+Requirements: TXN-24 to TXN-29, BUD-6, MOB-11
 
 - [x] D123 in the decision log, with the three rejected designs
 - [x] TXN-24 to TXN-28, BUD-6 and MOB-11 in the PRD
@@ -1017,7 +1017,9 @@ Requirements: TXN-24, TXN-25, TXN-26, BUD-6
 - [ ] clippy and `cargo test` pass in the containers
 
 ### US-076: A category for every receipt item (OEW-114)
-Requirements: TXN-27
+Requirements: TXN-27, TXN-29
+
+- [ ] An item whose key was categorised before takes that category, the newest purchase winning, and is not sent to the model (Rust test)
 
 - [ ] The categorise call answers one category per item, from the list it was given; an unknown or missing answer becomes empty (pytest)
 - [ ] The extraction call still passes no tools (D24, pytest)

@@ -183,6 +183,7 @@ Requirement IDs are referenced by every other doc and by each backlog story. The
 | TXN-25 | The category filter matches a transaction through any of its shares. The row keeps its whole amount and carries the matched portion beside it; filtered totals count the portion. |
 | TXN-26 | A transaction whose items span other categories shows its own category with the count of the others ("Groceries +2"). The count is derived, never stored. |
 | TXN-27 | The receipt scan proposes a category for every item, from the workspace's existing categories only; an item it is unsure of stays empty. The same proposal can be asked for one existing transaction's items. Each item's category is editable with the category picker (D79). An item's category must be of the transaction's type. |
+| TXN-29 | An item's category defaults to the one last given to an item of the same key (the key of ITM-1) in the workspace. The receipt scan fills those first and asks the model only for items never categorised before, so a correction made once holds for the next receipt. The default is read from past items; there is no rules table. |
 | TXN-28 | The create-transaction tool in chat, MCP and Telegram takes optional items (name, amount, category), so "500k at the supermarket, 40k of it cigarettes" is one transaction with one categorised item. |
 
 ### 6.5 Files (VLT)
