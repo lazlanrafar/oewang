@@ -34,6 +34,12 @@ class TransactionRow extends StatelessWidget {
         ? '${transaction.wallet?.name ?? ''} → ${transaction.toWallet?.name ?? ''}'
         : (transaction.wallet?.name ?? '');
 
+    final categoryStyle = OewangFonts.sans(
+      color: palette.foreground,
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+    );
+
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -44,15 +50,23 @@ class TransactionRow extends StatelessWidget {
             // Paling kiri: Kategori Transaksi (dikurangi max width ke 76, font lebih kecil 12px)
             SizedBox(
               width: 76,
-              child: Text(
-                categoryTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: OewangFonts.sans(
-                  color: palette.foreground,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      categoryTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: categoryStyle,
+                    ),
+                  ),
+                  // Its own text, so a long category name cannot cut it off.
+                  if (transaction.otherCategoryCount > 0)
+                    Text(
+                      ' +${transaction.otherCategoryCount}',
+                      style: categoryStyle,
+                    ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
@@ -90,10 +104,24 @@ class TransactionRow extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             // Paling kanan: Harga / Amount
-            MoneyText(
-              amount: transaction.amount,
-              color: amountColor,
-              textAlign: TextAlign.right,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                MoneyText(
+                  amount: transaction.amount,
+                  color: amountColor,
+                  textAlign: TextAlign.right,
+                ),
+                // The part in the filtered categories, from the API (TXN-25).
+                if (transaction.matchedAmount case final matched?)
+                  MoneyText(
+                    amount: matched,
+                    color: palette.mutedForeground,
+                    fontSize: 11,
+                    textAlign: TextAlign.right,
+                  ),
+              ],
             ),
           ],
         ),

@@ -93,6 +93,8 @@ What the transaction screens read, and where they differ from the old app:
 - The old app's only delete was a swipe that one transaction setting turned on, and that setting went with its API. Deleting is in the edit form's app bar now, behind the same confirm dialog.
 - The transaction settings themselves run on the old defaults (month from the 1st, Daily tab first, swipe changes month).
 - A member (the read-only role) sees no add button, opens no row for editing and gets no delete (MOB-5).
+- A row whose items span other categories reads its own category followed by "+N", from the API's `other_category_count` (TXN-26); the count is never worked out on the device. When a row carries `matched_amount`, the matched portion sits under the whole amount, muted (TXN-25). No screen sends a `category_id` filter yet, so that second line does not appear today.
+- Line items have no screen here yet: the app reads and writes no `/v1/transactions/{id}/items`, and the queue has no item kind. MOB-11's picker for an item's category and its offline write wait on that screen.
 
 What the other screens read, and where they differ from the old app:
 

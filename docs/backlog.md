@@ -1047,5 +1047,5 @@ Requirements: MOB-11
 
 - [ ] Category picker per item; "+N" on a row; the matched portion under a category filter
 - [ ] Item writes queue offline with client ids
-- [ ] `fvm flutter analyze` and `fvm flutter test` pass
+- [x] `fvm flutter analyze` and `fvm flutter test` pass
 - [ ] Verified on a device

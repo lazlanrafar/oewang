@@ -23,6 +23,8 @@ class TransactionDto {
     this.categoryName,
     this.name,
     this.description,
+    this.otherCategoryCount = 0,
+    this.matchedAmount,
   });
 
   factory TransactionDto.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,12 @@ class TransactionDto {
       categoryName: json['category_name'] as String?,
       name: json['name'] as String?,
       description: json['description'] as String?,
+      // Absent on a row queued offline or cached before the API sent them.
+      otherCategoryCount: json['other_category_count'] as int? ?? 0,
+      matchedAmount: switch (json['matched_amount']) {
+        final String raw => Decimal.parse(raw),
+        _ => null,
+      },
     );
   }
 
@@ -60,6 +68,8 @@ class TransactionDto {
   final String? categoryName;
   final String? name;
   final String? description;
+  final int otherCategoryCount;
+  final Decimal? matchedAmount;
 
   Transaction toDomain() {
     final local = date.toLocal();
@@ -81,6 +91,10 @@ class TransactionDto {
       category: categoryId == null
           ? null
           : NamedRef(id: categoryId!, name: categoryName ?? ''),
+      otherCategoryCount: otherCategoryCount,
+      matchedAmount: matchedAmount == null
+          ? null
+          : Money(amount: matchedAmount!, currency: walletCurrency),
     );
   }
 
