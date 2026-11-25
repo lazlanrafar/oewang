@@ -173,6 +173,10 @@ pub enum AppError {
     ConfirmationRequired(FieldErrors),
     #[error("tool cap exceeded for this turn")]
     ToolCapExceeded,
+    /// The same call id is still running in this turn, so its outcome is
+    /// not known yet (a transport retry of a slow write).
+    #[error("this tool call is still running")]
+    ToolCallInProgress,
 
     // -- integrations
     /// The server runs without a Telegram bot configured (D84).
@@ -255,6 +259,7 @@ impl AppError {
             ToolForbidden => "TOOL_FORBIDDEN",
             ConfirmationRequired(_) => "CONFIRMATION_REQUIRED",
             ToolCapExceeded => "TOOL_CAP_EXCEEDED",
+            ToolCallInProgress => "TOOL_CALL_IN_PROGRESS",
             Internal(_) => "INTERNAL_ERROR",
         }
     }
@@ -273,6 +278,7 @@ impl AppError {
             | WorkspaceCurrencyChanged
             | ConfirmationRequired(_)
             | ToolCapExceeded
+            | ToolCallInProgress
             | IdTaken
             | Stale(_)
             | ContactHasDebts
@@ -360,6 +366,9 @@ impl AppError {
             ConfirmationRequired(_) => "Ask the user to confirm, then call again.",
             ToolCapExceeded => {
                 "One turn may not do this much. Tell the user what was done and stop."
+            }
+            ToolCallInProgress => {
+                "The first attempt is still running. Tell the user its outcome is not known yet; do not call it again."
             }
             ReceiptUnreadable | StatementUnreadable => {
                 "Try a sharper photograph, or enter it manually."
@@ -505,6 +514,7 @@ mod tests {
             AppError::ToolForbidden,
             AppError::ConfirmationRequired(FieldErrors::new()),
             AppError::ToolCapExceeded,
+            AppError::ToolCallInProgress,
             AppError::TelegramDisabled,
             AppError::ContactNotFound,
             AppError::ContactHasDebts,
@@ -522,7 +532,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 66);
+        assert_eq!(samples.len(), 67);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

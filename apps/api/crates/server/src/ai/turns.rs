@@ -150,7 +150,7 @@ impl TurnStore {
         };
         match counters.writes_seen.get(call_id) {
             Some(Some(done)) => Ok(Some(done.clone())),
-            Some(None) => Err(AppError::Stale(None)),
+            Some(None) => Err(AppError::ToolCallInProgress),
             None => {
                 counters.writes_seen.insert(call_id.to_string(), None);
                 Ok(None)
@@ -274,6 +274,18 @@ mod tests {
             kind: "spending",
             payload: serde_json::json!({ "total": "1" }),
         }
+    }
+
+    #[test]
+    fn should_refuse_a_repeat_of_a_write_that_is_still_running() {
+        let store = store();
+        assert!(matches!(store.begin_write(TURN, "call_1"), Ok(None)));
+
+        assert!(matches!(
+            store.begin_write(TURN, "call_1"),
+            Err(AppError::ToolCallInProgress)
+        ));
+        assert!(matches!(store.begin_write(TURN, "call_2"), Ok(None)));
     }
 
     #[test]

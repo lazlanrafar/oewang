@@ -61,6 +61,7 @@ REFUSAL_CODES = frozenset(
         "TOOL_ARGS_INVALID",
         "TOOL_FORBIDDEN",
         "TOOL_CAP_EXCEEDED",
+        "TOOL_CALL_IN_PROGRESS",
         "CONFIRMATION_REQUIRED",
     }
 )
