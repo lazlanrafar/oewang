@@ -325,6 +325,13 @@ async function resave(
 	const row = current.data;
 	if (!row) throw new Error('NOT_FOUND');
 
+	// A rate the user confirmed survives the resave. A new wallet may hold
+	// another currency, so then the API resolves a fresh one; a looked-up
+	// rate is never sent, which would relabel it as the user's.
+	const keepsRate =
+		row.base_rate_source === 'user' &&
+		(change.wallet_id === undefined || change.wallet_id === row.wallet_id);
+
 	return ledger.updateTransaction(
 		id,
 		{
@@ -337,6 +344,7 @@ async function resave(
 			original_amount: row.original_amount,
 			original_currency_code: row.original_currency_code,
 			exchange_rate: row.exchange_rate,
+			base_rate: keepsRate ? row.base_rate : null,
 			date: row.date,
 			name: row.name,
 			description: row.description,
