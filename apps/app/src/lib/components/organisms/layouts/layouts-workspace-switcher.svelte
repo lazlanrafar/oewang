@@ -74,7 +74,8 @@
 	user says what they see. Collapsed, only the icon shows, so the label
 	names it instead. The menu it opens is announced by `aria-haspopup`.
 -->
-<div class={cn('flex flex-col gap-2 p-2', collapsed && 'items-center px-0')}>
+<!-- The extra bottom padding keeps the card off the first nav row. -->
+<div class={cn('flex flex-col gap-2 p-2 pb-4', collapsed && 'items-center px-0 pb-2')}>
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
 			{#snippet child({ props })}
@@ -82,8 +83,11 @@
 					{...props}
 					type="button"
 					class={cn(
-						'flex w-full items-center gap-2 overflow-hidden border border-sidebar-border text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
-						collapsed ? 'size-8 justify-center border-transparent p-0' : 'h-12 p-2'
+						'flex w-full items-center gap-2 overflow-hidden border text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
+						collapsed
+							? 'size-8 justify-center border-transparent p-0'
+							: // Drawn like the overview's stat card, with the active row's hatch.
+								'border-border bg-background p-3 [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_srgb,var(--color-primary)_15%,transparent)_5px_6px)]'
 					)}
 					aria-label={collapsed ? t('nav.switch_workspace') : undefined}
 				>
