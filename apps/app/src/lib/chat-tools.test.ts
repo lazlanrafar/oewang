@@ -123,9 +123,29 @@ describe('toolCallsFromAttachments', () => {
 				args: { amount: '50000' },
 				status: 'ok',
 				summary: 'Created expense 50,000 in Cash.',
-				artifact: null
+				artifact: null,
+				card: null
 			}
 		]);
+	});
+
+	// OEW-135
+	it('reads back the saved card a create stored, apart from the canvas', () => {
+		const payload = { transaction_id: 'txn1', amount_formatted: 'Rp 1', items: [] };
+		const [call] = toolCallsFromAttachments({
+			tool_calls: [
+				{
+					id: 't1',
+					name: 'create_transaction',
+					result: { ok: true, summary: 'x' },
+					artifact: { type: 'transaction', payload }
+				}
+			]
+		});
+
+		expect(call.card).toEqual(payload);
+		expect(call.artifact).toBeNull();
+		expect(artifactsOf([{ toolCalls: [call] }])).toEqual([]);
 	});
 
 	// CHAT-18

@@ -4,7 +4,8 @@
 	 *
 	 * Ported from the old app's `chat-messages.tsx`. What it renders per
 	 * message, in order: the tools the assistant used, what it said, the
-	 * files sent with it, and the actions under it.
+	 * cards of the transactions it saved, the files sent with it, and the
+	 * actions under it.
 	 *
 	 * The assistant's text renders as Markdown, the user's never does. A
 	 * message still streaming renders as plain text and becomes Markdown
@@ -29,10 +30,12 @@
 	import { entityTargetFromDataset, type EntityTarget } from '$lib/chat-entities';
 	import { t } from '$lib/i18n';
 	import { renderAssistantMarkdown } from '$lib/markdown';
+	import { closingTotal, type TransactionCard } from '$lib/transaction-card';
 
 	import * as Empty from '../../molecules/empty/index.js';
 	import { artifactTitle } from './canvas/artifact-title.js';
 	import ChatActivity from './chat-activity.svelte';
+	import ChatTransactionCard from './chat-transaction-card.svelte';
 	import MessageActions from './message-actions.svelte';
 	import ToolCallGroup from './tool-call-group.svelte';
 
@@ -48,6 +51,7 @@
 		onArtifact,
 		activeArtifactId = null,
 		activity = null,
+		canEdit = false,
 		emptyActions
 	}: {
 		messages: MessageItem[];
@@ -66,6 +70,8 @@
 		activeArtifactId?: string | null;
 		/** What the answer still arriving is doing, for its live activity lines. */
 		activity?: TurnPhase | null;
+		/** The reader may change what the assistant saved: false for a member. */
+		canEdit?: boolean;
 		/** Suggestion chips, mounted by the page on an empty conversation. */
 		emptyActions?: Snippet;
 	} = $props();
@@ -77,6 +83,10 @@
 	const lastAssistantId = $derived(
 		[...messages].reverse().find((message) => message.role === 'assistant')?.id ?? null
 	);
+
+	/** The saved cards a message carries (OEW-135). */
+	const cardsOf = (message: MessageItem): TransactionCard[] =>
+		message.toolCalls.flatMap((call) => (call.card ? [call.card] : []));
 
 	function dispatchEntity(event: MouseEvent) {
 		const origin = event.target;
@@ -154,6 +164,19 @@
 								{message.content}
 							</p>
 						{/if}
+					{/if}
+
+					{#if cardsOf(message).length > 0}
+						{@const cards = cardsOf(message)}
+						{@const total = closingTotal(cards)}
+						<div class="flex flex-col gap-2">
+							{#each cards as card (card.transaction_id)}
+								<ChatTransactionCard {card} canEdit={canEdit && message.id !== streamingId} />
+							{/each}
+							{#if total}
+								<p class="text-caption text-subtle">{t('chat.card_month_total', { total })}</p>
+							{/if}
+						</div>
 					{/if}
 
 					{#if message.files.length > 0}

@@ -31,6 +31,7 @@
 		ChatInput,
 		ChatMessages,
 		ChatSuggestions,
+		ChatTransactionCard,
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
 	import { AccountMenu, AppSidebar, ThemeToggle, WorkspaceSwitcher } from '$lib/components/organisms/layouts';
@@ -51,6 +52,27 @@
 		workspace
 	} from '../mock';
 	import Specimen from '../specimen.svelte';
+	import type { TransactionCard } from '$lib/transaction-card';
+
+	/* A saved card as the API sends it, every figure already formatted. */
+	const savedCard: TransactionCard = {
+		transaction_id: 'txn1',
+		type: 'expense',
+		name: 'Warung Tekko',
+		amount_formatted: 'Rp 136.850',
+		category_id: null,
+		category_name: 'Food',
+		wallet_id: 'w1',
+		wallet_name: 'Cash',
+		to_wallet_name: null,
+		date: '2026-10-23',
+		items: [
+			{ name: 'Mineral water', amount_formatted: 'Rp 20.000' },
+			{ name: 'Pho special', amount_formatted: 'Rp 81.000' }
+		],
+		month_total_formatted: 'Rp 1.250.000',
+		deleted: false
+	};
 
 	/* Two workspaces, so the switcher's menu has something to switch to. */
 	const workspaces = [
@@ -232,6 +254,17 @@
 		<ToolCallGroup calls={[{ id: 't1', name: 'create_transaction', args: {}, status: 'ok', summary: 'Created expense 50,000 in Cash.' }]} />
 		<ToolCallGroup calls={chatToolBatch} />
 		<ToolCallGroup calls={[{ id: 't9', name: 'get_spending_summary', args: {}, status: 'running', summary: null }]} />
+	</div>
+</Specimen>
+
+<Specimen
+	title="Chat saved card"
+	note="What a transaction the assistant saved is answered with (OEW-135): the Telegram receipt reply's lines, with category, wallet and delete for an owner or admin. A member sees the same card without controls; a deleted row collapses to one line."
+>
+	<div class="flex max-w-xl flex-col gap-3">
+		<ChatTransactionCard card={savedCard} canEdit />
+		<ChatTransactionCard card={{ ...savedCard, items: [] }} />
+		<ChatTransactionCard card={{ ...savedCard, deleted: true }} />
 	</div>
 </Specimen>
 

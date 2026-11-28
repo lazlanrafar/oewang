@@ -195,6 +195,18 @@ describe('advance, the tool events', () => {
 		expect(advance(called, { kind: 'frame', frame: frame('t9', 'spending') })).toBe(called);
 	});
 
+	it('attaches a saved card as a card, not a canvas (OEW-135)', () => {
+		const called = advance(streaming(), { kind: 'frame', frame: call('t1', 'create_transaction') });
+		const payload = { transaction_id: 'txn1', amount_formatted: 'Rp 1', items: [] };
+		const shown = advance(called, {
+			kind: 'frame',
+			frame: { event: 'artifact', data: JSON.stringify({ id: 't1', type: 'transaction', payload }) }
+		});
+
+		expect(shown.toolCalls[0].card).toEqual(payload);
+		expect(shown.toolCalls[0].artifact).toBeNull();
+	});
+
 	it('marks a refused call as failed', () => {
 		const called = advance(streaming(), { kind: 'frame', frame: call('t1', 'delete_transaction') });
 		const refused = advance(called, { kind: 'frame', frame: result('t1', false, 'Not allowed.') });

@@ -519,6 +519,7 @@
 			busy={isActive(turn)}
 			activeArtifactId={activeArtifact?.id ?? null}
 			activity={turnPhase(turn)}
+			canEdit={data.me.role !== 'member'}
 			onEntity={openEntity}
 			onCopy={copy}
 			onRegenerate={regenerate}

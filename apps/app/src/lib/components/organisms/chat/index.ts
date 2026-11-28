@@ -9,3 +9,4 @@ export { default as ChatDock } from './chat-dock.svelte';
 export { default as ChatHeader } from './chat-header.svelte';
 export * from './canvas/index.js';
 export { default as ChatActivity } from './chat-activity.svelte';
+export { default as ChatTransactionCard } from './chat-transaction-card.svelte';

@@ -15,6 +15,7 @@
  */
 
 import { readArtifact } from '$lib/artifacts';
+import { readTransactionCard } from '$lib/transaction-card';
 import type { ToolCall } from '$lib/chat-tools';
 
 export type SseFrame = { event: string; data: string };
@@ -192,12 +193,17 @@ export function advance(turn: Turn, input: TurnInput): Turn {
 			// Sent by the API right after its tool's result (D88). One for a
 			// call this turn never made is dropped, like a stray result.
 			const id = text(payload.id);
+			// A saved transaction travels the same way and is drawn as a card
+			// under the reply rather than in the canvas (OEW-135).
 			const artifact = readArtifact(payload.type, payload.payload);
-			if (!artifact || !turn.toolCalls.some((call) => call.id === id)) return turn;
+			const card = readTransactionCard(payload.type, payload.payload);
+			if ((!artifact && !card) || !turn.toolCalls.some((call) => call.id === id)) return turn;
 
 			return {
 				...turn,
-				toolCalls: turn.toolCalls.map((call) => (call.id === id ? { ...call, artifact } : call))
+				toolCalls: turn.toolCalls.map((call) =>
+					call.id === id ? { ...call, ...(artifact ? { artifact } : { card }) } : call
+				)
 			};
 		}
 		case 'receipt_draft': {

@@ -70,7 +70,8 @@ One conversation is one `ai_sessions` row with its `ai_messages` ([data model](.
   "tool_calls": [
     { "id": "t1", "name": "create_transaction",
       "args": { "…": "…" },
-      "result": { "ok": true, "summary": "Created expense 50,000 in Cash." } }
+      "result": { "ok": true, "summary": "Created expense 50,000 in Cash." },
+      "artifact": { "type": "transaction", "payload": { "transaction_id": "clx…", "…": "…" } } }
   ],
   "files": [ { "vault_file_id": "clx…", "name": "receipt.jpg", "type": "image/jpeg" } ],
   "receipt_draft": { "merchant": "…", "date": "2026-11-02", "total": "87500.0000", "items": [] },
@@ -237,10 +238,30 @@ Mechanics:
 
 Two things on the original list are not built this way, and both were decisions:
 
-- **A `create_transaction` or `update_transaction` tool call does not open the panel.** The `tool_result` event carries `ok` and a summary, not the id of the row it wrote ([streaming protocol](../ai/service.md#streaming-protocol)), and the panel is keyed by an id. Carrying the written id on the result is the change that would enable it.
+- **A `create_transaction` or `update_transaction` tool call does not open the panel.** The `tool_result` event carries `ok` and a summary, not the id of the row it wrote ([streaming protocol](../ai/service.md#streaming-protocol)), and the panel is keyed by an id. A create is answered with a [saved card](#saved-transaction-cards) under the reply instead.
 - **A transaction clicked in an answer opens on the transactions page**, not in the chat canvas, as [entity deep links](#entity-deep-links) already specifies. The detail sheet needs the row's history and its attachments, which that page's load fetches and this one does not.
 
 Why this shape: the canvas is the real editor, so it cannot drift from it, its edits go through the normal validation and mutation path, and the model renders nothing. The old oewang built the opposite, a bespoke artifact system under `components/organisms/chat/canvas/` and `charts/` fed by model-produced payloads, which is more code and more ways to be wrong ([research](../research/midday.md#2-the-canvas)).
+
+### Saved transaction cards
+
+A transaction the assistant records in the web chat is answered the way the Telegram bot answers a receipt (TG-6): one card per saved row, and one closing line for the reply (OEW-135).
+
+```
+✅ Saved Lunch
+Rp 50.000 · Food · Cash · 2026-11-03
+• Noodles  Rp 50.000
+
+This month: Rp 1.250.000
+```
+
+- **The artifact mechanism, another type.** A successful `create_transaction` builds the card in `ai/card.rs` and leaves it in the turn store under the call id, exactly as an analysis does (D88). The pump sends it as `artifact` with `type: "transaction"` after the call's `tool_result` and stores it on `tool_calls[i].artifact`. A refused or failed call leaves none, because only a written row is built and the pump forwards an artifact only after `ok: true`.
+- **Web only.** Telegram turns pass no artifacts to the pump, so the card is swept with the turn; the bot keeps its own reply. The mobile app shows the text only (see [mobile](mobile.md)).
+- **Payload.** `transaction_id`, `type`, `name`, `amount_formatted`, `category_id`, `category_name`, `wallet_id`, `wallet_name`, `to_wallet_name`, `date` (YYYY-MM-DD), `items[] {name, amount_formatted}`, `month_total_formatted` and `deleted`. Every figure is formatted by the API (D27), in the wallet's currency; the month total is this month's expense total in the workspace currency, from the same summary query as the Telegram reply. No amount is a number (D12).
+- **The closing line** is the last card's month total: it was worked out after every earlier write in the turn.
+- **Controls.** An owner or admin gets a category picker (`SelectCategory`, typed to the row), a wallet picker (`SelectAccount`) and delete behind `ConfirmDialog`. A member sees the card without them, and so does the reply still arriving. Each control posts to the transactions page's own actions, `/transactions?/setCategory`, `?/setWallet` and `?/delete`, the ones its table cells and its delete use, so balances, the wallet lock order (D13), the audit row (D14) and the soft delete (OPS-2) stay in the API service.
+- **Current values.** `GET /v1/ai/sessions/{id}` re-reads each stored card's row by id (`card::refresh`) and lays the current fields over the stored card, so an edit made from the card, or anywhere else, shows after the change and after a reload. A deleted row comes back with `deleted: true` and the card collapses to one "Deleted" line. The month total is not re-read: it is what the reply said. Re-reading was chosen over updating the stored card on each edit, because an edit can come from any screen and only the read sees all of them.
+- **The prompt is told.** After a successful `create_transaction` the model says at most one short line and repeats nothing the card shows ([AI service](../ai/service.md#system-prompt)).
 
 ## Keeping the rest of the app fresh
 

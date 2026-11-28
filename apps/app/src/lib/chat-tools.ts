@@ -14,6 +14,7 @@
 import { readArtifact, type Artifact } from '$lib/artifacts';
 import { t, type TranslationKey } from '$lib/i18n';
 import { rangeLabel } from '$lib/reports';
+import { readTransactionCard, type TransactionCard } from '$lib/transaction-card';
 
 export type ToolStatus = 'running' | 'ok' | 'failed';
 
@@ -29,6 +30,8 @@ export type ToolCall = {
 	 * Absent on every other tool.
 	 */
 	artifact?: Artifact | null;
+	/** The saved card a successful create left (OEW-135). Web chat only. */
+	card?: TransactionCard | null;
 };
 
 /**
@@ -190,7 +193,8 @@ export function toolCallsFromAttachments(attachments: unknown): ToolCall[] {
 			// first. It stays as it was rather than being reported as done.
 			status: result === null ? 'running' : result.ok === true ? 'ok' : 'failed',
 			summary: result === null ? null : string(result.summary) || null,
-			artifact: artifact === null ? null : readArtifact(artifact.type, artifact.payload)
+			artifact: artifact === null ? null : readArtifact(artifact.type, artifact.payload),
+			card: artifact === null ? null : readTransactionCard(artifact.type, artifact.payload)
 		});
 	}
 
