@@ -1,3 +1,4 @@
+pub mod card;
 pub mod extraction;
 pub mod handler;
 pub mod service;

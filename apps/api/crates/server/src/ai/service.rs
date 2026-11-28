@@ -65,9 +65,11 @@ pub struct Conversation {
 
 pub async fn get(pool: &PgPool, workspace_id: &str, id: &str) -> Result<Conversation> {
     let session = require(pool, workspace_id, id).await?;
-    let messages = ai::list_messages(pool, workspace_id, id)
+    let mut messages = ai::list_messages(pool, workspace_id, id)
         .await
         .map_err(internal)?;
+    // A saved card shows what its row holds now, not only what it held.
+    crate::ai::card::refresh(pool, workspace_id, &mut messages).await;
 
     Ok(Conversation { session, messages })
 }

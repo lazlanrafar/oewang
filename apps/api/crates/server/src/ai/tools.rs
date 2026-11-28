@@ -50,7 +50,10 @@ use serde_json::{json, Map, Value};
 
 use crate::{
     accounts,
-    ai::turns::{Artifact, TurnStore},
+    ai::{
+        card,
+        turns::{Artifact, TurnStore},
+    },
     audit::{Actor, SOURCE_CHAT},
     auth, budgets, contacts,
     debts::{self, service::SplitSource},
@@ -175,7 +178,9 @@ async fn run(
             analysis(pool, turns, request, Analysis::BurnRate, args).await
         }
         ToolCall::GetBudgetStatus(month) => budget_status(pool, turns, request, month).await,
-        ToolCall::CreateTransaction(args) => create_transaction(pool, actor, args).await,
+        ToolCall::CreateTransaction(args) => {
+            create_transaction(pool, turns, request, actor, args).await
+        }
         ToolCall::UpdateTransaction(args) => update_transaction(pool, actor, args).await,
         ToolCall::DeleteTransaction(args) => {
             delete_transaction(pool, turns, actor, request.session_id, args).await
@@ -806,6 +811,8 @@ fn describe_span(from: DateTime<Utc>, to: DateTime<Utc>) -> &'static str {
 
 async fn create_transaction(
     pool: &PgPool,
+    turns: &TurnStore,
+    request: &ToolRequest<'_>,
     actor: Actor<'_>,
     args: WriteTransactionArgs,
 ) -> Result<ToolOutcome> {
@@ -852,6 +859,23 @@ async fn create_transaction(
 
     let row = transactions::service::create_with_items(pool, actor, input, &items).await?;
     let detail = transactions::service::find(pool, actor.workspace_id, &row.id).await?;
+
+    // The web chat answers with a card (`ai::card`); a channel that draws
+    // none sweeps it with the turn. The row is already saved, so a card that
+    // cannot be built costs the card, never the write.
+    if let Some(call_id) = request.call_id {
+        match card::build(pool, actor.workspace_id, &row.id).await {
+            Ok(payload) => turns.put_artifact(
+                request.turn_id,
+                call_id,
+                Artifact {
+                    kind: card::KIND,
+                    payload,
+                },
+            ),
+            Err(error) => tracing::warn!(%error, "the saved card could not be built"),
+        }
+    }
 
     Ok(written(&detail, "Created"))
 }

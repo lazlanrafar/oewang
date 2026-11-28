@@ -743,6 +743,169 @@ async fn should_store_the_tool_calls_beside_the_reply(pool: PgPool) {
     assert_eq!(attachments["usage"]["output"], json!(4));
 }
 
+async fn create_in_turn(
+    pool: &PgPool,
+    turns: &TurnStore,
+    session_id: &str,
+    call_id: &str,
+    args: Value,
+) -> oewang_domain::Result<crate::ai::tools::ToolOutcome> {
+    crate::ai::tools::execute(
+        pool,
+        turns,
+        oewang_domain::tools::default_max_tool_amount(),
+        crate::ai::tools::ToolRequest {
+            workspace_id: WORKSPACE,
+            user_id: USER,
+            claimed_role: "owner",
+            session_id,
+            turn_id: "turn_a",
+            call_id: Some(call_id),
+            tool: "create_transaction",
+            args: &args,
+        },
+    )
+    .await
+}
+
+/// OEW-135: a create in a web turn answers with a saved card, built by the
+/// API and stored with the reply; a call that failed leaves none. A reload
+/// reads each card's row again, so an edit or a delete shows.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_answer_a_web_create_with_a_saved_card(pool: PgPool) {
+    fixture(&pool).await;
+    ledger_fixture(&pool).await;
+    let session = service::create(&pool, actor(), None).await.unwrap();
+    let turns = TurnStore::new();
+    turns.open("turn_a", crate::owe1::session::now_secs());
+
+    let saved = create_in_turn(
+        &pool,
+        &turns,
+        &session.id,
+        "t1",
+        json!({
+            "type": "expense", "amount": "50000", "wallet_id": "wal_cash",
+            "category_id": "cat_food", "date": "2026-11-03", "name": "Lunch",
+            "items": [{ "name": "Noodles", "amount": "50000" }]
+        }),
+    )
+    .await
+    .unwrap();
+    let transaction_id = saved.result["id"].as_str().unwrap().to_string();
+    // A wallet that does not exist: the call fails and leaves no card.
+    create_in_turn(
+        &pool,
+        &turns,
+        &session.id,
+        "t2",
+        json!({ "type": "expense", "amount": "1000", "wallet_id": "wal_gone" }),
+    )
+    .await
+    .unwrap_err();
+
+    let events = Scripted::new(vec![
+        (
+            "tool_call",
+            json!({ "id": "t1", "name": "create_transaction", "args": {} }),
+        ),
+        (
+            "tool_result",
+            json!({ "id": "t1", "ok": true, "summary": "Created." }),
+        ),
+        (
+            "tool_call",
+            json!({ "id": "t2", "name": "create_transaction", "args": {} }),
+        ),
+        (
+            "tool_result",
+            json!({ "id": "t2", "ok": false, "summary": "Refused." }),
+        ),
+        ("token", json!({ "text": "Saved." })),
+        ("done", json!({ "message_id": null, "usage": null })),
+    ]);
+    let (sender, mut receiver) = mpsc::channel::<Frame>(16);
+    stream::pump(
+        events,
+        sender,
+        pool.clone(),
+        WORKSPACE.to_string(),
+        session.id.clone(),
+        Sealer::new(None),
+        STREAM_DEADLINE,
+        Some(TurnArtifacts {
+            turns: turns.clone(),
+            turn_id: "turn_a".to_string(),
+        }),
+        crate::usage::TurnMeter::for_channel("user", "web"),
+    )
+    .await;
+
+    let mut frames = Vec::new();
+    while let Some(frame) = receiver.recv().await {
+        frames.push(frame);
+    }
+    let names: Vec<&str> = frames.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(
+        names,
+        [
+            "tool_call",
+            "tool_result",
+            "artifact",
+            "tool_call",
+            "tool_result",
+            "token",
+            "done"
+        ]
+    );
+
+    let card: Value = serde_json::from_str(&frames[2].data).unwrap();
+    assert_eq!(card["id"], "t1");
+    assert_eq!(card["type"], "transaction");
+    let payload = &card["payload"];
+    assert_eq!(payload["transaction_id"], json!(transaction_id));
+    assert_eq!(payload["name"], "Lunch");
+    assert_eq!(payload["amount_formatted"], "Rp 50.000");
+    assert_eq!(payload["category_id"], "cat_food");
+    assert_eq!(payload["category_name"], "Food");
+    assert_eq!(payload["wallet_id"], "wal_cash");
+    assert_eq!(payload["wallet_name"], "Cash");
+    assert_eq!(payload["date"], "2026-11-03");
+    assert_eq!(payload["items"][0]["amount_formatted"], "Rp 50.000");
+    assert!(payload["month_total_formatted"]
+        .as_str()
+        .unwrap()
+        .starts_with("Rp "));
+    assert_eq!(payload["deleted"], false);
+
+    // Stored with the reply, on the call that made it and no other.
+    let conversation = service::get(&pool, WORKSPACE, &session.id).await.unwrap();
+    let calls = &conversation.messages[0].attachments.as_ref().unwrap()["tool_calls"];
+    assert_eq!(calls[0]["artifact"]["type"], "transaction");
+    assert!(calls[1].get("artifact").is_none());
+
+    // A reload reads the row as it is now.
+    sqlx::query("UPDATE transactions SET name = 'Dinner' WHERE id = $1")
+        .bind(&transaction_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let conversation = service::get(&pool, WORKSPACE, &session.id).await.unwrap();
+    let payload = &conversation.messages[0].attachments.as_ref().unwrap()["tool_calls"][0]
+        ["artifact"]["payload"];
+    assert_eq!(payload["name"], "Dinner");
+
+    sqlx::query("UPDATE transactions SET deleted_at = now() WHERE id = $1")
+        .bind(&transaction_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let conversation = service::get(&pool, WORKSPACE, &session.id).await.unwrap();
+    let payload = &conversation.messages[0].attachments.as_ref().unwrap()["tool_calls"][0]
+        ["artifact"]["payload"];
+    assert_eq!(payload["deleted"], true);
+}
+
 /// A turn cut off between the call and its answer stores the call without a
 /// result, which is what the UI reads as "never answered" rather than as a
 /// finished one.

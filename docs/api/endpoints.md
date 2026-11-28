@@ -490,7 +490,7 @@ Soft-deletes the file and its live `transaction_attachments` rows in one databas
 |---|---|---|---|
 | GET | `/v1/ai/sessions` | any | Sessions, newest activity first |
 | POST | `/v1/ai/sessions` | any | Create a session |
-| GET | `/v1/ai/sessions/{id}` | any | Session with its messages |
+| GET | `/v1/ai/sessions/{id}` | any | Session with its messages. Saved transaction cards are re-read by id ([chat](../features/chat.md#saved-transaction-cards)) |
 | PATCH | `/v1/ai/sessions/{id}` | any | Rename |
 | DELETE | `/v1/ai/sessions/{id}` | any | Soft delete |
 | POST | `/v1/ai/chat/stream` | any | Server-sent events. Persists both messages (CHAT-2). *plan: `chat`* |

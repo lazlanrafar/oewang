@@ -263,8 +263,9 @@ pub async fn saved(
 
 /// This month's expense total and, when given, one category's, in the
 /// workspace currency. The month is UTC's, as every date the API works
-/// out is: the data model holds no workspace timezone.
-async fn month_totals(
+/// out is: the data model holds no workspace timezone. The web chat's
+/// saved card reads the same figure (`ai::card`).
+pub(crate) async fn month_totals(
     pool: &PgPool,
     workspace_id: &str,
     category_id: Option<&str>,
