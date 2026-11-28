@@ -217,6 +217,14 @@ impl TelegramStub {
             .collect()
     }
 
+    /// The text of every `answerCallbackQuery`, in order.
+    pub fn answers(&self) -> Vec<String> {
+        self.bodies("answerCallbackQuery")
+            .iter()
+            .map(|body| body["text"].as_str().unwrap_or_default().to_string())
+            .collect()
+    }
+
     /// The text of every `sendMessage`, in order.
     pub fn texts(&self) -> Vec<String> {
         self.bodies("sendMessage")
@@ -224,4 +232,32 @@ impl TelegramStub {
             .map(|body| body["text"].as_str().unwrap_or_default().to_string())
             .collect()
     }
+}
+
+/// Move `workspace_id` onto a plan holding every feature Free holds but
+/// `left_out`, the way an operator's change lands: one row, read by the
+/// next request (PLN-6).
+pub async fn plan_without(pool: &PgPool, workspace_id: &str, left_out: &[oewang_domain::Feature]) {
+    let id = format!("plan_{}", cuid2::create_id());
+    let keys: Vec<&str> = left_out.iter().map(|feature| feature.key()).collect();
+    sqlx::query("INSERT INTO plans (id, name) VALUES ($1, $1)")
+        .bind(&id)
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO plan_features (plan_id, feature)
+         SELECT $1, feature FROM plan_features WHERE plan_id = 'free' AND feature <> ALL($2)",
+    )
+    .bind(&id)
+    .bind(&keys)
+    .execute(pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE workspaces SET plan_id = $1 WHERE id = $2")
+        .bind(&id)
+        .bind(workspace_id)
+        .execute(pool)
+        .await
+        .unwrap();
 }

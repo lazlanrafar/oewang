@@ -24,6 +24,9 @@ mod mcp;
 mod offline;
 mod owe1;
 mod passkeys;
+mod plans;
+#[cfg(test)]
+mod plans_tests;
 mod push;
 mod receipts;
 mod reports;

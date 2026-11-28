@@ -87,6 +87,22 @@ pub async fn handle(
         source: SOURCE_TELEGRAM,
     };
 
+    // Before the download, so a refused photo is never stored (PLN-6). The
+    // read checks again; this one only spares the vault.
+    match crate::plans::require(
+        &state.db,
+        &link.workspace_id,
+        oewang_domain::Feature::ReceiptScan,
+    )
+    .await
+    {
+        Ok(()) => {}
+        Err(AppError::FeatureNotInPlan(_)) => {
+            return say(bot, chat_id, render::RECEIPT_NOT_IN_PLAN).await
+        }
+        Err(error) => return Err(error),
+    }
+
     bot.client.send_typing(chat_id).await.ok();
 
     let max_bytes = u64::try_from(state.config.max_file_bytes).unwrap_or(0);

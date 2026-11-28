@@ -276,6 +276,100 @@ async fn should_disconnect_a_member_who_left_the_workspace(pool: PgPool) {
         .is_none());
 }
 
+// ------------------------------------------------------------------ PLN-6
+
+/// PLN-6: a plan without `telegram` answers every message with one plain
+/// line, a photo included, and keeps the link, so adding the feature back
+/// is all it takes.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_answer_plainly_when_the_plan_leaves_telegram_out(pool: PgPool) {
+    fixture(&pool).await;
+    linked(&pool).await;
+    let (state, telegram) = running(&pool, readable).await;
+    let bot = bot(&telegram.url);
+
+    poller::handle(
+        &state,
+        &bot,
+        update("private", person(SENDER), text("/help")),
+    )
+    .await;
+    assert_eq!(telegram.texts(), [render::HELP]);
+
+    test_support::plan_without(&pool, WORKSPACE, &[oewang_domain::Feature::Telegram]).await;
+    poller::handle(&state, &bot, update("private", person(SENDER), text("hi"))).await;
+    poller::handle(&state, &bot, update("private", person(SENDER), photo(""))).await;
+
+    assert_eq!(
+        telegram.texts(),
+        [
+            render::HELP,
+            render::TELEGRAM_NOT_IN_PLAN,
+            render::TELEGRAM_NOT_IN_PLAN
+        ]
+    );
+    assert!(!telegram.methods().contains(&"getFile".to_string()));
+    assert!(links::find_link_for_chat(&pool, CHAT)
+        .await
+        .unwrap()
+        .is_some());
+}
+
+/// PLN-6: a tapped button is an incoming update too.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_answer_a_button_plainly_when_the_plan_leaves_telegram_out(pool: PgPool) {
+    fixture(&pool).await;
+    linked(&pool).await;
+    let (state, telegram) = running(&pool, readable).await;
+    let bot = bot(&telegram.url);
+    let tap = || -> Update {
+        serde_json::from_value(json!({
+            "update_id": 2,
+            "callback_query": {
+                "id": "cb_1",
+                "from": person(SENDER),
+                "message": {
+                    "message_id": 10,
+                    "date": 1_763_900_000,
+                    "chat": { "id": CHAT, "type": "private" },
+                },
+                "data": "d:tnothere",
+            },
+        }))
+        .unwrap()
+    };
+
+    poller::handle(&state, &bot, tap()).await;
+    assert_eq!(telegram.answers().len(), 1);
+    assert_ne!(telegram.answers()[0], render::TELEGRAM_NOT_IN_PLAN);
+
+    test_support::plan_without(&pool, WORKSPACE, &[oewang_domain::Feature::Telegram]).await;
+    poller::handle(&state, &bot, tap()).await;
+    assert_eq!(telegram.answers()[1], render::TELEGRAM_NOT_IN_PLAN);
+}
+
+/// PLN-6: a plan without `receipt_scan` refuses a photo before it is
+/// downloaded, so nothing reaches the vault. On Free the same photo is
+/// saved (TG-5, below).
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_receipt_photo_when_the_plan_leaves_receipt_scan_out(pool: PgPool) {
+    fixture(&pool).await;
+    linked(&pool).await;
+    test_support::plan_without(&pool, WORKSPACE, &[oewang_domain::Feature::ReceiptScan]).await;
+    let (state, telegram) = running(&pool, readable).await;
+
+    poller::handle(
+        &state,
+        &bot(&telegram.url),
+        update("private", person(SENDER), photo("")),
+    )
+    .await;
+
+    assert_eq!(telegram.texts(), [render::RECEIPT_NOT_IN_PLAN]);
+    assert!(!telegram.methods().contains(&"getFile".to_string()));
+    assert_eq!(count(&pool, "SELECT count(*) FROM vault_files").await, 0);
+}
+
 // ------------------------------------------------------------------- TG-5
 
 /// TG-5: a photo becomes an expense in the default IDR account, with its

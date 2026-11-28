@@ -15,6 +15,8 @@ The workspace's files, browsable again. Every receipt, statement and attachment 
 
 `vault_files`, with `tags` and `thumbnail` added by `0010_vault_usage.sql`, and `transaction_attachments` for the links. Columns are in [data model](../data-model.md#files).
 
+A workspace whose plan leaves out `vault` is refused a new upload (`POST /v1/vault/files`) with `FEATURE_NOT_IN_PLAN`; every stored file and attachment stays listable, readable and deletable. The web's receipt and statement uploads go through the same route, so they need `vault` too ([plans](plans.md#features)).
+
 ## Copied from the old app
 
 The page is the old app's vault page, copied (`references/oewang-old`), with three kinds of difference. Anything not listed here is meant to match.

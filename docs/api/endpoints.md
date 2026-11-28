@@ -15,6 +15,7 @@ The full route catalog, grouped by module. This doc is the source of truth for r
 - The workspace is never in the path. It comes from the JWT (AUTH-4). A `workspace_id` at the top level of a body, or in the query string, is refused with `WORKSPACE_ID_NOT_ALLOWED`, except on `POST /v1/auth/switch-workspace` and `POST /v1/internal/tools/execute`, whose job is to name one ([conventions](conventions.md#resources-and-urls)).
 - Role column values: `public` (no token), `any` (any member), `admin+` (`owner` or `admin`), `owner`, `service` (service key only).
 - Role rules are in [auth](../security/auth.md#permission-matrix).
+- Routes marked *plan: `<feature>`* also answer `403 FEATURE_NOT_IN_PLAN` when the workspace's plan leaves that feature out, checked on every request (PLN-6, [plans](../features/plans.md#features)): `POST /v1/ai/chat/stream` (`chat`), `POST /v1/ai/receipt/parse` and `POST /v1/receipts/pending` (`receipt_scan`), `POST /v1/transactions/import` (`statement_import`), `POST /v1/vault/files` (`vault`), `POST /v1/integrations/telegram/link-token` (`telegram`), and each `tools/call` on `POST /v1/mcp` (`mcp`, as a tool result with `isError` and the code, like every tool refusal). No read route answers it.
 
 ## Health and transport
 
@@ -256,7 +257,7 @@ Either `{ "transaction_id" }`, a live `expense` (otherwise `SPLIT_SOURCE_NOT_EXP
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
 | POST | `/v1/transactions/bulk-update` | admin+ | Set the category of many; `category_id: null` clears it (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
-| POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4) |
+| POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4). *plan: `statement_import`* |
 | POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
 | POST | `/v1/transactions/import/xlsx` | admin+ | An `.xlsx` as base64 in, its first sheet out as column names and rows of text, the shape a parsed CSV has. Writes nothing (TXN-11, D111) |
 | POST | `/v1/transactions/import/map-columns` | admin+ | Column names plus two sample rows in, a proposed mapping out (AI-9). Proxies the AI service, because the browser never calls it directly (PLT-4) |
@@ -426,7 +427,7 @@ Bytes travel through the API in encrypted chunks, not through a signed object-st
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/vault/files` | any | The workspace's ready, live files, paged. Query below (VLT-6) |
-| POST | `/v1/vault/files` | admin+ | Begin an upload: `{filename, content_type, size_bytes}`. Returns `{id, chunk_size, chunk_count, status:"pending"}` (VLT-1) |
+| POST | `/v1/vault/files` | admin+ | Begin an upload: `{filename, content_type, size_bytes}`. Returns `{id, chunk_size, chunk_count, status:"pending"}` (VLT-1). *plan: `vault`* |
 | PUT | `/v1/vault/files/{id}/chunks/{index}` | admin+ | Send one 512 KiB chunk as `{"data":"<base64>"}` |
 | POST | `/v1/vault/files/{id}/complete` | admin+ | Verify every chunk, record the SHA-256, set status `ready` |
 | GET | `/v1/vault/files/{id}` | any | Metadata, tags, `thumbnail`, `used_by`, and the newest 20 transactions carrying it (VLT-7, VLT-10) |
@@ -490,9 +491,9 @@ Soft-deletes the file and its live `transaction_attachments` rows in one databas
 | GET | `/v1/ai/sessions/{id}` | any | Session with its messages |
 | PATCH | `/v1/ai/sessions/{id}` | any | Rename |
 | DELETE | `/v1/ai/sessions/{id}` | any | Soft delete |
-| POST | `/v1/ai/chat/stream` | any | Server-sent events. Persists both messages (CHAT-2) |
-| POST | `/v1/ai/receipt/parse` | admin+ | Image to receipt draft. Persists nothing (AI-1, AI-2) |
-| POST | `/v1/receipts/pending` | admin+ | `{vault_file_id}`. Queue a receipt the reader could not answer for; 202 with `{id, status, next_attempt_at}`. Queuing a file twice returns the same job (AI-12, D95) |
+| POST | `/v1/ai/chat/stream` | any | Server-sent events. Persists both messages (CHAT-2). *plan: `chat`* |
+| POST | `/v1/ai/receipt/parse` | admin+ | Image to receipt draft. Persists nothing (AI-1, AI-2). *plan: `receipt_scan`* |
+| POST | `/v1/receipts/pending` | admin+ | `{vault_file_id}`. Queue a receipt the reader could not answer for; 202 with `{id, status, next_attempt_at}`. Queuing a file twice returns the same job (AI-12, D95). *plan: `receipt_scan`* |
 | GET | `/v1/receipts/notices` | any | The caller's queued web receipts that ended and were not told yet: `{id, status, code, file_name, transaction_id, transaction_name, amount, currency_code}` |
 | POST | `/v1/receipts/notices/seen` | any | `{ids}`. Mark them told |
 | GET | `/v1/ai/settings` | any | Read agent settings |
@@ -545,7 +546,7 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/integrations/telegram` | any | `{ enabled, bot_username, linked, telegram_username, linked_at }` |
-| POST | `/v1/integrations/telegram/link-token` | any | `{ deep_link, expires_at }`: a one-time `t.me` link, ten minutes (D85). `TELEGRAM_DISABLED` when no bot is configured |
+| POST | `/v1/integrations/telegram/link-token` | any | `{ deep_link, expires_at }`: a one-time `t.me` link, ten minutes (D85). `TELEGRAM_DISABLED` when no bot is configured. *plan: `telegram`* |
 | POST | `/v1/integrations/telegram/unlink` | any | 204. Ends the caller's link and tells the chat; ending none is not an error |
 
 ## MCP
@@ -554,7 +555,7 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 
 | Method | Path | Role | Purpose |
 |---|---|---|---|
-| POST | `/v1/mcp` | MCP token | One JSON-RPC message, relayed by the app's `/mcp`. `data` is the JSON-RPC response, or null for a notification. A refused token is `MCP_TOKEN_INVALID` (401) |
+| POST | `/v1/mcp` | MCP token | One JSON-RPC message, relayed by the app's `/mcp`. `data` is the JSON-RPC response, or null for a notification. A refused token is `MCP_TOKEN_INVALID` (401). *plan: `mcp`*, per `tools/call`, in the workspace the call resolves to |
 | GET | `/v1/mcp/tokens` | any | The person's live personal access tokens |
 | POST | `/v1/mcp/tokens` | any | `{ name, workspace_ids: string[] \| null, expires_in_days: 30 \| 90 \| 365 \| null }`. 201 with the token's view and `secret`, shown once |
 | DELETE | `/v1/mcp/tokens/{id}` | any | Revoke one of the person's tokens |

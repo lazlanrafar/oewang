@@ -73,6 +73,20 @@ pub async fn handle(state: &AppState, bot: &Bot, query: CallbackQuery) -> Result
         }
         Err(error) => return Err(error),
     }
+    match crate::plans::require(
+        &state.db,
+        &link.workspace_id,
+        oewang_domain::Feature::Telegram,
+    )
+    .await
+    {
+        Ok(()) => {}
+        Err(AppError::FeatureNotInPlan(_)) => {
+            answer(Some(render::TELEGRAM_NOT_IN_PLAN)).await;
+            return Ok(());
+        }
+        Err(error) => return Err(error),
+    }
 
     let actor = Actor {
         workspace_id: &link.workspace_id,

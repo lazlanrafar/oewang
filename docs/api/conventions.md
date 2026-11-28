@@ -83,7 +83,7 @@ Validation error, with per-field detail:
 }
 ```
 
-An error may also carry `details`, an object, when the client needs more than a message to act on it. Only `STALE` has one so far: `details.current` is the row as it reads now, or `null` when it is deleted (D115). The key is absent on every other error.
+An error may also carry `details`, an object, when the client needs more than a message to act on it. Two codes have one: `STALE`, where `details.current` is the row as it reads now, or `null` when it is deleted (D115), and `FEATURE_NOT_IN_PLAN`, where `details.feature` is the feature's key (PLN-7). The key is absent on every other error.
 
 The web app maps `code` to a dictionary key and renders that. It never renders `message` directly to the user (UI-1). `message` and `hint` exist for developers, logs and agents.
 
@@ -110,7 +110,7 @@ The web app maps `code` to a dictionary key and renders that. It never renders `
 |---|---|
 | 400 | Malformed request, unparseable body |
 | 401 | Missing, malformed or expired token |
-| 403 | Valid token, insufficient role |
+| 403 | Valid token, insufficient role, or a workspace an operator has not allowed this (suspended, or a feature its plan leaves out) |
 | 404 | Not found, or found in another workspace (VLT-4) |
 | 409 | A rule forbids the state change (last owner, wallet in use) |
 | 413 | Upload over the size limit |
@@ -143,6 +143,7 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `CONSOLE_ROLE_IN_USE` | 409 | Deleting a console role someone still holds (CSL-12) |
 | `PLAN_IN_USE` | 409 | Deleting a plan a workspace still holds, deleted workspaces included (PLN-2) |
 | `CONSOLE_FORBIDDEN` | 403 | The caller has no live console role, or their role lacks the permission the console route checks (CSL-2, D126) |
+| `FEATURE_NOT_IN_PLAN` | 403 | The workspace's plan does not include the feature this entry point starts; `details.feature` names it (`chat`, `telegram`, `receipt_scan`, `statement_import`, `mcp`, `vault`). Reads of what it already made still answer (PLN-6, D128, [plans](../features/plans.md#features)) |
 
 ### Validation and general
 
