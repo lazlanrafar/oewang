@@ -72,6 +72,8 @@ export const load: PageServerLoad = async ({ depends, locals, url }) => {
 		canvasFile: await loadCanvasFile(url, token),
 		// The file sheet a tile opened, stacked over the detail sheet (VLT-10).
 		file: await loadVaultFile(url.searchParams.get('file'), token),
+		// The tidy-names sheet's proposals, read only while it is open (D129).
+		tidyNames: url.searchParams.get('tidy') === 'names' ? await loadTidyNames(token) : null,
 		meta: transactions.meta,
 		wallets: wallets.data ?? [],
 		categories: categories.data ?? [],
@@ -112,6 +114,18 @@ async function loadCanvasFile(url: URL, token?: string) {
 
 	try {
 		return (await vault.readFile(id, token)).data ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * What the tidy-names sheet lists. Null when the API refuses, which it does
+ * for a member, who is not offered the sheet anyway.
+ */
+async function loadTidyNames(token?: string) {
+	try {
+		return (await ledger.tidyNamesPreview(token)).data ?? [];
 	} catch {
 		return null;
 	}
@@ -234,6 +248,14 @@ export const actions: Actions = {
 
 	bulkDelete: async ({ request, locals }) =>
 		run(request, (form) => ledger.bulkDeleteTransactions(ids(form), locals.accessToken)),
+
+	/**
+	 * Apply the ticked rows of the tidy-names sheet (D129). Each arrives as
+	 * one `change` field holding `{kind, id, from}`; the new name is never
+	 * sent, the API works it out again.
+	 */
+	tidyNames: async ({ request, locals }) =>
+		run(request, (form) => ledger.applyTidyNames(tidyChanges(form), locals.accessToken)),
 
 	/**
 	 * Confirm what the model read off a receipt (AI-2, CHAT-13).
@@ -463,6 +485,24 @@ function text(form: FormData, key: string): string {
 function optional(form: FormData, key: string): string | null {
 	const value = text(form, key);
 	return value === '' ? null : value;
+}
+
+function tidyChanges(form: FormData) {
+	return form.getAll('change').flatMap((value) => {
+		try {
+			const entry = JSON.parse(String(value)) as Record<string, unknown>;
+			const kind =
+				entry.kind === 'transaction' || entry.kind === 'item'
+					? (entry.kind as ledger.TidyNameChange['kind'])
+					: null;
+			if (kind === null || typeof entry.id !== 'string' || typeof entry.from !== 'string') {
+				return [];
+			}
+			return [{ kind, id: entry.id, from: entry.from }];
+		} catch {
+			return [];
+		}
+	});
 }
 
 function ids(form: FormData): string[] {

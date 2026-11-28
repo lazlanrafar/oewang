@@ -17,6 +17,7 @@ export { default as TransactionFormFields } from './transactions-form-fields.sve
 export { emptyDraft, type TransactionDraft } from './transactions-form-fields.svelte';
 export { default as TransactionFormSheet } from './transactions-form-sheet.svelte';
 export { default as TransactionsPage } from './transactions-page.svelte';
+export { default as TransactionTidyNamesSheet } from './transactions-tidy-names-sheet.svelte';
 
 export { default as TransactionsDataTable } from './transactions-data-table.svelte';
 export { TRANSACTION_COLUMNS, type ColumnKey } from './transactions-data-table-column.js';
