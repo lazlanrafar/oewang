@@ -44,6 +44,8 @@ pub async fn build(pool: &PgPool, workspace_id: &str, transaction_id: &str) -> R
 async fn current(pool: &PgPool, workspace_id: &str, transaction_id: &str) -> Result<Value> {
     let row = transactions::find(pool, workspace_id, transaction_id).await?;
     let items = transactions::list_items(pool, workspace_id, transaction_id).await?;
+    // The chat knows a receipt is confirmed from the card carrying its file.
+    let attachments = transactions::list_attachments(pool, workspace_id, transaction_id).await?;
     let money = |amount| format_money(amount, &row.wallet_currency_code, false);
     // Each item's own category (TXN-24), named for the items table.
     let categories = if items.iter().any(|item| item.category_id.is_some()) {
@@ -89,6 +91,10 @@ async fn current(pool: &PgPool, workspace_id: &str, transaction_id: &str) -> Res
                 "notes": item.notes,
             }))
             .collect::<Vec<_>>(),
+        "attachment_ids": attachments
+            .iter()
+            .map(|attachment| &attachment.file_id)
+            .collect::<Vec<_>>(),
         "deleted": false,
     }))
 }
@@ -97,7 +103,7 @@ async fn current(pool: &PgPool, workspace_id: &str, transaction_id: &str) -> Res
 ///
 /// A row that cannot be read for any reason but deletion keeps the stored
 /// card: a conversation still opens when one card cannot be refreshed.
-// shortcut: two queries per card on every conversation read; batch by id if
+// shortcut: three queries per card on every conversation read; batch by id if
 // a conversation with many cards ever shows up slow.
 pub async fn refresh(pool: &PgPool, workspace_id: &str, messages: &mut [MessageRow]) {
     for message in messages {

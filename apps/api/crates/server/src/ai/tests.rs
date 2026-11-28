@@ -1163,6 +1163,15 @@ mod saved_without_a_turn {
         .await
         .unwrap();
         let transaction_id = saved.result["id"].as_str().unwrap().to_string();
+        // The receipt the panel saved it from, attached as the panel does.
+        sqlx::query(
+            "INSERT INTO transaction_attachments (id, workspace_id, transaction_id, vault_file_id)
+             VALUES ('att_ours', 'ws_test', $1, 'f_ours')",
+        )
+        .bind(&transaction_id)
+        .execute(&pool)
+        .await
+        .unwrap();
         let cards = |session: &str| format!("/v1/ai/sessions/{session}/cards");
         let body = json!({ "transaction_id": transaction_id });
 
@@ -1206,6 +1215,8 @@ mod saved_without_a_turn {
         assert_eq!(payload["items"][0]["amount"], "45000.0000");
         assert_eq!(payload["items"][1]["category_id"], Value::Null);
         assert_eq!(payload["items"][1]["category_name"], Value::Null);
+        // The receipt's file, so the chat knows this receipt is confirmed.
+        assert_eq!(payload["attachment_ids"], json!(["f_ours"]));
 
         // An item's category changed elsewhere shows after a reload.
         sqlx::query("UPDATE transaction_items SET category_id = NULL WHERE transaction_id = $1")
@@ -1213,10 +1224,16 @@ mod saved_without_a_turn {
             .execute(&pool)
             .await
             .unwrap();
+        // A file detached elsewhere leaves the card on a reload.
+        sqlx::query("UPDATE transaction_attachments SET deleted_at = now() WHERE id = 'att_ours'")
+            .execute(&pool)
+            .await
+            .unwrap();
         let conversation = service::get(&pool, WORKSPACE, &ours).await.unwrap();
         let payload = &conversation.messages[0].attachments.as_ref().unwrap()["tool_calls"][0]
             ["artifact"]["payload"];
         assert_eq!(payload["items"][0]["category_id"], Value::Null);
+        assert_eq!(payload["attachment_ids"], json!([]));
         assert!(payload["month_total_formatted"]
             .as_str()
             .unwrap()
