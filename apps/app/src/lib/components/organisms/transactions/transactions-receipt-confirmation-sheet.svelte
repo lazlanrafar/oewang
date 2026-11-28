@@ -301,8 +301,8 @@
 								<Table.Row>
 									<Table.Head>{t('txn.item_column_name')}</Table.Head>
 									<Table.Head class="w-14 text-right">{t('receipt.col_quantity')}</Table.Head>
-									<Table.Head class="w-36">{t('txn.item_column_category')}</Table.Head>
-									<Table.Head class="w-28 text-right">{t('txn.item_amount')}</Table.Head>
+									<Table.Head class="w-32">{t('txn.item_column_category')}</Table.Head>
+									<Table.Head class="w-24 text-right">{t('txn.item_amount')}</Table.Head>
 									<Table.Head class="w-10"><span class="sr-only">{t('common.actions')}</span></Table.Head>
 								</Table.Row>
 							</Table.Header>

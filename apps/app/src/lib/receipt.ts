@@ -362,9 +362,9 @@ export function toReceiptForm(
 		categoryId: matchCategoryId(parsed.draft, context.categories),
 		items: parsed.draft.line_items.map((item) => ({
 			name: item.name,
-			quantity: item.quantity ?? '',
-			unitPrice: item.unit_price ?? '',
-			amount: item.amount,
+			quantity: plainDecimal(item.quantity ?? ''),
+			unitPrice: plainDecimal(item.unit_price ?? ''),
+			amount: plainDecimal(item.amount),
 			// Only a category this workspace has: the picker could not show another.
 			categoryId: context.categories.some((category) => category.id === item.category_id)
 				? (item.category_id ?? '')
@@ -446,4 +446,16 @@ function string(value: unknown): string {
 
 function strings(value: unknown): string[] {
 	return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : [];
+}
+
+/**
+ * A decimal string as a person types it: the API's "47130.0000" reads
+ * "47130", "1.5000" reads "1.5". String in, string out; nothing here turns
+ * an amount into a number (D12). Anything that is not a plain decimal is
+ * returned as it came.
+ */
+export function plainDecimal(value: string): string {
+	const match = /^(-?\d+)\.(\d*?)0*$/.exec(value);
+	if (!match) return value;
+	return match[2] ? `${match[1]}.${match[2]}` : match[1];
 }

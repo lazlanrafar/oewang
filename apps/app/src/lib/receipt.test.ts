@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+	plainDecimal,
 	correctionFor,
 	defaultWalletId,
 	fieldFlag,
@@ -349,8 +350,8 @@ describe('toReceiptForm', () => {
 				{
 					name: 'Iga bakar',
 					quantity: '1',
-					unitPrice: '45000.0000',
-					amount: '45000.0000',
+					unitPrice: '45000',
+					amount: '45000',
 					categoryId: ''
 				}
 			]
@@ -435,5 +436,21 @@ describe('itemsDisagree', () => {
 	it('says nothing without items or without a total', () => {
 		expect(itemsDisagree({ total: '87500', line_items: [] })).toBe(false);
 		expect(itemsDisagree({ total: '', line_items: items })).toBe(false);
+	});
+});
+
+describe('plainDecimal', () => {
+	it('drops the trailing zeros the API pads a decimal with, as a string', () => {
+		expect(plainDecimal('47130.0000')).toBe('47130');
+		expect(plainDecimal('1.5000')).toBe('1.5');
+		expect(plainDecimal('0.4920')).toBe('0.492');
+		expect(plainDecimal('-2.0000')).toBe('-2');
+		expect(plainDecimal('20000')).toBe('20000');
+	});
+
+	it('leaves anything that is not a plain decimal alone', () => {
+		expect(plainDecimal('')).toBe('');
+		expect(plainDecimal('1.000,50')).toBe('1.000,50');
+		expect(plainDecimal('abc')).toBe('abc');
 	});
 });
