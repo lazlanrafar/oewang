@@ -2497,7 +2497,7 @@ mod offline_writes {
     }
 }
 
-/// Category shares (D123): an item with its own category counts under it.
+/// Category shares (D123, TXN-24): an item with its own category counts under it.
 mod category_shares {
     use std::collections::BTreeMap;
 
