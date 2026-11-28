@@ -300,7 +300,7 @@ Specified in [payload encryption](api/encryption.md), [hardening](security/harde
 |---|---|
 | SEC-21 | Receipt and statement extraction runs with no tools available to the model (D24). |
 | SEC-22 | Untrusted document text enters a prompt inside a labelled block, and is never passed as an unreviewed tool argument. |
-| SEC-23 | Per turn, the API caps write tool calls at 3, deletes at 1, and transactions created at 3 (D25). |
+| SEC-23 | Per turn, the API caps write tool calls at 20, deletes at 1, and transactions created at 20 (D25, raised from 3 and 3 by D130). |
 | SEC-24 | A tool-created transaction has a configurable maximum amount. |
 | SEC-25 | A delete confirmation is scoped to one transaction ID, expires after 5 minutes, and is not honoured on an unchallenged first call. |
 | SEC-26 | No bulk write tool, no browsing tool, no URL-fetching tool, and no membership or settings tool exists. |

@@ -112,7 +112,7 @@ The `role` in the tool-execute body is a claim. The API re-reads the membership 
 
 ### Blast radius
 
-Caps enforced in the API per turn, whatever the model asks for (D25): at most 3 write calls, 1 delete, 3 transactions created, and a configurable ceiling on a tool-created amount. There is no bulk write tool except `split_bill`, which is confirmed first (D122), and no tool that touches members, settings or the workspace. Full reasoning in [AI safety](../security/ai-safety.md#layer-2-blast-radius).
+Caps enforced in the API per turn, whatever the model asks for (D25): at most 20 write calls, 1 delete, 20 transactions created (D130), and a configurable ceiling on a tool-created amount. There is no bulk write tool except `split_bill`, which is confirmed first (D122), and no tool that touches members, settings or the workspace. Full reasoning in [AI safety](../security/ai-safety.md#layer-2-blast-radius).
 
 ### Untrusted text
 

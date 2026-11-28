@@ -53,9 +53,9 @@ Caps enforced in the API per turn, whatever the model asks for.
 | Limit | Value | Reason |
 |---|---|---|
 | Tool rounds per turn | 8 (CHAT-5) | Bounds a loop and bounds spend |
-| Write tool calls per turn | 3 | A turn that wants to create ten transactions is not a turn the user asked for |
+| Write tool calls per turn | 20 (D130, was 3) | Bounds a misread or injected turn while a pasted list of entries still fits; each write is audited and reversible |
 | `delete_transaction` calls per turn | 1 | Mass deletion through chat is not reachable, at any confirmation level |
-| Transactions created per turn | 3 | Same reason as above |
+| Transactions created per turn | 20 (D130, was 3) | Same reason as above; a longer list is an import, which has its own screen |
 | Single transaction amount from a tool | 100,000,000 in the wallet's own currency, configurable | A parse error that shifts a decimal point stops here |
 | Chat turns per workspace per minute | 20 | Bounds model spend, the one unbounded cost |
 

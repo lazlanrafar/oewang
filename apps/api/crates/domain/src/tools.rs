@@ -30,9 +30,9 @@ use crate::{budget::Month, AppError, FieldErrors, Role};
 
 /// Per-turn blast radius, enforced in the API whatever the model asks for
 /// (D25, docs/security/ai-safety.md#layer-2-blast-radius).
-pub const MAX_WRITES_PER_TURN: u32 = 3;
+pub const MAX_WRITES_PER_TURN: u32 = 20;
 pub const MAX_DELETES_PER_TURN: u32 = 1;
-pub const MAX_CREATED_TRANSACTIONS_PER_TURN: u32 = 3;
+pub const MAX_CREATED_TRANSACTIONS_PER_TURN: u32 = 20;
 
 /// How long a challenge for one row, or one split, stays answerable (CHAT-6,
 /// D122).

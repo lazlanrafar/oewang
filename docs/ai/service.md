@@ -293,7 +293,7 @@ emit done
 Safety rules:
 
 - **Round cap.** On hitting `AI_MAX_STEPS`, the loop stops and returns what it has rather than looping (CHAT-5).
-- **Blast-radius caps.** The API refuses more than 3 write calls, more than 1 delete, or more than 3 created transactions in one turn (D25, D68, SEC-23), counted against the `turn_id` the service echoes on every call. The refusal is `TOOL_CAP_EXCEEDED` and the service relays it.
+- **Blast-radius caps.** The API refuses more than 20 write calls, more than 1 delete, or more than 20 created transactions in one turn (D25, D130, D68, SEC-23), counted against the `turn_id` the service echoes on every call. The refusal is `TOOL_CAP_EXCEEDED` and the service relays it.
 - **Tool errors are data.** A refusal or a failure is appended as a tool result, so the model can explain it. It is never raised as an exception that kills the turn.
 - **No retry on refusal.** `TOOL_FORBIDDEN`, `TOOL_CAP_EXCEEDED` and `CONFIRMATION_REQUIRED` are relayed to the user, not worked around.
 - **No client-side authorization.** The service never decides that a call is allowed. It asks the API and reports the answer.
