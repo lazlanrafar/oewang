@@ -3,20 +3,20 @@
 	 * The workspace switcher at the top of the sidebar, the old app's
 	 * `WorkspaceSwitcher` (D94).
 	 *
-	 * The same trigger, a 48px row with the black cat tile, the workspace name
+	 * The same trigger, a 48px row with a tile, the workspace name
 	 * over a second line and the up-down chevron, and the same menu: a label,
 	 * one row per workspace with its letter in a bordered square, a rule, and
 	 * "Add workspace". Changed from the old one, each a fix: the current
 	 * workspace is ticked, the second line is the role (there are no plans),
 	 * the ⌘1… shortcuts it printed but never bound are gone (they would also
-	 * fight the browser's own tab shortcuts), and "Manage workspaces" leads to
-	 * the workspaces page.
+	 * fight the browser's own tab shortcuts), "Manage workspaces" leads to
+	 * the workspaces page, and the tile is the Oewang mark on the primary
+	 * colour rather than the old black cat.
 	 *
 	 * Switching posts a plain form, so the whole shell reloads in the new
 	 * workspace, as the old switcher reloaded the page.
 	 */
-	import Cat from '@lucide/svelte/icons/cat';
-	import Check from '@lucide/svelte/icons/check';
+		import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import Loader2 from '@lucide/svelte/icons/loader-circle';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -25,6 +25,7 @@
 
 	import { page } from '$app/state';
 	import * as DropdownMenu from '$lib/components/atoms/dropdown-menu';
+	import { Logo } from '$lib/components/atoms/logo';
 	import { t } from '$lib/i18n';
 	import { cn } from '$lib/utils';
 	import { roleLabel, workspaceInitial } from '$lib/workspaces';
@@ -87,12 +88,12 @@
 					aria-label={collapsed ? t('nav.switch_workspace') : undefined}
 				>
 					<span
-						class="flex aspect-square size-8 shrink-0 items-center justify-center rounded bg-foreground font-semibold text-background text-sm"
+						class="flex aspect-square size-8 shrink-0 items-center justify-center rounded bg-primary font-semibold text-primary-foreground text-sm"
 					>
 						{#if switching}
 							<Loader2 class="size-4 animate-spin" />
 						{:else}
-							<Cat class="size-4" />
+							<Logo class="size-5" />
 						{/if}
 					</span>
 					{#if !collapsed}

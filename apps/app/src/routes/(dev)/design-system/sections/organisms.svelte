@@ -305,7 +305,7 @@
 
 <Specimen
 	title="Workspace switcher, account menu and theme toggle"
-	note="The old app's switcher (D94): the cat tile, the workspace over its role, a menu of workspaces with the current one ticked, Add workspace and Manage workspaces. Switching posts a plain form, so it does nothing useful here. The account menu is the old avatar menu: Account, Theme, Log out."
+	note="The old app's switcher (D94): the Oewang mark on a primary tile, the workspace over its role, a menu of workspaces with the current one ticked, Add workspace and Manage workspaces. Switching posts a plain form, so it does nothing useful here. The account menu is the old avatar menu: Account, Theme, Log out."
 >
 	<div class="flex items-center gap-6">
 		<div class="w-56 border">
