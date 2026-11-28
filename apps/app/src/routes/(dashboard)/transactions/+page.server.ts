@@ -255,7 +255,8 @@ export const actions: Actions = {
 	 * sent, the API works it out again.
 	 */
 	tidyNames: async ({ request, locals }) =>
-		run(request, (form) => ledger.applyTidyNames(tidyChanges(form), locals.accessToken)),
+		// The counts, not the envelope: the page reads `data.applied`.
+		run(request, async (form) => (await ledger.applyTidyNames(tidyChanges(form), locals.accessToken)).data),
 
 	/**
 	 * Confirm what the model read off a receipt (AI-2, CHAT-13).
