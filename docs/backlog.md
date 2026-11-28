@@ -1131,7 +1131,7 @@ Requirements: PLN-6
 ### US-089: Plan, limits and refusals in the app (OEW-134)
 Requirements: PLN-7
 
-- [ ] Sidebar bars and the usage page measure against the plan
-- [ ] Plain messages for the three refusal codes, web and mobile
-- [ ] Verify in browser
+- [x] Sidebar bars and the usage page measure against the plan
+- [x] Plain messages for the three refusal codes, web and mobile
+- [x] Verify in browser
 
