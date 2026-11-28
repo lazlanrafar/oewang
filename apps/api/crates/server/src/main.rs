@@ -686,6 +686,11 @@ fn protected_routes(state: AppState) -> Router<AppState> {
                 .patch(ai::handler::rename_session)
                 .delete(ai::handler::delete_session),
         )
+        // A message of files only, stored with no model turn (OEW-135).
+        .route("/v1/ai/sessions/{id}/files", post(ai::handler::post_files))
+        // The saved card for a receipt confirmed beside the conversation.
+        // Admin and above, by its extractor.
+        .route("/v1/ai/sessions/{id}/cards", post(ai::handler::post_card))
         // The chat stream and receipt parse wait on the AI service, so they
         // live in `ai_routes` (D118).
         // Receipts waiting for the reader (D95, AI-12).

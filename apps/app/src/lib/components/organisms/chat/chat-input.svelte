@@ -148,7 +148,9 @@
 	function submit() {
 		if (streaming || !canSend) return;
 
-		const message = value.trim() || t('chat.attachment_fallback');
+		// Files alone send an empty message: the page stores them without a
+		// turn (OEW-135).
+		const message = value.trim();
 		closeMenus();
 		onSend(message);
 	}

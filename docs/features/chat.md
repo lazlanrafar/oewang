@@ -144,8 +144,12 @@ The capture path that makes the assistant worth using (AI-1 to AI-3).
 4. The API calls the AI service, which returns a structured draft: merchant, date, total, subtotal, tax, currency, line items.
 5. The API returns the draft, the file id and a `quality` report. **Nothing is persisted as a transaction** (AI-2).
 6. The confirmation sheet opens in the [canvas](#canvas) with every field editable. The wallet defaults to the workspace default (WAL-3); the category is preselected when the parsed merchant or a line item matches an existing one, as a whole word and never from an income category.
-7. Confirming posts to `/transactions?/confirmReceipt`, which calls `POST /v1/transactions` with `attachment_ids` and then adds the line items one by one. The create route takes attachments but not items.
+7. Confirming posts to `/transactions?/confirmReceipt`, which calls `POST /v1/transactions` with `attachment_ids` and then adds the line items one by one. The create route takes attachments but not items. In the chat's canvas the conversation then answers with the [saved table](#saved-transaction-cards): the page posts `/chat?/card` with the new id, which calls `POST /v1/ai/sessions/{id}/cards`. The manual form in the same canvas does the same. The transactions page's own Scan a receipt has no conversation and posts nothing more.
 8. Cancelling leaves the uploaded file and creates nothing.
+
+**Files sent with no words start no turn** (OEW-135). The model cannot read a file (D24), so a turn for a bare photo only got "I have not received an attachment" while the panel was reading it. The page posts `/chat?/files` instead of the stream, which calls `POST /v1/ai/sessions/{id}/files`: the user message is stored with its files and an empty text, and nothing answers it. An empty message never reaches the model later either, because the history drops blank rows. Regenerate asks the last message that had words.
+
+**Files sent with words** start a turn as before, and the turn's prompt names each file by type and id and says the receipt panel reads it, so the model never asks for a re-upload ([system prompt](../ai/service.md#system-prompt)).
 
 The response shape, which the web app checks field by field in `src/lib/receipt.ts` rather than casting:
 
@@ -259,6 +263,7 @@ This month: Rp 1.333.600
 A row's items are listed under its name; a deleted row collapses to "Deleted {name}" across the row.
 
 - **The artifact mechanism, another type.** A successful `create_transaction` builds the card in `ai/card.rs` and leaves it in the turn store under the call id, exactly as an analysis does (D88). The pump sends it as `artifact` with `type: "transaction"` after the call's `tool_result` and stores it on `tool_calls[i].artifact`. A refused or failed call leaves none, because only a written row is built and the pump forwards an artifact only after `ok: true`.
+- **A receipt confirmed in the canvas gets one too** (OEW-135). `POST /v1/ai/sessions/{id}/cards` builds the same card with `card::build` and appends an assistant message with no text and one `create_transaction` call carrying it, so it is stored, re-read and drawn exactly like the model's own. No model is called, and no audit row is written for it: a message is the conversation, not workspace data, as for every chat message; the transaction's own create is audited.
 - **Web only.** Telegram turns pass no artifacts to the pump, so the card is swept with the turn; the bot keeps its own reply. The mobile app shows the text only (see [mobile](mobile.md)).
 - **Payload.** `transaction_id`, `type`, `name`, `amount_formatted`, `category_id`, `category_name`, `wallet_id`, `wallet_name`, `to_wallet_name`, `date` (YYYY-MM-DD), `items[] {name, amount_formatted}`, `month_total_formatted` and `deleted`. Every figure is formatted by the API (D27), in the wallet's currency; the month total is this month's expense total in the workspace currency, from the same summary query as the Telegram reply. No amount is a number (D12).
 - **The closing line** is the last card's month total: it was worked out after every earlier write in the turn.
@@ -290,7 +295,7 @@ The map is `src/lib/chat-invalidation.ts`. Each entry is a key a load declares w
 
 The overview (D87) is the screen the last row was waiting for. It declares both keys, so a transaction the assistant writes moves the overview's figures without a reload.
 
-A receipt confirmed from the canvas invalidates the same keys, through `invalidationsForTool('create_transaction')`. The write did not come from a tool, but it moved the same money, and reusing the map is what keeps the two from drifting.
+A receipt confirmed from the canvas reruns every load with `invalidateAll()`, which covers the same keys and also brings the [saved table](#saved-transaction-cards) it appended to the conversation (OEW-135).
 
 Two rules in the collector, both tested:
 
@@ -306,7 +311,7 @@ Invalidating reruns the loads that are mounted, which is how the shell refreshes
 | Session list | Sessions newest first, rename, delete, new chat |
 | Message area | User and assistant messages, tool cards, receipt draft cards, copy and regenerate actions |
 | Canvas | Side panel holding the real form or sheet, driven by URL parameters |
-| Input | Auto-growing textarea, Enter to send, Shift and Enter for a newline, attachment button, stop button while streaming. The attachment button opens the same dropzone the transaction form uses, so a receipt photographed into the chat takes the one upload path there is (D23); the turn then carries the file ids |
+| Input | Auto-growing textarea, Enter to send, Shift and Enter for a newline, attachment button, stop button while streaming. The attachment button opens the same dropzone the transaction form uses, so a receipt photographed into the chat takes the one upload path there is (D23); a message with words carries the file ids into its turn, and files alone are stored with no turn ([receipt OCR](#receipt-ocr)) |
 | Empty state | Suggestion chips: "How much did I spend on food last month?", "Add a 50,000 lunch expense", "What is my biggest expense this month?" |
 | Status | Thinking, calling a tool (with a human label), streaming |
 

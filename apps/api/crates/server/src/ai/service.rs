@@ -21,7 +21,10 @@ use rust_decimal::Decimal;
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use crate::audit::{log, snapshot, Actor};
+use crate::{
+    ai::card,
+    audit::{log, snapshot, Actor},
+};
 
 pub use oewang_db::repositories::ai::{MessageRow, SessionRow, SessionSummaryRow};
 
@@ -425,14 +428,7 @@ pub async fn begin_turn(
     // half-turn behind (PLN-4). The web chat and Telegram both start here.
     crate::usage::ensure_tokens_left(pool, workspace_id).await?;
 
-    let mut attachments = Vec::with_capacity(attachment_ids.len());
-    for id in attachment_ids {
-        let file = vault::find_file(pool, workspace_id, id)
-            .await
-            .map_err(internal)?
-            .ok_or(AppError::FileNotFound)?;
-        attachments.push(file);
-    }
+    let attachments = find_files(pool, workspace_id, attachment_ids).await?;
 
     let workspace = accounts::find_workspace(pool, workspace_id)
         .await
@@ -452,19 +448,13 @@ pub async fn begin_turn(
         .await
         .map_err(internal)?;
 
-    let files: Vec<Value> = attachments
-        .iter()
-        .map(|file| json!({ "vault_file_id": file.id, "name": file.name, "type": file.r#type }))
-        .collect();
-    let stored_attachments = (!files.is_empty()).then(|| json!({ "files": files }));
-
     append_message(
         pool,
         workspace_id,
         session_id,
         "user",
         message,
-        stored_attachments.as_ref(),
+        stored_files(&attachments).as_ref(),
     )
     .await?;
 
@@ -531,6 +521,95 @@ pub async fn begin_turn(
             .collect(),
         channel: CHANNEL_WEB,
     })
+}
+
+/// A message of files and no words, stored without a model turn (OEW-135).
+///
+/// The model cannot read a file (D24), so a turn would only answer that it
+/// sees no attachment while the receipt panel is reading it. Same checks
+/// as a turn's files: each one belongs to the workspace.
+pub async fn post_files(
+    pool: &PgPool,
+    workspace_id: &str,
+    session_id: &str,
+    attachment_ids: &[String],
+) -> Result<MessageRow> {
+    if attachment_ids.is_empty() {
+        return Err(AppError::validation([(
+            "attachment_ids",
+            "At least one file is required.",
+        )]));
+    }
+
+    let files = find_files(pool, workspace_id, attachment_ids).await?;
+    append_message(
+        pool,
+        workspace_id,
+        session_id,
+        "user",
+        "",
+        stored_files(&files).as_ref(),
+    )
+    .await
+}
+
+/// Answer a transaction saved beside the conversation, a confirmed receipt
+/// from the canvas, with the saved card a chat create gets (OEW-135).
+///
+/// Stored as one `create_transaction` call carrying the card, so it is
+/// re-read and drawn exactly like the model's own. No model is called.
+/// The card is built first: a transaction outside the workspace is not
+/// found before anything is written.
+pub async fn post_card(
+    pool: &PgPool,
+    workspace_id: &str,
+    session_id: &str,
+    transaction_id: &str,
+) -> Result<MessageRow> {
+    let card = card::build(pool, workspace_id, transaction_id).await?;
+    let attachments = json!({ "tool_calls": [{
+        "id": cuid2::create_id(),
+        "name": "create_transaction",
+        "args": {},
+        "result": { "ok": true, "summary": null },
+        "artifact": { "type": card::KIND, "payload": card },
+    }] });
+
+    append_message(
+        pool,
+        workspace_id,
+        session_id,
+        "assistant",
+        "",
+        Some(&attachments),
+    )
+    .await
+}
+
+/// Each file a message names, checked against the workspace.
+async fn find_files(
+    pool: &PgPool,
+    workspace_id: &str,
+    ids: &[String],
+) -> Result<Vec<vault::VaultFileRow>> {
+    let mut files = Vec::with_capacity(ids.len());
+    for id in ids {
+        let file = vault::find_file(pool, workspace_id, id)
+            .await
+            .map_err(internal)?
+            .ok_or(AppError::FileNotFound)?;
+        files.push(file);
+    }
+    Ok(files)
+}
+
+/// What a message stores about its files (docs/features/chat.md#message-attachments).
+fn stored_files(files: &[vault::VaultFileRow]) -> Option<Value> {
+    let files: Vec<Value> = files
+        .iter()
+        .map(|file| json!({ "vault_file_id": file.id, "name": file.name, "type": file.r#type }))
+        .collect();
+    (!files.is_empty()).then(|| json!({ "files": files }))
 }
 
 /// Persist what the assistant said.

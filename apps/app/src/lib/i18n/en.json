@@ -150,7 +150,6 @@
 		"commands_toggle": "Show shortcuts",
 		"attach_add": "Add attachments",
 		"attachment_remove": "Remove {name}",
-		"attachment_fallback": "Sent with attachments",
 		"composer_focus": "Focus chat input",
 		"history_updated": "Updated {when}",
 		"tool_get_spending_analysis": "Analysing your spending",

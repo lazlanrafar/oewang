@@ -1044,3 +1044,170 @@ async fn should_store_nothing_when_the_assistant_said_nothing(pool: PgPool) {
     let frame = receiver.recv().await.unwrap();
     assert_eq!(frame.name, "error");
 }
+
+/// OEW-135: a message of files only, and the saved card for a receipt
+/// confirmed beside the conversation, through their routes. The AI service
+/// points nowhere: neither route may reach it.
+mod saved_without_a_turn {
+    use axum::{body::Body, http::Request, routing::post, Router};
+    use tower::ServiceExt;
+
+    use super::*;
+    use crate::{ai::handler, auth::token, test_support};
+
+    const MEMBER: &str = "usr_member";
+
+    async fn setup(pool: &PgPool) -> (Router, String, String) {
+        fixture(pool).await;
+        ledger_fixture(pool).await;
+        for sql in [
+            "INSERT INTO users (id, email, password_hash) VALUES ('usr_member', 'm@example.com', 'x')",
+            "INSERT INTO user_workspaces (id, workspace_id, user_id, role)
+             VALUES ('m_member', 'ws_test', 'usr_member', 'member')",
+            "INSERT INTO vault_files (id, workspace_id, name, key, size, type, status)
+             VALUES ('f_ours', 'ws_test', 'receipt.jpg', 'wsp/ws_test/f_ours', 10, 'image/jpeg', 'ready'),
+                    ('f_theirs', 'ws_other', 'x.jpg', 'wsp/ws_other/f_theirs', 10, 'image/jpeg', 'ready')",
+        ] {
+            sqlx::query(sql).execute(pool).await.unwrap();
+        }
+
+        let ours = service::create(pool, actor(), None).await.unwrap().id;
+        let theirs = service::create(pool, Actor::web(OTHER_WORKSPACE, USER), None)
+            .await
+            .unwrap()
+            .id;
+
+        let app = Router::new()
+            .route("/v1/ai/sessions/{id}/files", post(handler::post_files))
+            .route("/v1/ai/sessions/{id}/cards", post(handler::post_card))
+            .with_state(test_support::state(pool.clone(), test_support::NOWHERE));
+        (app, ours, theirs)
+    }
+
+    async fn call(app: &Router, uri: String, user: &str, role: Role, body: Value) -> u16 {
+        let secret = test_support::config().jwt_secret;
+        let scope = Some((WORKSPACE, role));
+        let ttl = std::time::Duration::from_secs(60);
+        let bearer = token::issue_access_token(&secret, user, scope, ttl)
+            .unwrap()
+            .token;
+        let response = app
+            .clone()
+            .oneshot(
+                Request::post(uri)
+                    .header("authorization", format!("Bearer {bearer}"))
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        response.status().as_u16()
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_store_files_without_a_turn(pool: PgPool) {
+        let (app, ours, theirs) = setup(&pool).await;
+        let files = |session: &str| format!("/v1/ai/sessions/{session}/files");
+
+        let body = json!({ "attachment_ids": ["f_ours"] });
+        assert_eq!(
+            call(&app, files(&ours), MEMBER, Role::Member, body.clone()).await,
+            201
+        );
+        assert_eq!(
+            call(&app, files(&theirs), USER, Role::Owner, body).await,
+            404
+        );
+        let theirs_file = json!({ "attachment_ids": ["f_theirs"] });
+        assert_eq!(
+            call(&app, files(&ours), USER, Role::Owner, theirs_file).await,
+            404
+        );
+        let none = json!({ "attachment_ids": [] });
+        assert_eq!(call(&app, files(&ours), USER, Role::Owner, none).await, 422);
+
+        // One user message, no words, its file; and no answer, because no
+        // model was asked.
+        let conversation = service::get(&pool, WORKSPACE, &ours).await.unwrap();
+        assert_eq!(conversation.messages.len(), 1);
+        let message = &conversation.messages[0];
+        assert_eq!(
+            (message.role.as_str(), message.content.as_str()),
+            ("user", "")
+        );
+        let attachments = message.attachments.as_ref().unwrap();
+        assert_eq!(attachments["files"][0]["vault_file_id"], "f_ours");
+        assert_eq!(attachments["files"][0]["name"], "receipt.jpg");
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_answer_a_confirmed_receipt_with_a_saved_card(pool: PgPool) {
+        let (app, ours, theirs) = setup(&pool).await;
+        let turns = TurnStore::new();
+        turns.open("turn_a", crate::owe1::session::now_secs());
+        let saved = create_in_turn(
+            &pool,
+            &turns,
+            &ours,
+            "t1",
+            json!({
+                "type": "expense", "amount": "87500", "wallet_id": "wal_cash",
+                "category_id": "cat_food", "date": "2026-11-03", "name": "Warung Tekko",
+                "items": [{ "name": "Iga bakar", "amount": "45000" }]
+            }),
+        )
+        .await
+        .unwrap();
+        let transaction_id = saved.result["id"].as_str().unwrap().to_string();
+        let cards = |session: &str| format!("/v1/ai/sessions/{session}/cards");
+        let body = json!({ "transaction_id": transaction_id });
+
+        assert_eq!(
+            call(&app, cards(&ours), MEMBER, Role::Member, body.clone()).await,
+            403
+        );
+        assert_eq!(
+            call(&app, cards(&theirs), USER, Role::Owner, body.clone()).await,
+            404
+        );
+        let gone = json!({ "transaction_id": "txn_not_ours" });
+        assert_eq!(call(&app, cards(&ours), USER, Role::Owner, gone).await, 404);
+        assert_eq!(call(&app, cards(&ours), USER, Role::Owner, body).await, 201);
+
+        let conversation = service::get(&pool, WORKSPACE, &ours).await.unwrap();
+        assert_eq!(
+            conversation.messages.len(),
+            1,
+            "only the card, nothing refused"
+        );
+        let message = &conversation.messages[0];
+        assert_eq!(
+            (message.role.as_str(), message.content.as_str()),
+            ("assistant", "")
+        );
+        let call = &message.attachments.as_ref().unwrap()["tool_calls"][0];
+        assert_eq!(call["name"], "create_transaction");
+        assert_eq!(call["result"]["ok"], true);
+        assert_eq!(call["artifact"]["type"], "transaction");
+        let payload = &call["artifact"]["payload"];
+        assert_eq!(payload["transaction_id"], json!(transaction_id));
+        assert_eq!(payload["name"], "Warung Tekko");
+        assert_eq!(payload["items"][0]["name"], "Iga Bakar");
+        assert!(payload["month_total_formatted"]
+            .as_str()
+            .unwrap()
+            .starts_with("Rp "));
+
+        // Re-read like any card: a delete shows after a reload.
+        sqlx::query("UPDATE transactions SET deleted_at = now() WHERE id = $1")
+            .bind(&transaction_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let conversation = service::get(&pool, WORKSPACE, &ours).await.unwrap();
+        let payload = &conversation.messages[0].attachments.as_ref().unwrap()["tool_calls"][0]
+            ["artifact"]["payload"];
+        assert_eq!(payload["deleted"], true);
+    }
+}

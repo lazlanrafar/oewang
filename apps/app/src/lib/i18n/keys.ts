@@ -324,7 +324,6 @@ export type TranslationKey =
 	| 'chat.attach'
 	| 'chat.attach_add'
 	| 'chat.attach_close'
-	| 'chat.attachment_fallback'
 	| 'chat.attachment_missing'
 	| 'chat.attachment_open'
 	| 'chat.attachment_remove'

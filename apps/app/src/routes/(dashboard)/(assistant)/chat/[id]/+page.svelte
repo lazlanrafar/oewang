@@ -31,7 +31,7 @@
 	 * column in the middle, and the composer floating at the bottom with the
 	 * conversation list behind its history button.
 	 */
-	import { enhance, type SubmitFunction } from '$app/forms';
+	import { deserialize, enhance, type SubmitFunction } from '$app/forms';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { getContext, onMount, tick } from 'svelte';
@@ -58,7 +58,7 @@
 		type MessageItem
 	} from '$lib/chat';
 	import type { EntityTarget } from '$lib/chat-entities';
-	import { invalidateForToolCalls, invalidationsForTool } from '$lib/chat-invalidation';
+	import { invalidateForToolCalls } from '$lib/chat-invalidation';
 	import { toolLabel } from '$lib/chat-tools';
 	import {
 		ArtifactCanvas,
@@ -209,17 +209,23 @@
 		if (isActive(turn)) return;
 
 		const carrying = attached;
+		if (message === '' && carrying.length === 0) return;
 
 		startedAt = new Date().toISOString();
 		asked = {
 			...local('user', message, 'turn-user'),
 			files: carrying.map((file) => ({ id: file.id, name: file.name, type: file.type }))
 		};
-		turn = advance(turn, { kind: 'send' });
 		draft = '';
 		attached = [];
 		storedBefore = data.conversation.messages.length;
 
+		if (message === '') {
+			await storeFiles(carrying);
+			return;
+		}
+
+		turn = advance(turn, { kind: 'send' });
 		abort = new AbortController();
 
 		try {
@@ -249,6 +255,42 @@
 		} finally {
 			abort = null;
 			await settle();
+		}
+	}
+
+	/**
+	 * Files with no words start no turn (OEW-135). The model cannot read a
+	 * file (D24), so it would only say nothing arrived while the receipt
+	 * panel beside it reads the photo. The message is stored with its files
+	 * and nothing answers it.
+	 */
+	async function storeFiles(files: UploadedFile[]) {
+		const form = new FormData();
+		form.set('session_id', data.conversation.id);
+		for (const file of files) form.append('attachment_ids', file.id);
+
+		const result = await postChatAction('files', form);
+		if (result?.type !== 'success') {
+			const code = result?.type === 'failure' ? String(result.data?.code ?? '') : '';
+			turn = { ...IDLE_TURN, status: 'failed', errorCode: code || 'STREAM_FAILED' };
+		}
+		await settle();
+	}
+
+	/**
+	 * One of `/chat`'s actions, posted the way `use:enhance` would. Null
+	 * when the request itself failed.
+	 */
+	async function postChatAction(name: 'files' | 'card', form: FormData) {
+		try {
+			const response = await fetch(`/chat?/${name}`, {
+				method: 'POST',
+				headers: { 'x-sveltekit-action': 'true' },
+				body: form
+			});
+			return deserialize(await response.text());
+		} catch {
+			return null;
 		}
 	}
 
@@ -337,7 +379,10 @@
 	 * lose a reply the user may still want to compare against.
 	 */
 	function regenerate() {
-		const previous = [...messages].reverse().find((message) => message.role === 'user');
+		// A message of files alone asked nothing (OEW-135).
+		const previous = [...messages]
+			.reverse()
+			.find((message) => message.role === 'user' && message.content !== '');
 		if (previous) void send(previous.content);
 	}
 
@@ -409,7 +454,7 @@
 
 		if (handoff.files.length > 0) attached = handoff.files;
 		await tick();
-		if (handoff.message) void send(handoff.message);
+		if (handoff.message || handoff.files.length > 0) void send(handoff.message);
 	});
 
 	function closeCanvas() {
@@ -472,9 +517,9 @@
 	 * because applying another route's action result to this page would
 	 * replace the conversation's own `form` data with a transaction's.
 	 *
-	 * The write leaves the rest of the app stale in exactly the way a chat
-	 * write does, so the same map answers for it (D32): a transaction moves
-	 * a wallet balance and every total computed from it, whoever made it.
+	 * The conversation then answers with the saved table a chat create gets
+	 * (OEW-135), and every load reruns: the new message, and the balances
+	 * and totals the transaction moved (D32).
 	 */
 	const afterCreate: SubmitFunction = () => {
 		confirming = true;
@@ -491,7 +536,16 @@
 			if (result.type !== 'success') return;
 
 			await closeCanvas();
-			for (const key of invalidationsForTool('create_transaction')) await invalidate(key);
+			const created = result.data?.data?.data?.id;
+			if (typeof created === 'string') {
+				const form = new FormData();
+				form.set('session_id', data.conversation.id);
+				form.set('transaction_id', created);
+				// A card that fails to append loses only the card: the
+				// transaction is saved, and the toast says so.
+				await postChatAction('card', form);
+			}
+			await invalidateAll();
 			toast.success(t('receipt.created'));
 		};
 	};

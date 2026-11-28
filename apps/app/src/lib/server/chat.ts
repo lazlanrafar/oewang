@@ -76,6 +76,32 @@ export function deleteSession(id: string, token?: string) {
 }
 
 /**
+ * A message of files and no words, stored without a turn (OEW-135). The
+ * model cannot read a file (D24); the receipt panel is already reading it.
+ */
+export function postFiles(sessionId: string, attachmentIds: string[], token?: string) {
+	return api<ChatMessage>({
+		method: 'POST',
+		path: `/v1/ai/sessions/${sessionId}/files`,
+		body: { attachment_ids: attachmentIds },
+		token
+	});
+}
+
+/**
+ * The saved card for a transaction confirmed beside the conversation, as
+ * an assistant message with no model call (OEW-135).
+ */
+export function postCard(sessionId: string, transactionId: string, token?: string) {
+	return api<ChatMessage>({
+		method: 'POST',
+		path: `/v1/ai/sessions/${sessionId}/cards`,
+		body: { transaction_id: transactionId },
+		token
+	});
+}
+
+/**
  * The workspace's agent settings (CHAT-10).
  *
  * Both fields reach every future turn's system prompt, which is why the

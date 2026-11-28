@@ -213,6 +213,18 @@ pub struct StreamBody {
     pub attachment_ids: Vec<String>,
 }
 
+/// The files of a message that starts no turn (OEW-135).
+#[derive(Debug, Deserialize)]
+pub struct FilesBody {
+    pub attachment_ids: Vec<String>,
+}
+
+/// The transaction a saved card answers for (OEW-135).
+#[derive(Debug, Deserialize)]
+pub struct CardBody {
+    pub transaction_id: String,
+}
+
 // ---------------------------------------------------------------- handlers
 
 pub async fn list_sessions(
@@ -300,6 +312,59 @@ pub async fn delete_session(
 
     match service::delete(&state.db, auth.actor(), &session_id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// Store a message of files only. Any member, as a turn is; no model call.
+pub async fn post_files(
+    State(state): State<AppState>,
+    auth: Auth,
+    Path(session_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<FilesBody>,
+) -> Result<(StatusCode, Json<Envelope<MessageView>>), ApiError> {
+    let id = request_id.0;
+
+    match service::post_files(
+        &state.db,
+        &auth.workspace_id,
+        &session_id,
+        &body.attachment_ids,
+    )
+    .await
+    {
+        Ok(message) => Ok((
+            StatusCode::CREATED,
+            Json(Envelope::data(message.into(), id)),
+        )),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+/// Append the saved card for a transaction. Admin and above: it answers a
+/// write, and only a writer sees its controls.
+pub async fn post_card(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    Path(session_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<CardBody>,
+) -> Result<(StatusCode, Json<Envelope<MessageView>>), ApiError> {
+    let id = request_id.0;
+
+    match service::post_card(
+        &state.db,
+        &auth.workspace_id,
+        &session_id,
+        &body.transaction_id,
+    )
+    .await
+    {
+        Ok(message) => Ok((
+            StatusCode::CREATED,
+            Json(Envelope::data(message.into(), id)),
+        )),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }

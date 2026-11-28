@@ -23,9 +23,11 @@ export const load: PageServerLoad = async ({ parent }) => {
  * Every chat mutation, in one place.
  *
  * The sidebar lives in the layout and a layout cannot own actions, so the
- * forms post here from whichever conversation is open. Each action ends in
- * its own redirect, which also keeps this route's "open the newest one"
- * load out of the way.
+ * forms post here from whichever conversation is open. Each session action
+ * ends in its own redirect, which also keeps this route's "open the newest
+ * one" load out of the way. `files` and `card` are posted by the open
+ * conversation with `fetch` and answer with no redirect: the page refreshes
+ * itself (OEW-135).
  */
 export const actions: Actions = {
 	new: async ({ request, locals }) => {
@@ -69,6 +71,40 @@ export const actions: Actions = {
 		// just deleted: then `/chat`, which opens whatever is newest now.
 		const back = backTo(form, '/chat');
 		redirect(303, back.startsWith(`/chat/${id}`) ? '/chat' : back);
+	},
+
+	/** Files sent with no words: stored, and no turn starts. */
+	files: async ({ request, locals }) => {
+		const form = await request.formData();
+		const ids = form
+			.getAll('attachment_ids')
+			.map((value) => String(value))
+			.filter(Boolean);
+
+		try {
+			await chat.postFiles(text(form, 'session_id'), ids, locals.accessToken);
+		} catch (error) {
+			return failure(error);
+		}
+
+		return { ok: true };
+	},
+
+	/** The saved card for a receipt just confirmed in the canvas. */
+	card: async ({ request, locals }) => {
+		const form = await request.formData();
+
+		try {
+			await chat.postCard(
+				text(form, 'session_id'),
+				text(form, 'transaction_id'),
+				locals.accessToken
+			);
+		} catch (error) {
+			return failure(error);
+		}
+
+		return { ok: true };
 	}
 };
 
