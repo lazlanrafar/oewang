@@ -43,6 +43,7 @@
 	import { DateRangePicker, type DateRange } from '$lib/components/molecules/date-range-picker';
 	import { DataTableFilter } from '$lib/components/molecules/data-table-filter';
 	import { SelectCategory } from '$lib/components/molecules/select-category';
+	import { SelectLineItem } from '$lib/components/molecules/select-line-item';
 	import type { DataTableFilterState } from '$lib/components/molecules/data-table-filter';
 	import type { NamedOption } from '$lib/components/molecules/data-table';
 	import { FileDropzone, type UploadedFile } from '$lib/components/molecules/file-dropzone';
@@ -1117,7 +1118,17 @@
 					<Label for="item-name" class="text-subtle text-xs font-normal">
 						{t('common.name')}
 					</Label>
-					<Input id="item-name" name="name" required value={itemDialog.item?.name ?? ''} />
+					<!-- Keyed on the dialog's item, so a reopened dialog starts from it. -->
+					{#key itemDialog.item}
+						<SelectLineItem
+							id="item-name"
+							name="name"
+							value={itemDialog.item?.name ?? ''}
+							placeholder={t('txn.item_name_placeholder')}
+							searchPlaceholder={t('txn.item_name_search')}
+							createLabel={(typed) => t('common.create_named', { name: typed })}
+						/>
+					{/key}
 				</div>
 
 				<div class="grid grid-cols-2 gap-4">

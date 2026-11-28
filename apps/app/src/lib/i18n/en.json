@@ -581,6 +581,8 @@
 		"unit": "Unit",
 		"item_amount": "Amount",
 		"item_column_name": "Item",
+		"item_name_placeholder": "Pick or type an item",
+		"item_name_search": "Search items you bought",
 		"item_column_category": "Category",
 		"item_category": "Item category",
 		"item_no_category": "No category",

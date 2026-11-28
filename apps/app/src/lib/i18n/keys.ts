@@ -1411,6 +1411,8 @@ export type TranslationKey =
 	| 'txn.item_category'
 	| 'txn.item_column_category'
 	| 'txn.item_column_name'
+	| 'txn.item_name_placeholder'
+	| 'txn.item_name_search'
 	| 'txn.item_no_category'
 	| 'txn.item_saved'
 	| 'txn.items_categorised'
