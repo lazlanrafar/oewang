@@ -168,7 +168,8 @@ What the panel shows depends on the receipt:
 | Receipt | Panel |
 |---|---|
 | Not confirmed | "Check this receipt": `ReceiptCanvas` reads the receipt and shows the confirmation sheet, as above |
-| Confirmed | "Receipt saved", `chat/chat-receipt-saved.svelte`: the receipt image (the vault preview), the saved name, amount, category, wallet and date, the items as the chat's compact items table without pickers, and an "Open in Transactions" button to `/transactions?detail=<transaction id>`. Read-only; changes happen in the chat table or on the transactions page |
+| Confirmed | "Receipt saved", `chat/chat-receipt-saved.svelte`: the receipt image (the server-made thumbnail, as the vault tiles show it; the full file streamed into a read-only panel failed to decode), the saved name, amount, category, wallet and date, the items as the chat's compact items table without pickers, and an "Open in Transactions" button to `/transactions?detail=<transaction id>`. Read-only; changes happen in the chat table or on the transactions page |
+| File deleted | The vault can no longer describe the file (it was deleted): an empty state, "This receipt is no longer in the vault", rather than a read that could only fail. A transaction saved from it stays in Transactions. |
 
 "Confirmed" is read from the conversation, not kept in the page: a live [saved card](#saved-transaction-cards) whose `attachment_ids` carry the file (`receiptCard` in `src/lib/transaction-card.ts`). The chat page derives it for the file in the URL and, when there is one, renders the saved view instead of mounting `ReceiptCanvas`, so a confirmed receipt is never read again (a read takes a minute) and cannot be confirmed twice. A deleted transaction confirms nothing, so its receipt's panel goes back to the confirmation sheet. A message with typed words keeps plain file chips, which open the file in a dialog.
 

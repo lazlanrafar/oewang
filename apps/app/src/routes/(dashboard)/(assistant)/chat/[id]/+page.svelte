@@ -85,6 +85,8 @@
 	import { FilePreview } from '$lib/components/molecules/file-preview';
 	import { filePreview } from '$lib/files';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
+	import * as Empty from '$lib/components/molecules/empty';
+	import FileX from '@lucide/svelte/icons/file-x';
 	import { messageForCode, readRefusal } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
@@ -755,6 +757,16 @@
 		/>
 	{:else if savedReceipt}
 		<ChatReceiptSaved card={savedReceipt} file={data.canvasFile} />
+	{:else if canvas?.kind === 'receipt' && !data.canvasFile}
+		<!-- The vault cannot describe the file, most often because it was
+		     deleted: reading it again could only fail. -->
+		<Empty.Root class="h-full">
+			<Empty.Header>
+				<Empty.Media><FileX /></Empty.Media>
+				<Empty.Title>{t('canvas.receipt_gone_title')}</Empty.Title>
+				<Empty.Description>{t('canvas.receipt_gone_description')}</Empty.Description>
+			</Empty.Header>
+		</Empty.Root>
 	{:else}
 		<ReceiptCanvas
 			fileId={canvas?.kind === 'receipt' ? canvas.id : null}

@@ -9,13 +9,12 @@
 	 * and the changes live in the chat table and on the transactions page.
 	 */
 	import { transactionTarget } from '$lib/chat-entities';
-	import { filePreview } from '$lib/files';
+	import { thumbnailSrc } from '$lib/files';
 	import { t } from '$lib/i18n';
 	import type { TransactionCard } from '$lib/transaction-card';
 
 	import { Button } from '../../atoms/button/index.js';
 	import * as Table from '../../atoms/table/index.js';
-	import { FilePreview } from '../../molecules/file-preview/index.js';
 
 	let {
 		card,
@@ -27,6 +26,9 @@
 	} = $props();
 
 	const name = $derived(card.name ?? t('chat.card_untitled'));
+	// The server-made preview, as the vault's tiles use (VLT-3): a read-only
+	// panel needs the receipt at a glance, not the whole file streamed in.
+	const preview = $derived(file ? thumbnailSrc(file) : null);
 	const fields = $derived([
 		{ label: t('chat.card_col_name'), value: name },
 		{ label: t('chat.card_col_amount'), value: card.amount_formatted, figure: true },
@@ -43,8 +45,12 @@
 </script>
 
 <div class="space-y-6 px-6 py-6">
-	{#if file}
-		<FilePreview {...filePreview()} variant="box" {file} />
+	{#if preview}
+		<img
+			src={preview}
+			alt={t('canvas.receipt_saved_image', { name })}
+			class="border-border bg-muted/20 max-h-96 w-full border object-contain"
+		/>
 	{/if}
 
 	<dl class="grid grid-cols-2 gap-x-6 gap-y-4">
