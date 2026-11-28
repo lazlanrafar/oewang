@@ -219,6 +219,9 @@ async def _call_model(
                 ],
                 # Not a detail and not a default. See the docstring.
                 tools=[],
+                # The SDK's own ceiling is the chat's 20 s; a pass gets the
+                # ladder's, or the client cuts it before wait_for does.
+                timeout=budget.timeout(),
             ),
             timeout=budget.timeout(),
         )
@@ -325,7 +328,7 @@ async def run_ladder(
     started = time.monotonic()
     budget = _Budget(
         deadline=started + config.ai_extraction_budget_ms / 1000,
-        per_call_timeout=config.model_timeout_secs,
+        per_call_timeout=config.extraction_call_timeout_secs,
     )
     models: list[str] = []
     scores: list[int] = []

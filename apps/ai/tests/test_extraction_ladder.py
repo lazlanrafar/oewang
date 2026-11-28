@@ -392,6 +392,18 @@ async def test_a_per_call_timeout_counts_as_a_failed_pass(ladder_config: Setting
     assert client.models == [PRIMARY, TERTIARY]
 
 
+async def test_every_pass_gives_the_sdk_the_ladders_ceiling(ladder_config: Settings) -> None:
+    """The client is built with the chat's 20 s. Without a per-call timeout
+    the SDK cut a long receipt's vision pass at 20 s, whatever the ladder
+    allowed, and every pass of a 22-line receipt timed out."""
+    client = ScriptedClient(answer("receipt_clean.json"))
+
+    await run(client, ladder_config)
+
+    timeout = client.calls[0]["timeout"]
+    assert 0 < timeout <= ladder_config.extraction_call_timeout_secs
+
+
 # ---------------------------------------------------------- unreadable
 
 

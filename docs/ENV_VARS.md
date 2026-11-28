@@ -4,7 +4,7 @@
 modules. Do not edit by hand: change the configuration and run it
 again.** CI runs `--check` and fails when this file is stale.
 
-Last generated 2026-11-25.
+Last generated 2026-11-28.
 
 A value shown as `secret` is never printed, logged or committed
 (OPS-3). `required` means the process refuses to start without it.
@@ -20,7 +20,7 @@ Read by `apps/api/crates/server/src/config.rs` at startup.
 
 | Variable | Default |
 |---|---|
-| `AI_REQUEST_TIMEOUT_SECS` | `60` |
+| `AI_REQUEST_TIMEOUT_SECS` | `90` |
 | `AI_SERVICE_API_KEY` | secret |
 | `AI_SERVICE_URL` | unset |
 | `AI_SIGNING_PUBLIC_KEYS` | unset |
@@ -81,7 +81,7 @@ Read by `apps/ai/app/config.py`. This process is never given
 | `AI_API_KEY` | secret |
 | `AI_BASE_URL` | `""` |
 | `AI_CHAT_MODEL` | `"claude-sonnet-5-5"` |
-| `AI_EXTRACTION_BUDGET_MS` | `45_000` |
+| `AI_EXTRACTION_BUDGET_MS` | `80_000` |
 | `AI_MAX_OUTPUT_TOKENS` | `2048` |
 | `AI_MAX_STEPS` | `8` |
 | `AI_QUALITY_THRESHOLD` | `70` |
@@ -94,6 +94,7 @@ Read by `apps/ai/app/config.py`. This process is never given
 | `APP_ENV` | `"development"` |
 | `CRYPTO_SIGNING_KEY_FILE` | `Path("./.secrets/ai-owe1-signing-key.pem")` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` | `""` |
+| `EXTRACTION_CALL_TIMEOUT_SECS` | `45.0` |
 | `HANDSHAKE_RATE_LIMIT_PER_MINUTE` | `30` |
 | `MODEL_MAX_RETRIES` | `2` |
 | `MODEL_TIMEOUT_SECS` | `20.0` |

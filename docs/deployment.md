@@ -152,7 +152,8 @@ Read by `apps/ai/app/config.py` as lowercase settings; the environment names are
 | `AI_API_KEY` | yes, **secret** | The key for whichever of the two the line above selects |
 | `AI_CHAT_MODEL`, `AI_VISION_PRIMARY`, `AI_VISION_SECONDARY`, `AI_VISION_TERTIARY` | no | Model ids as the provider or gateway names them |
 | `AI_QUALITY_THRESHOLD`, `AI_EXTRACTION_BUDGET_MS`, `AI_MAX_STEPS`, `AI_MAX_OUTPUT_TOKENS` | no | The extraction ladder and the tool loop |
-| `MODEL_TIMEOUT_SECS`, `MODEL_MAX_RETRIES` | no | One model call's ceiling |
+| `MODEL_TIMEOUT_SECS`, `MODEL_MAX_RETRIES` | no | One model call's ceiling (chat, titles, column mapping) |
+| `EXTRACTION_CALL_TIMEOUT_SECS` | no | One extraction pass's ceiling, default 45: a long receipt takes a vision pass 30 to 45 s. Keep `AI_EXTRACTION_BUDGET_MS` under the api's `AI_REQUEST_TIMEOUT_SECS`, and that plus 5 s under Cloudflare's 100 |
 | `CRYPTO_SIGNING_KEY_FILE` | yes | This service signs its own handshake, so it holds its own key, a different one from the API's |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` | yes | The **API's** pinned public keys. Empty is a development-only path |
 | `OWE1_ENABLED` | no | Must be `true` outside development |

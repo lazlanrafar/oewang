@@ -276,7 +276,7 @@ All configuration comes from environment variables, validated at startup. A miss
 | `AI_EXTRACTION_BUDGET_MS` | ai | Default 45000. Wall-clock budget per document. |
 | `AI_MAX_STEPS` | ai | Tool-loop cap, default 8 (CHAT-5). |
 | `CHAT_MAX_TOOL_AMOUNT` | api | The ceiling on an amount one chat tool call may write, in the wallet's own currency. Default `100000000`. A parse error that shifts a decimal point stops there (D25). |
-| `AI_REQUEST_TIMEOUT_SECS` | api | How long one AI service call may take, default 60. Also bounds the routes that wait on that call, plus 5 seconds (D118). |
+| `AI_REQUEST_TIMEOUT_SECS` | api | How long one AI service call may take, default 90 (60 until 2026-11-28, raised so a long receipt fits). Also bounds the routes that wait on that call, plus 5 seconds (D118). |
 | `RATE_LIMIT_PER_MINUTE` | ai | Requests per caller per minute, default 600. |
 | `HANDSHAKE_RATE_LIMIT_PER_MINUTE` | ai | The lower ceiling on the handshake, default 30. |
 | `CRYPTO_SIGNING_KEY_FILE` | api, ai | Ed25519 private key, PKCS#8 PEM, mode `0600`. Each service signs its own handshake, so each holds its own key. Created on first start in development (D22). |

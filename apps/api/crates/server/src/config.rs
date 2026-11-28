@@ -309,7 +309,7 @@ impl Config {
             ai_service_url: optional("AI_SERVICE_URL").unwrap_or_else(|| "http://ai:3004".into()),
             ai_service_api_key: Secret::new(ai_service_api_key),
             ai_signing_public_keys,
-            ai_request_timeout: Duration::from_secs(parse_or("AI_REQUEST_TIMEOUT_SECS", 60)?),
+            ai_request_timeout: Duration::from_secs(parse_or("AI_REQUEST_TIMEOUT_SECS", 90)?),
 
             owe1_enabled,
 
