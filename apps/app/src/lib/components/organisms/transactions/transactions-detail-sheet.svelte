@@ -325,7 +325,7 @@
 											<!-- The category the item is counted under, its own when
 											     it has one (TXN-24). A reader sees it only when set. -->
 											{#if itemType}
-												<Table.Cell class="px-0">
+												<Table.Cell>
 													{#if canEdit || item.categoryId}
 														<!-- Keyed on the loaded items: a pick the API refused
 														     goes back to what the reload says. -->
