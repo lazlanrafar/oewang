@@ -8,7 +8,7 @@ What a workspace stores and what its model calls cost, recorded and shown. Nothi
 
 - Adding a call to the AI service, or a feature value to `ai_usage.feature`.
 - Changing how storage or tokens are summed, or what "this month" means.
-- Changing the settings page or `GET /v1/workspaces/current/usage`.
+- Changing the settings page, the sidebar's usage block, or `GET /v1/workspaces/current/usage`.
 
 ## Data
 
@@ -55,6 +55,10 @@ The Rust client read the AI service's map-columns answer, `{mapping, model}`, as
 | By feature | Feature, calls, this month, all time |
 
 The headline figures are summed from the per-feature rows in the API, so the cards and the table cannot disagree. The vault page's header shows the same storage figure.
+
+## The sidebar
+
+The foot of the app's sidebar shows this month's AI tokens (input plus output) and the vault's stored bytes and file count, and opens `/settings/usage`. It is set like the old app's `NavUsage`, a muted caps label over each figure, without its progress bars and percentages: those measured use against a plan's quota, and nothing here is limited. The dashboard layout reads it alongside the pickers' lists, so it refreshes whenever the layout does (a navigation that reloads it, or any form action); a failed read leaves it out rather than blocking the shell. It is hidden on the collapsed rail, and the console's sidebar has none.
 
 ## Testing
 

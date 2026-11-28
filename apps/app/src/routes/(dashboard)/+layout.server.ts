@@ -7,6 +7,7 @@ import { listWorkspaces, readWorkspaceMe } from '$lib/server/account';
 import * as contactsApi from '$lib/server/contacts';
 import * as ledger from '$lib/server/ledger';
 import { receiptNotices } from '$lib/server/receipts';
+import { workspaceUsage } from '$lib/server/usage';
 import { SIDEBAR_COOKIE } from '$lib/components/organisms/layouts';
 
 /**
@@ -42,9 +43,11 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 		ledger.listCurrencies(locals.accessToken).catch(() => null),
 		// Queued receipts that ended since the last page (D95). A failure to
 		// read them never blocks the shell.
-		receiptNotices(locals.accessToken).catch(() => null)
+		receiptNotices(locals.accessToken).catch(() => null),
+		// The sidebar's usage figures (D92). Never blocks the shell either.
+		workspaceUsage(locals.accessToken).catch(() => null)
 	]);
-	const [me, workspaces, wallets, groups, categories, contacts, currencies, notices] = await shell.catch(
+	const [me, workspaces, wallets, groups, categories, contacts, currencies, notices, usage] = await shell.catch(
 		(caught: unknown) => {
 			// An operator suspended this workspace (CSL-5): the API refuses every
 			// read in it. The error page says so and offers another workspace.
@@ -87,6 +90,13 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 			}))
 		},
 		receiptNotices: notices?.data ?? [],
+		usage: usage?.data
+			? {
+					tokens: usage.data.ai.month.input + usage.data.ai.month.output,
+					bytes: usage.data.storage.bytes,
+					files: usage.data.storage.files
+				}
+			: null,
 		sidebarOpen: cookies.get(SIDEBAR_COOKIE) !== 'false'
 	};
 };

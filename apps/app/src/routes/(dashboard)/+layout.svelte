@@ -105,7 +105,7 @@
 
 <AppShell sidebarOpen={data.sidebarOpen} style={colorStyle(userColors) || undefined}>
 	{#snippet sidebar(props)}
-		<AppSidebar workspaces={data.workspaces} activeId={data.me.workspace.id} {...props} />
+		<AppSidebar workspaces={data.workspaces} activeId={data.me.workspace.id} usage={data.usage} {...props} />
 	{/snippet}
 
 	{#snippet account()}
