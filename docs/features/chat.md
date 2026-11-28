@@ -58,6 +58,7 @@ One conversation is one `ai_sessions` row with its `ai_messages` ([data model](.
 - Rename and delete are available from the list. Delete is a soft delete and asks for confirmation (UI-4). The messages are marked deleted with their session rather than left behind a deleted parent.
 - Routes: `/chat` opens the newest session or an empty one; `/chat/{id}` opens a specific session.
 - The list is loaded by the `(assistant)` route group's layout, which holds the overview and every conversation (D87), and it opens from the composer's history button on both. A layout cannot own form actions, so rename and delete post to `/chat`'s actions with the page they came from as `back`, and return there; deleting the conversation that is open lands on `/chat`.
+- A workspace whose plan leaves out `chat` is refused a new turn with `FEATURE_NOT_IN_PLAN`; its past conversations stay listed, readable, renamable and deletable ([plans](plans.md#features)). A receipt read needs `receipt_scan` the same way.
 - There is no Assistant entry in the sidebar. A conversation starts from the overview's composer, its chips or its cards, and the list behind the history button reaches every earlier one.
 
 ### Message attachments

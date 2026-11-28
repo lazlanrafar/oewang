@@ -170,6 +170,8 @@ the marks on each field and what is and is not stored are in
 
 Two paths, picked by what the file is. The rule behind the split: **deterministic beats model-driven whenever structure exists.**
 
+A statement import needs the plan's `statement_import`, a receipt scan its `receipt_scan`; without it the start is refused with `FEATURE_NOT_IN_PLAN` and what was imported stays. CSV and XLSX import are not checked ([plans](plans.md#features)).
+
 | File | Path | What the model does |
 |---|---|---|
 | CSV, XLSX | Column mapping wizard | Maps column names once. Never sees a row |
