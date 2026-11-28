@@ -86,8 +86,8 @@
 						'flex w-full items-center gap-2 overflow-hidden border text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
 						collapsed
 							? 'size-8 justify-center border-transparent p-0'
-							: // Drawn like the overview's stat card, with the active row's hatch.
-								'border-border bg-background p-3 [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_srgb,var(--color-primary)_15%,transparent)_5px_6px)]'
+							: // Drawn like the overview's stat card, in the active row's tint and hatch.
+								'border-border bg-primary/10 hover:bg-primary/15 data-[state=open]:bg-primary/15 p-3 [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_srgb,var(--color-primary)_15%,transparent)_5px_6px)]'
 					)}
 					aria-label={collapsed ? t('nav.switch_workspace') : undefined}
 				>
