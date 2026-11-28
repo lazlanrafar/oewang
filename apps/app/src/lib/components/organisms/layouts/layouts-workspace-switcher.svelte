@@ -101,9 +101,9 @@
 						{/if}
 					</span>
 					{#if !collapsed}
-						<span class="grid flex-1 gap-0.5 text-left leading-tight">
-							<span class="text-body truncate font-medium">{active?.name ?? ''}</span>
-							<span class="text-caption text-subtle truncate tracking-wider uppercase">{roleLabel(active?.role ?? '')}</span>
+						<span class="grid flex-1 text-left leading-tight">
+							<span class="text-body truncate leading-tight font-medium">{active?.name ?? ''}</span>
+							<span class="text-caption text-subtle truncate leading-none tracking-wider uppercase">{roleLabel(active?.role ?? '')}</span>
 						</span>
 						<ChevronsUpDown class="ml-auto size-4 shrink-0" />
 					{/if}

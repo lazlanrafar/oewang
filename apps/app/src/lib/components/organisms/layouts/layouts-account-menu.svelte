@@ -65,9 +65,9 @@
 				<!-- Who is signed in, read without opening the menu; the role is
 				     the switcher's line, so it is not repeated here. Hidden on a
 				     phone, where the bar has no room for it. -->
-				<span class="hidden min-w-0 gap-0.5 text-right leading-tight sm:grid">
-					<span class="text-body max-w-48 truncate font-medium">{name || email}</span>
-					{#if name}<span class="text-caption text-subtle max-w-48 truncate">{email}</span>{/if}
+				<span class="hidden min-w-0 text-right leading-tight sm:grid">
+					<span class="text-body max-w-48 truncate leading-tight font-medium">{name || email}</span>
+					{#if name}<span class="text-caption text-subtle max-w-48 truncate leading-none">{email}</span>{/if}
 				</span>
 				<Avatar.Root class="size-9 shrink-0 rounded-full">
 					{#if photo}<Avatar.Image src={photo} alt="" />{/if}
