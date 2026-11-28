@@ -151,7 +151,7 @@ An item may carry its own category, picked with `select-category` limited to the
 
 In the detail sheet the items are a compact table: item, category, amount, and a "⋯" menu holding Edit and Delete for an admin or owner. The item dialog's name is `select-line-item`: it suggests the workspace's items (ITM-1), most recently bought first and searched as you type, through the page's server route `/transactions/items/suggest`, which asks `GET /v1/items` (D5). A name nobody bought yet is made from what was typed.
 
-In the web app the item's category picker sits in the line's own row in the detail sheet and under each line in the receipt confirmation sheet, and it is clearable: its first row, "No category", puts the item back under the transaction's category. A pick saves at once through the item's own `PUT`, which replaces the item whole, so the rest of the item is sent back as it was read. Categorise items is a button under the lines, shown to an admin or owner while at least one item has no category; a refusal is a toast, because the sheet's overlay covers the page banner. A transfer's items get no picker, since a transfer has no category. The receipt scan's proposal for a line is prefilled only when the workspace has that category. The matched portion is a muted line under the row's amount, signed like it.
+In the web app the item's category picker sits in the line's own row, in the detail sheet's items table and in the receipt confirmation sheet's editable one, and it is clearable: its first row, "No category", puts the item back under the transaction's category. A pick saves at once through the item's own `PUT`, which replaces the item whole, so the rest of the item is sent back as it was read. Categorise items is a button under the lines, shown to an admin or owner while at least one item has no category; a refusal is a toast, because the sheet's overlay covers the page banner. A transfer's items get no picker, since a transfer has no category. The receipt scan's proposal for a line is prefilled only when the workspace has that category. The matched portion is a muted line under the row's amount, signed like it.
 
 The same proposal is made in two places, by one function (`transactions::service::suggest_item_categories`). The receipt scan answers every draft item with a `category_id`, so the confirmation sheet opens with the pickers filled. `POST /v1/transactions/{id}/items/categorize` does it for one existing transaction and writes the result, touching only items that have no category ([endpoints](../api/endpoints.md#transaction-line-items)). History is `items::last_categories`: the item key of ITM-1 (`lower(btrim(name))`), live items on live transactions with a live category, the newest purchase winning. Only the names it does not know go to the AI service, with the category names of the transaction's type; the answer is kept when it is exactly one of those names.
 
@@ -177,7 +177,9 @@ draft at `?canvas=receipt&id={vault_file_id}`, and the page reflows beside it.
 It is the same panel and the same confirmation sheet the chat page mounts,
 because a receipt is confirmed the same way wherever it was dropped. The flow,
 the marks on each field and what is and is not stored are in
-[receipt OCR](chat.md#receipt-ocr).
+[receipt OCR](chat.md#receipt-ocr). Its line items are an editable compact
+table (Item, Qty, Category, Amount, a ⋯ menu with Remove), the detail sheet's
+items table with inputs in its cells.
 
 **A queued receipt and a confirmed one never both save** (OEW-135). A photo the
 reader was too busy for is queued and saved by the queue later (D95), and the

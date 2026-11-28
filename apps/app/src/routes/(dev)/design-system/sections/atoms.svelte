@@ -42,6 +42,7 @@
 	import { Slider } from '$lib/components/atoms/slider';
 	import { Spinner } from '$lib/components/atoms/spinner';
 	import { Switch } from '$lib/components/atoms/switch';
+	import * as Table from '$lib/components/atoms/table';
 	import * as Tabs from '$lib/components/atoms/tabs';
 	import { Textarea } from '$lib/components/atoms/textarea';
 	import { Toggle } from '$lib/components/atoms/toggle';
@@ -132,6 +133,25 @@
 		<div class="space-y-2 sm:col-span-2">
 			<Label for="spec-textarea">Textarea</Label>
 			<Textarea id="spec-textarea" placeholder="A note on this transaction" rows={3} />
+		</div>
+		<div class="space-y-2 sm:col-span-2">
+			<p class="text-subtle text-xs">In a table cell: variant="in-cell", and "in-cell-figure" for a quantity or an amount</p>
+			<Table.Root density="compact" class="table-fixed">
+				<Table.Header>
+					<Table.Row>
+						<Table.Head>Item</Table.Head>
+						<Table.Head class="w-14 text-right">Qty</Table.Head>
+						<Table.Head class="w-28 text-right">Amount</Table.Head>
+					</Table.Row>
+				</Table.Header>
+				<Table.Body>
+					<Table.Row>
+						<Table.Cell><Input variant="in-cell" value="Nasi goreng" aria-label="Item" /></Table.Cell>
+						<Table.Cell><Input variant="in-cell-figure" value="2" aria-label="Qty" /></Table.Cell>
+						<Table.Cell><Input variant="in-cell-figure" value="50000" aria-label="Amount" /></Table.Cell>
+					</Table.Row>
+				</Table.Body>
+			</Table.Root>
 		</div>
 	</div>
 </Specimen>

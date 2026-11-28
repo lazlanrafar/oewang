@@ -20,6 +20,7 @@
 	 * figure the client worked out (D27).
 	 */
 	import Calculator from '@lucide/svelte/icons/calculator';
+	import Ellipsis from '@lucide/svelte/icons/ellipsis';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 
 	import { formatMoney } from '$lib/money.js';
@@ -35,9 +36,11 @@
 
 	import { Badge } from '../../atoms/badge/index.js';
 	import { Button } from '../../atoms/button/index.js';
+	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
 	import { Input } from '../../atoms/input/index.js';
 	import { Label } from '../../atoms/label/index.js';
 	import * as Sheet from '../../atoms/sheet/index.js';
+	import * as Table from '../../atoms/table/index.js';
 	import { CurrencyInput } from '../../molecules/currency-input/index.js';
 	import { DatePicker } from '../../molecules/date-picker/index.js';
 	import { SelectCurrency } from '../../molecules/select-currency/index.js';
@@ -287,37 +290,95 @@
 						{@render mark('line_items')}
 					</div>
 
-					{#each form.items as item, index (index)}
-						<!-- Two rows a line: the figures as read, then the category the
-						     line is counted under, which is its own when it has one
-						     (TXN-27). A receipt is always an expense. -->
-						<div class="grid grid-cols-[1fr_4rem_7rem] items-center gap-2">
-							<Input
-								bind:value={form.items[index].name}
-								aria-label={t('receipt.item_name', { line: index + 1 })}
-							/>
-							<Input
-								bind:value={form.items[index].quantity}
-								inputmode="decimal"
-								aria-label={t('receipt.item_quantity', { line: index + 1 })}
-							/>
-							<Input
-								bind:value={form.items[index].amount}
-								inputmode="decimal"
-								class="font-mono"
-								aria-label={t('receipt.item_amount', { line: index + 1 })}
-							/>
-							<SelectCategory
-								type="expense"
-								creatable
-								createLabel={(typed) => t('common.create_named', { name: typed })}
-								clearLabel={t('txn.item_no_category')}
-								placeholder={t('txn.item_category')}
-								bind:value={form.items[index].categoryId}
-								class="col-span-3"
-							/>
-						</div>
-					{/each}
+					<!-- The saved items table's shape (chat, detail sheet), editable:
+					     one row a line, the category it is counted under in its own
+					     cell (TXN-27). A receipt is always an expense. It scrolls
+					     sideways on a phone rather than squeezing the item to
+					     nothing (UI-6). -->
+					<div class="overflow-x-auto">
+						<Table.Root density="compact" class="min-w-[28rem] table-fixed">
+							<Table.Header>
+								<Table.Row>
+									<Table.Head>{t('txn.item_column_name')}</Table.Head>
+									<Table.Head class="w-14 text-right">{t('receipt.col_quantity')}</Table.Head>
+									<Table.Head class="w-36">{t('txn.item_column_category')}</Table.Head>
+									<Table.Head class="w-28 text-right">{t('txn.item_amount')}</Table.Head>
+									<Table.Head class="w-10"><span class="sr-only">{t('common.actions')}</span></Table.Head>
+								</Table.Row>
+							</Table.Header>
+							<Table.Body>
+								{#each form.items as _, index (index)}
+									<Table.Row>
+										<Table.Cell>
+											<Input
+												variant="in-cell"
+												bind:value={form.items[index].name}
+												aria-label={t('receipt.item_name', { line: index + 1 })}
+											/>
+										</Table.Cell>
+										<Table.Cell>
+											<Input
+												variant="in-cell-figure"
+												bind:value={form.items[index].quantity}
+												inputmode="decimal"
+												aria-label={t('receipt.item_quantity', { line: index + 1 })}
+											/>
+										</Table.Cell>
+										<Table.Cell>
+											<SelectCategory
+												type="expense"
+												inDataTable
+												creatable
+												createLabel={(typed) => t('common.create_named', { name: typed })}
+												clearLabel={t('txn.item_no_category')}
+												placeholder={t('txn.item_category')}
+												bind:value={form.items[index].categoryId}
+											/>
+										</Table.Cell>
+										<Table.Cell>
+											<Input
+												variant="in-cell-figure"
+												bind:value={form.items[index].amount}
+												inputmode="decimal"
+												aria-label={t('receipt.item_amount', { line: index + 1 })}
+											/>
+										</Table.Cell>
+										<Table.Cell class="px-1">
+											<div class="flex justify-center">
+												<DropdownMenu.Root>
+													<DropdownMenu.Trigger>
+														{#snippet child({ props })}
+															<Button
+																variant="ghost"
+																size="icon"
+																class="size-6"
+																aria-label={t('receipt.item_actions', { line: index + 1 })}
+																{...props}
+															>
+																<Ellipsis />
+															</Button>
+														{/snippet}
+													</DropdownMenu.Trigger>
+													<DropdownMenu.Content align="end" class="w-40">
+														<DropdownMenu.Item
+															class="text-destructive"
+															onclick={() => (form.items = form.items.filter((_, i) => i !== index))}
+														>
+															{t('receipt.item_remove')}
+														</DropdownMenu.Item>
+													</DropdownMenu.Content>
+												</DropdownMenu.Root>
+											</div>
+										</Table.Cell>
+									</Table.Row>
+								{/each}
+							</Table.Body>
+						</Table.Root>
+					</div>
+
+					{#if fieldErrors?.items}
+						<p class="text-destructive text-xs">{fieldErrors.items}</p>
+					{/if}
 
 					{#if disagrees && linesTotal}
 						<!-- A note, never a block: a service charge makes this

@@ -146,7 +146,8 @@ fills the settings column, which is the same width for every section
 ## Changing how something looks
 
 The component owns its look; the call site owns where it sits. A caller may
-pass data, a documented variant (`inDataTable`, `variant="outline"`), and the
+pass data, a documented variant (`inDataTable`, `variant="outline"`, an
+input's `variant="in-cell"`), and the
 classes that place it: a width, a grid or flex position, a height. It may not
 pass colour, radius, shadow, border, font or padding, and it may not reach
 past the component with `[&_div]:…`.
