@@ -11,7 +11,10 @@
 //! deleted row reads as deleted. The month total is not re-read: it is what
 //! the reply said at the time.
 
-use oewang_db::{repositories::accounts, PgPool};
+use oewang_db::{
+    repositories::{accounts, categories},
+    PgPool,
+};
 use oewang_domain::{format_money, AppError, Result};
 use serde_json::{json, Value};
 
@@ -42,6 +45,20 @@ async fn current(pool: &PgPool, workspace_id: &str, transaction_id: &str) -> Res
     let row = transactions::find(pool, workspace_id, transaction_id).await?;
     let items = transactions::list_items(pool, workspace_id, transaction_id).await?;
     let money = |amount| format_money(amount, &row.wallet_currency_code, false);
+    // Each item's own category (TXN-24), named for the items table.
+    let categories = if items.iter().any(|item| item.category_id.is_some()) {
+        categories::list_categories(pool, workspace_id, None)
+            .await
+            .map_err(|error| AppError::Internal(error.into()))?
+    } else {
+        Vec::new()
+    };
+    let category_name = |id: &Option<String>| {
+        categories
+            .iter()
+            .find(|category| Some(&category.id) == id.as_ref())
+            .map(|category| category.name.clone())
+    };
 
     Ok(json!({
         "transaction_id": row.id,
@@ -56,7 +73,21 @@ async fn current(pool: &PgPool, workspace_id: &str, transaction_id: &str) -> Res
         "date": row.date.date_naive().to_string(),
         "items": items
             .iter()
-            .map(|item| json!({ "name": item.name, "amount_formatted": money(item.amount) }))
+            // The raw fields ride along because changing an item's category
+            // replaces the item whole (TXN-27): what is not sent back is lost.
+            .map(|item| json!({
+                "id": item.id,
+                "name": item.name,
+                "brand": item.brand,
+                "quantity": item.quantity.map(|quantity| quantity.normalize().to_string()),
+                "unit": item.unit,
+                "unit_price": item.unit_price.map(|price| price.to_string()),
+                "amount": item.amount.to_string(),
+                "amount_formatted": money(item.amount),
+                "category_id": item.category_id,
+                "category_name": category_name(&item.category_id),
+                "notes": item.notes,
+            }))
             .collect::<Vec<_>>(),
         "deleted": false,
     }))

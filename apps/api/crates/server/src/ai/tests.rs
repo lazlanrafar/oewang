@@ -1154,7 +1154,10 @@ mod saved_without_a_turn {
             json!({
                 "type": "expense", "amount": "87500", "wallet_id": "wal_cash",
                 "category_id": "cat_food", "date": "2026-11-03", "name": "Warung Tekko",
-                "items": [{ "name": "Iga bakar", "amount": "45000" }]
+                "items": [
+                    { "name": "Iga bakar", "amount": "45000", "category_id": "cat_food" },
+                    { "name": "Es teh", "amount": "42500" }
+                ]
             }),
         )
         .await
@@ -1194,6 +1197,26 @@ mod saved_without_a_turn {
         assert_eq!(payload["transaction_id"], json!(transaction_id));
         assert_eq!(payload["name"], "Warung Tekko");
         assert_eq!(payload["items"][0]["name"], "Iga Bakar");
+        // What the items table under the card needs: each item's own id and
+        // category (TXN-24), and no quantity where none was given.
+        assert!(payload["items"][0]["id"].as_str().is_some());
+        assert_eq!(payload["items"][0]["category_id"], "cat_food");
+        assert_eq!(payload["items"][0]["category_name"], "Food");
+        assert_eq!(payload["items"][0]["quantity"], Value::Null);
+        assert_eq!(payload["items"][0]["amount"], "45000.0000");
+        assert_eq!(payload["items"][1]["category_id"], Value::Null);
+        assert_eq!(payload["items"][1]["category_name"], Value::Null);
+
+        // An item's category changed elsewhere shows after a reload.
+        sqlx::query("UPDATE transaction_items SET category_id = NULL WHERE transaction_id = $1")
+            .bind(&transaction_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let conversation = service::get(&pool, WORKSPACE, &ours).await.unwrap();
+        let payload = &conversation.messages[0].attachments.as_ref().unwrap()["tool_calls"][0]
+            ["artifact"]["payload"];
+        assert_eq!(payload["items"][0]["category_id"], Value::Null);
         assert!(payload["month_total_formatted"]
             .as_str()
             .unwrap()
@@ -1209,5 +1232,76 @@ mod saved_without_a_turn {
         let payload = &conversation.messages[0].attachments.as_ref().unwrap()["tool_calls"][0]
             ["artifact"]["payload"];
         assert_eq!(payload["deleted"], true);
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_title_an_unnamed_session_from_the_receipt_only(pool: PgPool) {
+        let (app, ours, _) = setup(&pool).await;
+        let named = service::create(&pool, actor(), None).await.unwrap().id;
+        service::rename(&pool, actor(), &named, "Groceries")
+            .await
+            .unwrap();
+        let title = |session: String| {
+            let pool = pool.clone();
+            async move {
+                service::get(&pool, WORKSPACE, &session)
+                    .await
+                    .unwrap()
+                    .session
+                    .title
+            }
+        };
+
+        let files = json!({ "attachment_ids": ["f_ours"] });
+        for session in [&ours, &named] {
+            let uri = format!("/v1/ai/sessions/{session}/files");
+            assert_eq!(call(&app, uri, USER, Role::Owner, files.clone()).await, 201);
+        }
+        assert_eq!(title(ours.clone()).await, service::RECEIPT_TITLE);
+        assert_eq!(title(named.clone()).await, "Groceries");
+
+        let turns = TurnStore::new();
+        turns.open("turn_a", crate::owe1::session::now_secs());
+        let saved = create_in_turn(
+            &pool,
+            &turns,
+            &ours,
+            "t1",
+            json!({
+                "type": "expense", "amount": "87500", "wallet_id": "wal_cash",
+                "date": "2026-11-03", "name": "warung tekko"
+            }),
+        )
+        .await
+        .unwrap();
+        let body = json!({ "transaction_id": saved.result["id"] });
+        for session in [&ours, &named] {
+            let uri = format!("/v1/ai/sessions/{session}/cards");
+            assert_eq!(call(&app, uri, USER, Role::Owner, body.clone()).await, 201);
+        }
+        assert_eq!(
+            title(ours.clone()).await,
+            "Warung Tekko",
+            "the saved name, tidied, replaces the placeholder"
+        );
+        assert_eq!(title(named).await, "Groceries", "a chosen title stays");
+
+        // A second card does not rename what the first one named.
+        let uri = format!("/v1/ai/sessions/{ours}/cards");
+        let saved = create_in_turn(
+            &pool,
+            &turns,
+            &ours,
+            "t2",
+            json!({
+                "type": "expense", "amount": "1000", "wallet_id": "wal_cash",
+                "date": "2026-11-03", "name": "Parkir"
+            }),
+        )
+        .await
+        .unwrap();
+        let body = json!({ "transaction_id": saved.result["id"] });
+        assert_eq!(call(&app, uri, USER, Role::Owner, body).await, 201);
+        assert_eq!(title(ours).await, "Warung Tekko");
     }
 }

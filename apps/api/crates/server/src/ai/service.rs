@@ -44,6 +44,9 @@ const MAX_TITLE: usize = 120;
 
 /// What a session is called before its first message names it (CHAT-8).
 pub const DEFAULT_TITLE: &str = "New chat";
+/// What a still-unnamed session is called once a photo is sent with no
+/// words (OEW-135): there is no message to name it from.
+pub const RECEIPT_TITLE: &str = "Receipt";
 
 pub async fn list(
     pool: &PgPool,
@@ -542,7 +545,7 @@ pub async fn post_files(
     }
 
     let files = find_files(pool, workspace_id, attachment_ids).await?;
-    append_message(
+    let message = append_message(
         pool,
         workspace_id,
         session_id,
@@ -550,7 +553,9 @@ pub async fn post_files(
         "",
         stored_files(&files).as_ref(),
     )
-    .await
+    .await?;
+    title_unnamed(pool, workspace_id, session_id, RECEIPT_TITLE, &[]).await?;
+    Ok(message)
 }
 
 /// Answer a transaction saved beside the conversation, a confirmed receipt
@@ -575,7 +580,7 @@ pub async fn post_card(
         "artifact": { "type": card::KIND, "payload": card },
     }] });
 
-    append_message(
+    let message = append_message(
         pool,
         workspace_id,
         session_id,
@@ -583,7 +588,35 @@ pub async fn post_card(
         "",
         Some(&attachments),
     )
-    .await
+    .await?;
+    // The saved name, already tidied (D129), replaces only the placeholder a
+    // bare photo left.
+    if let Some(name) = card.get("name").and_then(Value::as_str) {
+        title_unnamed(pool, workspace_id, session_id, name, &[RECEIPT_TITLE]).await?;
+    }
+    Ok(message)
+}
+
+/// Name a session that nobody has named: still the default, or one of
+/// `placeholders`. Taken from what was saved, never asked of a model
+/// (CHAT-8), and never over a title the user or a first message gave.
+async fn title_unnamed(
+    pool: &PgPool,
+    workspace_id: &str,
+    session_id: &str,
+    title: &str,
+    placeholders: &[&str],
+) -> Result<()> {
+    let session = require(pool, workspace_id, session_id).await?;
+    if session.title != DEFAULT_TITLE && !placeholders.contains(&session.title.as_str()) {
+        return Ok(());
+    }
+    if let Ok(title) = clean_title(title) {
+        ai::rename_session(pool, workspace_id, session_id, &title)
+            .await
+            .map_err(internal)?;
+    }
+    Ok(())
 }
 
 /// Each file a message names, checked against the workspace.
