@@ -35,7 +35,7 @@
 	import * as Empty from '../../molecules/empty/index.js';
 	import { artifactTitle } from './canvas/artifact-title.js';
 	import ChatActivity from './chat-activity.svelte';
-	import ChatTransactionCard from './chat-transaction-card.svelte';
+	import ChatTransactionTable from './chat-transaction-table.svelte';
 	import MessageActions from './message-actions.svelte';
 	import ToolCallGroup from './tool-call-group.svelte';
 
@@ -170,9 +170,7 @@
 						{@const cards = cardsOf(message)}
 						{@const total = closingTotal(cards)}
 						<div class="flex flex-col gap-2">
-							{#each cards as card (card.transaction_id)}
-								<ChatTransactionCard {card} canEdit={canEdit && message.id !== streamingId} />
-							{/each}
+							<ChatTransactionTable {cards} canEdit={canEdit && message.id !== streamingId} />
 							{#if total}
 								<p class="text-caption text-subtle">{t('chat.card_month_total', { total })}</p>
 							{/if}

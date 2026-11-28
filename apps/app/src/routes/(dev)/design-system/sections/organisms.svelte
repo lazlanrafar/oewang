@@ -31,7 +31,7 @@
 		ChatInput,
 		ChatMessages,
 		ChatSuggestions,
-		ChatTransactionCard,
+		ChatTransactionTable,
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
 	import { AccountMenu, AppSidebar, ThemeToggle, WorkspaceSwitcher } from '$lib/components/organisms/layouts';
@@ -262,9 +262,11 @@
 	note="What a transaction the assistant saved is answered with (OEW-135): the Telegram receipt reply's lines, with category, wallet and delete for an owner or admin. A member sees the same card without controls; a deleted row collapses to one line."
 >
 	<div class="flex max-w-xl flex-col gap-3">
-		<ChatTransactionCard card={savedCard} canEdit />
-		<ChatTransactionCard card={{ ...savedCard, items: [] }} />
-		<ChatTransactionCard card={{ ...savedCard, deleted: true }} />
+		<ChatTransactionTable
+			cards={[savedCard, { ...savedCard, transaction_id: 'clxtxn-deleted', deleted: true }]}
+			canEdit
+		/>
+		<ChatTransactionTable cards={[{ ...savedCard, items: [] }]} />
 	</div>
 </Specimen>
 

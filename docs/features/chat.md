@@ -245,21 +245,24 @@ Why this shape: the canvas is the real editor, so it cannot drift from it, its e
 
 ### Saved transaction cards
 
-A transaction the assistant records in the web chat is answered the way the Telegram bot answers a receipt (TG-6): one card per saved row, and one closing line for the reply (OEW-135).
+The transactions the assistant records in one web reply are answered with one table, a row per saved transaction, and one closing line (OEW-135). The owner first asked for the Telegram receipt layout (TG-6) as a card per row, then for a table, so a message that records a whole list reads like the list: `chat/chat-transaction-table.svelte`, the line items table's shape (the compact table, the pickers in their cells, a ⋯ menu for delete).
 
 ```
-✅ Saved Lunch
-Rp 50.000 · Food · Cash · 2026-11-03
-• Noodles  Rp 50.000
-
-This month: Rp 1.250.000
+✅ Saved 3 transactions
+| Transaction  |      Amount | Category  | Wallet | Date       | ⋯ |
+| Galon        | Rp  20.000  | Household | Cash   | 2026-11-28 | ⋯ |
+| Cilok        | Rp  15.000  | Food      | Cash   | 2026-11-28 | ⋯ |
+| Ayam Geprek  | Rp  24.000  | Food      | Cash   | 2026-11-28 | ⋯ |
+This month: Rp 1.333.600
 ```
+
+A row's items are listed under its name; a deleted row collapses to "Deleted {name}" across the row.
 
 - **The artifact mechanism, another type.** A successful `create_transaction` builds the card in `ai/card.rs` and leaves it in the turn store under the call id, exactly as an analysis does (D88). The pump sends it as `artifact` with `type: "transaction"` after the call's `tool_result` and stores it on `tool_calls[i].artifact`. A refused or failed call leaves none, because only a written row is built and the pump forwards an artifact only after `ok: true`.
 - **Web only.** Telegram turns pass no artifacts to the pump, so the card is swept with the turn; the bot keeps its own reply. The mobile app shows the text only (see [mobile](mobile.md)).
 - **Payload.** `transaction_id`, `type`, `name`, `amount_formatted`, `category_id`, `category_name`, `wallet_id`, `wallet_name`, `to_wallet_name`, `date` (YYYY-MM-DD), `items[] {name, amount_formatted}`, `month_total_formatted` and `deleted`. Every figure is formatted by the API (D27), in the wallet's currency; the month total is this month's expense total in the workspace currency, from the same summary query as the Telegram reply. No amount is a number (D12).
 - **The closing line** is the last card's month total: it was worked out after every earlier write in the turn.
-- **Controls.** An owner or admin gets a category picker (`SelectCategory`, typed to the row), a wallet picker (`SelectAccount`) and delete behind `ConfirmDialog`. A member sees the card without them, and so does the reply still arriving. Each control posts to the transactions page's own actions, `/transactions?/setCategory`, `?/setWallet` and `?/delete`, the ones its table cells and its delete use, so balances, the wallet lock order (D13), the audit row (D14) and the soft delete (OPS-2) stay in the API service.
+- **Controls.** An owner or admin gets a category picker (`SelectCategory`, typed to the row), a wallet picker (`SelectAccount`) in their cells, and delete in the row's ⋯ menu behind `ConfirmDialog`. A member sees the table without them, and so does the reply still arriving. Each control posts to the transactions page's own actions, `/transactions?/setCategory`, `?/setWallet` and `?/delete`, the ones its table cells and its delete use, so balances, the wallet lock order (D13), the audit row (D14) and the soft delete (OPS-2) stay in the API service.
 - **Current values.** `GET /v1/ai/sessions/{id}` re-reads each stored card's row by id (`card::refresh`) and lays the current fields over the stored card, so an edit made from the card, or anywhere else, shows after the change and after a reload. A deleted row comes back with `deleted: true` and the card collapses to one "Deleted" line. The month total is not re-read: it is what the reply said. Re-reading was chosen over updating the stored card on each edit, because an edit can come from any screen and only the read sees all of them.
 - **The prompt is told.** After a successful `create_transaction` the model says at most one short line and repeats nothing the card shows ([AI service](../ai/service.md#system-prompt)).
 
