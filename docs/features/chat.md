@@ -155,11 +155,20 @@ The capture path that makes the assistant worth using (AI-1 to AI-3).
 | Panel | Line |
 |---|---|
 | Reading | A spinner and "Reading the receipt. A long one can take a minute." |
-| Read | "Read it. Check the receipt on the right and confirm.", with **Open the receipt** while the panel is closed |
+| Read | "Read it. Check the receipt on the right and confirm." |
 | Queued (D95) | "The reader is busy. Your receipt is kept and will be saved automatically; I'll show it here." |
-| Unreadable | "I couldn't read it. Enter it by hand on the right.", with the same button while the panel is closed |
+| Unreadable | "I couldn't read it. Enter it by hand on the right." |
 
 The state is the panel's own: `ReceiptCanvas` reports each read through `onStatus(fileId, status)`, and the page keeps the last one after the panel closes, so the receipt is read once. A read that fails outright shows nothing here; the panel says why and offers a retry. A confirmed create clears the line, and the saved table takes its place. A reload reads the receipt again when the URL still opens the panel, so the line comes back with it.
+
+**The receipt's chip opens it** (OEW-135). A files-only message shows each file as a **Receipt** chip rather than a plain file chip, and the status line has no button of its own. The chip has two states:
+
+| Receipt | Chip | Click |
+|---|---|---|
+| Not confirmed | `PanelRight` icon, pressed (`aria-pressed`) while `?canvas=receipt&id=<file>` is open, the same `chat/chat-canvas-chip.svelte` the analysis toggles use | Opens the receipt panel, or closes it when it is showing, through the URL (UI-8) |
+| Confirmed | `ArrowUpRight` icon, title naming the saved transaction | `/transactions?detail=<transaction id>`, the transaction's detail sheet |
+
+"Confirmed" is read from the conversation, not kept in the page: a live [saved card](#saved-transaction-cards) whose `attachment_ids` carry the file (`receiptCard` in `src/lib/transaction-card.ts`). A confirmed receipt never reopens the panel from its chip, so a second confirm cannot save it twice. A deleted transaction confirms nothing, so its receipt's chip goes back to opening the panel. A message with typed words keeps plain file chips, which open the file in a dialog.
 
 One promise in the queued line is not kept yet: the queue's later save is told by the next page's toast (`GET /v1/receipts/notices`), not by a message in this conversation.
 
@@ -281,7 +290,7 @@ The items get a table because each one has its own category (TXN-24, D123): a 21
 - **The artifact mechanism, another type.** A successful `create_transaction` builds the card in `ai/card.rs` and leaves it in the turn store under the call id, exactly as an analysis does (D88). The pump sends it as `artifact` with `type: "transaction"` after the call's `tool_result` and stores it on `tool_calls[i].artifact`. A refused or failed call leaves none, because only a written row is built and the pump forwards an artifact only after `ok: true`.
 - **A receipt confirmed in the canvas gets one too** (OEW-135). `POST /v1/ai/sessions/{id}/cards` builds the same card with `card::build` and appends an assistant message with no text and one `create_transaction` call carrying it, so it is stored, re-read and drawn exactly like the model's own. No model is called, and no audit row is written for it: a message is the conversation, not workspace data, as for every chat message; the transaction's own create is audited.
 - **Web only.** Telegram turns pass no artifacts to the pump, so the card is swept with the turn; the bot keeps its own reply. The mobile app shows the text only (see [mobile](mobile.md)).
-- **Payload.** `transaction_id`, `type`, `name`, `amount_formatted`, `category_id`, `category_name`, `wallet_id`, `wallet_name`, `to_wallet_name`, `date` (YYYY-MM-DD), `items[] {id, name, brand, quantity, unit, unit_price, amount, amount_formatted, category_id, category_name, notes}`, `month_total_formatted` and `deleted`. Every figure is formatted by the API (D27), in the wallet's currency; the month total is this month's expense total in the workspace currency, from the same summary query as the Telegram reply. No amount is a number (D12). An item's raw `amount`, `unit_price` and `quantity` are decimal strings, carried only so its category can be saved without losing them.
+- **Payload.** `transaction_id`, `type`, `name`, `amount_formatted`, `category_id`, `category_name`, `wallet_id`, `wallet_name`, `to_wallet_name`, `date` (YYYY-MM-DD), `items[] {id, name, brand, quantity, unit, unit_price, amount, amount_formatted, category_id, category_name, notes}`, `month_total_formatted`, `attachment_ids` (the row's live attachments, by vault file id, which is how the chat knows a [receipt is confirmed](#receipt-ocr)) and `deleted`. Every figure is formatted by the API (D27), in the wallet's currency; the month total is this month's expense total in the workspace currency, from the same summary query as the Telegram reply. No amount is a number (D12). An item's raw `amount`, `unit_price` and `quantity` are decimal strings, carried only so its category can be saved without losing them.
 - **The closing line** is the last card's month total: it was worked out after every earlier write in the turn.
 - **Controls.** An owner or admin gets a category picker (`SelectCategory`, typed to the row), a wallet picker (`SelectAccount`) in their cells, and delete in the row's ⋯ menu behind `ConfirmDialog`. A member sees the table without them, and so does the reply still arriving. Each control posts to the transactions page's own actions, `/transactions?/setCategory`, `?/setWallet` and `?/delete`, the ones its table cells and its delete use, so balances, the wallet lock order (D13), the audit row (D14) and the soft delete (OPS-2) stay in the API service.
 - **Current values.** `GET /v1/ai/sessions/{id}` re-reads each stored card's row by id (`card::refresh`) and lays the current fields over the stored card, so an edit made from the card, or anywhere else, shows after the change and after a reload. A deleted row comes back with `deleted: true` and the card collapses to one "Deleted" line. The month total is not re-read: it is what the reply said. Re-reading was chosen over updating the stored card on each edit, because an edit can come from any screen and only the read sees all of them.

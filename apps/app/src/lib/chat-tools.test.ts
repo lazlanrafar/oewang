@@ -131,7 +131,12 @@ describe('toolCallsFromAttachments', () => {
 
 	// OEW-135
 	it('reads back the saved card a create stored, apart from the canvas', () => {
-		const payload = { transaction_id: 'txn1', amount_formatted: 'Rp 1', items: [] };
+		const payload = {
+			transaction_id: 'txn1',
+			amount_formatted: 'Rp 1',
+			items: [],
+			attachment_ids: []
+		};
 		const [call] = toolCallsFromAttachments({
 			tool_calls: [
 				{

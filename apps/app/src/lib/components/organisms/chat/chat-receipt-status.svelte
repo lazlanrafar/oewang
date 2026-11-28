@@ -10,23 +10,14 @@
 	 * minute, so without this line the conversation looked like nothing was
 	 * happening. It is not a message: nothing stores it, and it goes once the
 	 * saved table answers the receipt. What it says comes from the panel's own
-	 * read, never from a second one.
+	 * read, never from a second one. The receipt's own chip, above it,
+	 * opens the panel.
 	 */
 	import { t } from '$lib/i18n';
 
-	import { Button } from '../../atoms/button/index.js';
 	import { Spinner } from '../../atoms/spinner/index.js';
 
-	let {
-		status,
-		panelOpen,
-		onOpen
-	}: {
-		status: ReceiptStatus;
-		/** The panel is showing this receipt: no button to open it again. */
-		panelOpen: boolean;
-		onOpen: () => void;
-	} = $props();
+	let { status }: { status: ReceiptStatus } = $props();
 
 	const text = $derived(
 		{
@@ -38,16 +29,9 @@
 	);
 </script>
 
-<div class="flex flex-col items-start gap-2" role="status" aria-live="polite">
-	<p class="text-body text-subtle flex items-center gap-2">
-		{#if status === 'reading'}
-			<Spinner size={16} />
-		{/if}
-		{text}
-	</p>
-	{#if !panelOpen && (status === 'ready' || status === 'unreadable')}
-		<Button type="button" variant="outline" size="sm" onclick={onOpen}>
-			{t('chat.receipt_status_open')}
-		</Button>
+<p class="text-body text-subtle flex items-center gap-2" role="status" aria-live="polite">
+	{#if status === 'reading'}
+		<Spinner size={16} />
 	{/if}
-</div>
+	{text}
+</p>

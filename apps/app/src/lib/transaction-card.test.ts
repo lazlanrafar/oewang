@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { closingTotal, readTransactionCard, type TransactionCard } from './transaction-card';
+import {
+	closingTotal,
+	readTransactionCard,
+	receiptCard,
+	type TransactionCard
+} from './transaction-card';
 
 const payload = {
 	transaction_id: 'txn1',
@@ -29,6 +34,7 @@ const payload = {
 		}
 	],
 	month_total_formatted: 'Rp 1.250.000',
+	attachment_ids: ['file1'],
 	deleted: false
 };
 
@@ -47,6 +53,28 @@ describe('readTransactionCard', () => {
 	it('treats missing items as none', () => {
 		const { items: _, ...noItems } = payload;
 		expect(readTransactionCard('transaction', noItems)?.items).toEqual([]);
+	});
+
+	it('treats missing attachments as none', () => {
+		const { attachment_ids: _, ...noFiles } = payload;
+		expect(readTransactionCard('transaction', noFiles)?.attachment_ids).toEqual([]);
+	});
+});
+
+describe('receiptCard', () => {
+	const card = (transaction_id: string, attachment_ids: string[], deleted = false) =>
+		({ ...payload, transaction_id, attachment_ids, deleted }) as TransactionCard;
+
+	it('finds the newest live card carrying the receipt', () => {
+		const cards = [card('txn1', ['file1']), card('txn2', ['file2']), card('txn3', ['file1'])];
+		expect(receiptCard(cards, 'file1')?.transaction_id).toBe('txn3');
+		expect(receiptCard(cards, 'file2')?.transaction_id).toBe('txn2');
+	});
+
+	it('finds nothing for an unconfirmed or deleted receipt', () => {
+		expect(receiptCard([card('txn1', ['file1'])], 'file9')).toBeNull();
+		expect(receiptCard([card('txn1', ['file1'], true)], 'file1')).toBeNull();
+		expect(receiptCard([], 'file1')).toBeNull();
 	});
 });
 

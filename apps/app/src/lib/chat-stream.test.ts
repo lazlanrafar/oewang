@@ -197,7 +197,12 @@ describe('advance, the tool events', () => {
 
 	it('attaches a saved card as a card, not a canvas (OEW-135)', () => {
 		const called = advance(streaming(), { kind: 'frame', frame: call('t1', 'create_transaction') });
-		const payload = { transaction_id: 'txn1', amount_formatted: 'Rp 1', items: [] };
+		const payload = {
+			transaction_id: 'txn1',
+			amount_formatted: 'Rp 1',
+			items: [],
+			attachment_ids: []
+		};
 		const shown = advance(called, {
 			kind: 'frame',
 			frame: { event: 'artifact', data: JSON.stringify({ id: 't1', type: 'transaction', payload }) }

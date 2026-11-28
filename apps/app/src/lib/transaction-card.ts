@@ -26,6 +26,8 @@ export type TransactionCard = {
 	items: TransactionCardItem[];
 	/** This month's expense total when the row was saved. */
 	month_total_formatted?: string | null;
+	/** The vault files attached to the row now: how the chat knows a receipt was confirmed. */
+	attachment_ids: string[];
 	deleted: boolean;
 };
 
@@ -56,7 +58,11 @@ export function readTransactionCard(type: unknown, payload: unknown): Transactio
 	const card = payload as Partial<TransactionCard>;
 	if (typeof card.transaction_id !== 'string' || card.transaction_id === '') return null;
 
-	return { ...card, items: Array.isArray(card.items) ? card.items : [] } as TransactionCard;
+	return {
+		...card,
+		items: Array.isArray(card.items) ? card.items : [],
+		attachment_ids: Array.isArray(card.attachment_ids) ? card.attachment_ids : []
+	} as TransactionCard;
 }
 
 /**
@@ -67,4 +73,13 @@ export function readTransactionCard(type: unknown, payload: unknown): Transactio
  */
 export function closingTotal(cards: TransactionCard[]): string | null {
 	return cards.at(-1)?.month_total_formatted ?? null;
+}
+
+/**
+ * The saved card that confirmed a receipt: the newest live one whose row
+ * has that file attached. A deleted row confirms nothing, so its receipt
+ * can be confirmed again.
+ */
+export function receiptCard(cards: TransactionCard[], fileId: string): TransactionCard | null {
+	return cards.findLast((card) => !card.deleted && card.attachment_ids.includes(fileId)) ?? null;
 }

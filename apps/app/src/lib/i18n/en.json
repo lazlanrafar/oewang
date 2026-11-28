@@ -170,7 +170,8 @@
 		"receipt_status_ready": "Read it. Check the receipt on the right and confirm.",
 		"receipt_status_queued": "The reader is busy. Your receipt is kept and will be saved automatically; I'll show it here.",
 		"receipt_status_unreadable": "I couldn't read it. Enter it by hand on the right.",
-		"receipt_status_open": "Open the receipt",
+		"receipt_chip": "Receipt",
+		"receipt_chip_saved": "Open the saved transaction, {name}",
 		"card_items_hint": "· {count} {count|item|items}",
 		"card_items_caption": "{name} · {count} {count|item|items}"
 	},

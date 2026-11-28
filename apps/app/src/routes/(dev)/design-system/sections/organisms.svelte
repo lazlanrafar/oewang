@@ -95,6 +95,7 @@
 			}
 		],
 		month_total_formatted: 'Rp 1.250.000',
+		attachment_ids: [],
 		deleted: false
 	};
 

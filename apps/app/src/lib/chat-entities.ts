@@ -45,7 +45,7 @@ export function entityTarget(href: string): EntityTarget | null {
 
 	switch (link.scheme) {
 		case '#txn:':
-			return { kind: 'transaction', id: value, href: query('detail', value) };
+			return transactionTarget(value);
 		case '#wallet:':
 			return { kind: 'wallet', id: value, href: query('wallet_id', value) };
 		case '#cat:':
@@ -68,6 +68,11 @@ export function entityTargetFromDataset(
 ): EntityTarget | null {
 	if (!scheme || !value) return null;
 	return entityTarget(`${scheme}${value}`);
+}
+
+/** A transaction's detail sheet, for a caller that already holds its id. */
+export function transactionTarget(id: string): EntityTarget {
+	return { kind: 'transaction', id, href: query('detail', id) };
 }
 
 function query(key: string, id: string): string {

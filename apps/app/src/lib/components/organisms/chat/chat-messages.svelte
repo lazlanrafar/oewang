@@ -21,20 +21,26 @@
 	 */
 	import type { Snippet } from 'svelte';
 
+	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import PanelRight from '@lucide/svelte/icons/panel-right';
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 
 	import type { MessageItem } from '$lib/chat';
 	import type { TurnPhase } from '$lib/chat-stream';
-	import { entityTargetFromDataset, type EntityTarget } from '$lib/chat-entities';
+	import {
+		entityTargetFromDataset,
+		transactionTarget,
+		type EntityTarget
+	} from '$lib/chat-entities';
 	import { t } from '$lib/i18n';
 	import { renderAssistantMarkdown } from '$lib/markdown';
-	import { closingTotal, type TransactionCard } from '$lib/transaction-card';
+	import { closingTotal, receiptCard, type TransactionCard } from '$lib/transaction-card';
 
 	import * as Empty from '../../molecules/empty/index.js';
 	import { artifactTitle } from './canvas/artifact-title.js';
 	import ChatActivity from './chat-activity.svelte';
+	import ChatCanvasChip from './chat-canvas-chip.svelte';
 	import ChatTransactionTable from './chat-transaction-table.svelte';
 	import MessageActions from './message-actions.svelte';
 	import ToolCallGroup from './tool-call-group.svelte';
@@ -50,6 +56,8 @@
 		onRegenerate,
 		onArtifact,
 		activeArtifactId = null,
+		onReceipt,
+		activeReceiptId = null,
 		activity = null,
 		canEdit = false,
 		emptyActions,
@@ -70,6 +78,10 @@
 		onArtifact?: (id: string) => void;
 		/** The analysis the canvas is showing, so its toggle reads as pressed. */
 		activeArtifactId?: string | null;
+		/** Toggle a receipt's confirmation panel, by its vault file id (OEW-135). */
+		onReceipt?: (fileId: string) => void;
+		/** The receipt the panel is showing, so its chip reads as pressed. */
+		activeReceiptId?: string | null;
 		/** What the answer still arriving is doing, for its live activity lines. */
 		activity?: TurnPhase | null;
 		/** The reader may change what the assistant saved: false for a member. */
@@ -93,6 +105,13 @@
 	/** The saved cards a message carries (OEW-135). */
 	const cardsOf = (message: MessageItem): TransactionCard[] =>
 		message.toolCalls.flatMap((call) => (call.card ? [call.card] : []));
+
+	/** Every saved card in the conversation, to tell which receipts are confirmed. */
+	const savedCards = $derived(messages.flatMap(cardsOf));
+
+	/** A message of files alone is a receipt the chat sent to the panel. */
+	const isReceiptMessage = (message: MessageItem) =>
+		onReceipt !== undefined && message.role === 'user' && message.content === '';
 
 	function dispatchEntity(event: MouseEvent) {
 		const origin = event.target;
@@ -189,16 +208,40 @@
 							aria-label={t('chat.attachments')}
 						>
 							{#each message.files as file (file.id)}
+								{@const saved = isReceiptMessage(message) ? receiptCard(savedCards, file.id) : null}
 								<li>
-									<button
-										type="button"
-										class="border-border text-caption flex items-center gap-1.5 border px-2 py-1"
-										title={t('chat.attachment_open', { name: file.name })}
-										onclick={() => onEntity({ kind: 'file', id: file.id })}
-									>
-										<Paperclip class="size-3.5" aria-hidden="true" />
-										<span class="max-w-40 truncate">{file.name}</span>
-									</button>
+									{#if saved}
+										<!-- Confirmed: the saved row, never the panel again, so a
+										     second confirm cannot save it twice. -->
+										<ChatCanvasChip
+											title={t('chat.receipt_chip_saved', {
+												name: saved.name ?? saved.amount_formatted
+											})}
+											onclick={() => onEntity(transactionTarget(saved.transaction_id))}
+										>
+											<ArrowUpRight class="size-3.5" aria-hidden="true" />
+											{t('chat.receipt_chip')}
+										</ChatCanvasChip>
+									{:else if isReceiptMessage(message)}
+										<ChatCanvasChip
+											pressed={file.id === activeReceiptId}
+											title={file.name}
+											onclick={() => onReceipt?.(file.id)}
+										>
+											<PanelRight class="size-3.5" aria-hidden="true" />
+											{t('chat.receipt_chip')}
+										</ChatCanvasChip>
+									{:else}
+										<button
+											type="button"
+											class="border-border text-caption flex items-center gap-1.5 border px-2 py-1"
+											title={t('chat.attachment_open', { name: file.name })}
+											onclick={() => onEntity({ kind: 'file', id: file.id })}
+										>
+											<Paperclip class="size-3.5" aria-hidden="true" />
+											<span class="max-w-40 truncate">{file.name}</span>
+										</button>
+									{/if}
 								</li>
 							{/each}
 						</ul>
@@ -209,18 +252,13 @@
 							{#each message.toolCalls as call (call.id)}
 								{#if call.artifact}
 									<li>
-										<button
-											type="button"
-											class="border-border text-caption hover:border-foreground/40 flex items-center gap-1.5 border px-2 py-1 transition-colors {call.id ===
-											activeArtifactId
-												? 'bg-muted'
-												: ''}"
-											aria-pressed={call.id === activeArtifactId}
+										<ChatCanvasChip
+											pressed={call.id === activeArtifactId}
 											onclick={() => onArtifact(call.id)}
 										>
 											<PanelRight class="size-3.5" aria-hidden="true" />
 											{artifactTitle(call.artifact)}
-										</button>
+										</ChatCanvasChip>
 									</li>
 								{/if}
 							{/each}

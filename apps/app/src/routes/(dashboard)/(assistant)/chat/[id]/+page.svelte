@@ -522,6 +522,12 @@
 		receiptStatus = status === 'failed' ? null : { fileId, status };
 	}
 
+	/** A receipt's chip opens its panel, and closes it when it is showing (UI-8). */
+	function toggleReceipt(fileId: string) {
+		if (canvas?.kind === 'receipt' && canvas.id === fileId) void closeCanvas();
+		else void openCanvas('receipt', fileId);
+	}
+
 	/** The newest message of files alone that carries the receipt being read. */
 	const receiptNoteFor = $derived.by(() => {
 		const fileId = receiptStatus?.fileId;
@@ -610,6 +616,8 @@
 			onCopy={copy}
 			onRegenerate={regenerate}
 			onArtifact={openArtifact}
+			activeReceiptId={canvas?.kind === 'receipt' ? canvas.id : null}
+			onReceipt={toggleReceipt}
 			noteFor={receiptNoteFor}
 		>
 			{#snippet emptyActions()}
@@ -617,12 +625,7 @@
 			{/snippet}
 			{#snippet note()}
 				{#if receiptStatus}
-					{@const fileId = receiptStatus.fileId}
-					<ChatReceiptStatus
-						status={receiptStatus.status}
-						panelOpen={canvas?.kind === 'receipt' && canvas.id === fileId}
-						onOpen={() => openCanvas('receipt', fileId)}
-					/>
+					<ChatReceiptStatus status={receiptStatus.status} />
 				{/if}
 			{/snippet}
 		</ChatMessages>
