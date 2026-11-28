@@ -149,10 +149,25 @@ void main() {
         expect(body['category_id'], 'cat-food');
         expect(body['name'], 'Lunch');
         expect(body.containsKey('attachment_ids'), isFalse);
+        expect(body.containsKey('source'), isFalse);
         final day = DateTime.parse(body['date'] as String).toLocal();
         expect([day.year, day.month, day.day, day.hour], [2026, 1, 5, 12]);
       },
     );
+
+    test('a form seeded from a receipt says so, so the API tidies it', () {
+      final body = TransactionDto.body(
+        NewTransactionDraft(
+          type: TransactionType.expense,
+          amount: Decimal.parse('87500'),
+          date: DateTime(2026, 11, 2),
+          walletId: 'w-cash',
+          note: 'WARUNG TEKKO',
+          source: 'receipt',
+        ),
+      );
+      expect(body['source'], 'receipt');
+    });
   });
 
   group('MOB-4 TransactionsRepositoryRemote', () {
