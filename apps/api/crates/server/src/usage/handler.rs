@@ -2,7 +2,7 @@
 
 use axum::{extract::State, Json};
 use oewang_db::repositories::{plans, usage, vault};
-use oewang_domain::{AppError, Envelope};
+use oewang_domain::{AppError, Envelope, Feature};
 use serde::Serialize;
 
 use crate::{
@@ -26,6 +26,20 @@ pub struct PlanView {
     pub name: String,
     pub max_tokens_month: Option<i64>,
     pub max_storage_bytes: Option<i64>,
+    /// Feature keys, so the app can hide what the plan leaves out (PLN-7).
+    pub features: Vec<Feature>,
+}
+
+impl From<plans::WorkspacePlan> for PlanView {
+    fn from(plan: plans::WorkspacePlan) -> Self {
+        Self {
+            id: plan.plan_id,
+            name: plan.name,
+            max_tokens_month: plan.max_tokens_month,
+            max_storage_bytes: plan.max_storage_bytes,
+            features: plan.features,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Default)]
@@ -71,12 +85,7 @@ pub async fn get(
         Ok::<_, AppError>(UsageView {
             storage,
             ai: summarize(rows),
-            plan: PlanView {
-                id: plan.plan_id,
-                name: plan.name,
-                max_tokens_month: plan.max_tokens_month,
-                max_storage_bytes: plan.max_storage_bytes,
-            },
+            plan: plan.into(),
         })
     }
     .await;
@@ -151,5 +160,26 @@ mod tests {
         assert_eq!((view.month.input, view.month.output), (15, 3));
         assert_eq!((view.total.input, view.total.output), (35, 7));
         assert_eq!(view.by_feature.len(), 2);
+    }
+
+    /// PLN-7: the app hides what the plan leaves out, so the keys go out.
+    #[test]
+    fn should_send_the_plan_with_its_feature_keys() {
+        let view = PlanView::from(plans::WorkspacePlan {
+            plan_id: "basic".into(),
+            name: "Basic".into(),
+            max_tokens_month: Some(500_000),
+            max_storage_bytes: None,
+            features: vec![Feature::Chat, Feature::ReceiptScan],
+        });
+        let json = serde_json::to_value(&view).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "id": "basic", "name": "Basic",
+                "max_tokens_month": 500_000, "max_storage_bytes": null,
+                "features": ["chat", "receipt_scan"],
+            })
+        );
     }
 }

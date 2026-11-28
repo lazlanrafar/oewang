@@ -107,11 +107,12 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
           "total": { "input": 610002, "output": 40120 }, "calls": 57 }
       ]
     },
-    "plan": { "id": "free", "name": "Free", "max_tokens_month": null, "max_storage_bytes": null }
+    "plan": { "id": "free", "name": "Free", "max_tokens_month": null, "max_storage_bytes": null,
+              "features": ["chat", "telegram", "receipt_scan", "statement_import", "mcp", "vault"] }
 } }
 ```
 
-`storage` is `SUM(size)` and the count over ready, live files; nothing stores it. `month` is since the first of the current calendar month in UTC. The headline `month` and `total` are summed from the `by_feature` rows, so the cards and the table on the settings page cannot disagree. `calls` counts all time. `plan` is the workspace's plan and the limits these figures are measured against: `ai.month` input plus output against `max_tokens_month`, `storage.bytes` against `max_storage_bytes`. A null limit is unlimited ([usage](../features/usage.md), [plans](../features/plans.md)).
+`storage` is `SUM(size)` and the count over ready, live files; nothing stores it. `month` is since the first of the current calendar month in UTC. The headline `month` and `total` are summed from the `by_feature` rows, so the cards and the table on the settings page cannot disagree. `calls` counts all time. `plan` is the workspace's plan and the limits these figures are measured against: `ai.month` input plus output against `max_tokens_month`, `storage.bytes` against `max_storage_bytes`. A null limit is unlimited. `features` lists the keys the plan includes, so the app can hide or disable what it leaves out ([usage](../features/usage.md), [plans](../features/plans.md)).
 
 ## Wallet groups
 
