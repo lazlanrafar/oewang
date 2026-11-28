@@ -18,6 +18,7 @@
 		app,
 		installed,
 		available = true,
+		planReason = null,
 		busy = false,
 		onDetails,
 		onConnect,
@@ -27,6 +28,8 @@
 		installed: boolean;
 		/** False when the server has no bot configured. */
 		available?: boolean;
+		/** Why the workspace's plan keeps Connect off, or null (PLN-7). */
+		planReason?: string | null;
 		busy?: boolean;
 		onDetails: () => void;
 		onConnect: () => void;
@@ -44,7 +47,9 @@
 
 	<div class="flex items-center gap-2 px-6 pt-2 pb-4">
 		<h2 class="text-base leading-none font-medium">{t(app.nameKey)}</h2>
-		{#if !available}
+		{#if planReason}
+			<Badge variant="muted" title={planReason}>{t('plan.not_included_badge')}</Badge>
+		{:else if !available}
 			<Badge variant="muted">{t('apps.unavailable')}</Badge>
 		{/if}
 	</div>
@@ -60,7 +65,7 @@
 		{#if installed}
 			<Button variant="secondary" disabled={busy} onclick={onDisconnect}>{t('apps.disconnect')}</Button>
 		{:else}
-			<Button variant="outline" disabled={!available || busy} onclick={onConnect}>
+			<Button variant="outline" disabled={!available || planReason !== null || busy} onclick={onConnect}>
 				{t('apps.connect')}
 			</Button>
 		{/if}

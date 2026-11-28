@@ -44,7 +44,9 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 		// Queued receipts that ended since the last page (D95). A failure to
 		// read them never blocks the shell.
 		receiptNotices(locals.accessToken).catch(() => null),
-		// The sidebar's usage figures (D92). Never blocks the shell either.
+		// The sidebar's usage figures (D92) and the plan that limits them,
+		// whose features gate the entry points (PLN-7). Never blocks the
+		// shell either: without it nothing is withheld and the API refuses.
 		workspaceUsage(locals.accessToken).catch(() => null)
 	]);
 	const [me, workspaces, wallets, groups, categories, contacts, currencies, notices, usage] = await shell.catch(
@@ -94,7 +96,13 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url }) => {
 			? {
 					tokens: usage.data.ai.month.input + usage.data.ai.month.output,
 					bytes: usage.data.storage.bytes,
-					files: usage.data.storage.files
+					files: usage.data.storage.files,
+					plan: {
+						name: usage.data.plan.name,
+						max_tokens_month: usage.data.plan.max_tokens_month,
+						max_storage_bytes: usage.data.plan.max_storage_bytes,
+						features: usage.data.plan.features
+					}
 				}
 			: null,
 		sidebarOpen: cookies.get(SIDEBAR_COOKIE) !== 'false'

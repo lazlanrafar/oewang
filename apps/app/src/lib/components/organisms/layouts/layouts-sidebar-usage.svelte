@@ -1,28 +1,33 @@
 <script lang="ts" module>
-	/** The figures the sidebar shows; the settings page has the breakdown. */
-	export type SidebarUsage = { tokens: number; bytes: number; files: number };
-
-	/*
-	 * What a full bar stands for. Nothing is limited (D92): these are a
-	 * yardstick for the bar, never enforced anywhere, and a month past one
-	 * reads over 100% with the bar full.
-	 * shortcut: fixed in the source, upgrade to a per-workspace figure from the API once a quota exists.
+	/**
+	 * The figures the sidebar shows, and the plan they are measured against
+	 * (D128). A null limit is unlimited. The settings page has the breakdown.
 	 */
-	const TOKEN_REFERENCE = 1_000_000;
-	const STORAGE_REFERENCE_BYTES = 1024 * 1024 * 1024;
+	export type SidebarUsage = {
+		tokens: number;
+		bytes: number;
+		files: number;
+		plan: {
+			name: string;
+			max_tokens_month: number | null;
+			max_storage_bytes: number | null;
+			features: string[];
+		};
+	};
 </script>
 
 <script lang="ts">
 	/**
 	 * Usage at the foot of the sidebar, laid out as the old app's `NavUsage`:
 	 * a muted caps label with the percentage at the right, the figure over
-	 * its reference, and a thin bar. The old one measured against a plan's
-	 * quota; there is none, so the reference above stands in for it. It
+	 * the plan's limit, and a thin bar. An unlimited figure stands alone,
+	 * with no bar and no percentage, since there is nothing to fill. It
 	 * opens the usage page, which breaks both figures down.
 	 */
 	import { Progress } from '$lib/components/atoms/progress';
 	import { formatBytes } from '$lib/files';
 	import { t } from '$lib/i18n';
+	import { limitPercent } from '$lib/plans';
 
 	let { usage, onNavigate }: { usage: SidebarUsage; onNavigate?: () => void } = $props();
 
@@ -31,24 +36,26 @@
 	// keeps the exact figure.
 	const numbers = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
-	const rows = $derived([
-		{
-			label: t('settings.usage_tokens_month'),
-			figure: t('settings.usage_of_reference', {
-				used: numbers.format(usage.tokens),
-				reference: numbers.format(TOKEN_REFERENCE)
-			}),
-			percent: (usage.tokens / TOKEN_REFERENCE) * 100
-		},
-		{
-			label: t('settings.usage_storage'),
-			figure: `${t('settings.usage_of_reference', {
-				used: formatBytes(usage.bytes),
-				reference: formatBytes(STORAGE_REFERENCE_BYTES)
-			})} · ${t('vault.storage.files', { count: usage.files })}`,
-			percent: (usage.bytes / STORAGE_REFERENCE_BYTES) * 100
-		}
-	]);
+	/** "used / limit", or the used figure alone when there is no limit. */
+	const ofLimit = (used: string, limit: string | null) =>
+		limit === null ? used : t('settings.usage_of_reference', { used, reference: limit });
+
+	const rows = $derived.by(() => {
+		const tokenLimit = usage.plan.max_tokens_month;
+		const storageLimit = usage.plan.max_storage_bytes;
+		return [
+			{
+				label: t('settings.usage_tokens_month'),
+				figure: ofLimit(numbers.format(usage.tokens), tokenLimit === null ? null : numbers.format(tokenLimit)),
+				percent: limitPercent(usage.tokens, tokenLimit)
+			},
+			{
+				label: t('settings.usage_storage'),
+				figure: `${ofLimit(formatBytes(usage.bytes), storageLimit === null ? null : formatBytes(storageLimit))} · ${t('vault.storage.files', { count: usage.files })}`,
+				percent: limitPercent(usage.bytes, storageLimit)
+			}
+		];
+	});
 </script>
 
 <a
@@ -65,11 +72,15 @@
 					</span>
 					<span class="text-caption text-subtle mt-1 truncate leading-none tabular-nums">{row.figure}</span>
 				</span>
-				<span class="text-caption text-subtle shrink-0 leading-none font-medium tabular-nums">
-					{Math.round(row.percent)}%
-				</span>
+				{#if row.percent !== null}
+					<span class="text-caption text-subtle shrink-0 leading-none font-medium tabular-nums">
+						{Math.round(row.percent)}%
+					</span>
+				{/if}
 			</span>
-			<Progress value={Math.min(row.percent, 100)} class="h-1" aria-label={row.label} />
+			{#if row.percent !== null}
+				<Progress value={Math.min(row.percent, 100)} class="h-1" aria-label={row.label} />
+			{/if}
 		</span>
 	{/each}
 </a>

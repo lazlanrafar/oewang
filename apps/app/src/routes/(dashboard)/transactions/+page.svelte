@@ -70,11 +70,13 @@
 	import { canvasParams, readCanvas } from '$lib/canvas';
 	import { messageForCode, toastRefusal } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { notInPlan } from '$lib/plans';
 	import { pageTitle } from '$lib/page-title';
 	import { absDecimal, trimZeros } from '$lib/money';
 	import { toDetail } from '$lib/transaction-detail';
 	import { isoDay, toRow } from '$lib/transactions';
 	import { readParam, readText, readValues, reloading, writeParams } from '$lib/url-state';
+	import { featureGate } from '$lib/workspace-data.svelte';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -705,6 +707,13 @@
 	const canvas = $derived(readCanvas(page.url));
 
 	let scanOpen = $state(false);
+	/*
+	 * The web uploads a receipt into the vault before it asks for the read,
+	 * so scanning needs both features; the dialog names the missing one in
+	 * place of the dropzone (PLN-7).
+	 */
+	const gate = featureGate();
+	const scanOff = $derived(gate('receipt_scan', 'vault'));
 	/** The dropzone's own list, cleared the moment the panel takes over. */
 	let scanned = $state<UploadedFile[]>([]);
 	let confirming = $state(false);
@@ -1213,7 +1222,11 @@
 		</Dialog.Header>
 
 		<div class="py-2">
-			<FileDropzone bind:files={scanned} {...attachmentDropzone()} />
+			{#if scanOff}
+				<p class="text-subtle text-small" role="status">{notInPlan(scanOff)}</p>
+			{:else}
+				<FileDropzone bind:files={scanned} {...attachmentDropzone()} />
+			{/if}
 		</div>
 	</Dialog.Content>
 </Dialog.Root>

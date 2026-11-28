@@ -12,6 +12,7 @@
 	import { enhance, type SubmitFunction } from '$app/forms';
 	import { page } from '$app/state';
 
+	import * as Alert from '$lib/components/atoms/alert';
 	import { Button } from '$lib/components/atoms/button';
 	import { Separator } from '$lib/components/atoms/separator';
 	import { ConfirmDialog } from '$lib/components/molecules/confirm-dialog';
@@ -82,6 +83,12 @@
 	<SettingsSectionHeader title={t('account.mcp.title')} description={t('account.mcp.description')} />
 
 	<FormError message={form?.code && !sheetOpen ? messageForCode(form.code) : undefined} />
+
+	{#if !data.mcpInPlan}
+		<Alert.Root>
+			<Alert.Description>{t('plan.mcp_note', { workspace: data.me.workspace.name })}</Alert.Description>
+		</Alert.Root>
+	{/if}
 
 	<SettingsSectionGroup
 		title={t('account.mcp.connect_title')}

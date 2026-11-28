@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
-	 * Usage (D92): stored bytes and AI tokens, by feature. No limit and no
-	 * plan, so there is no percentage and nothing to upgrade; this is the
-	 * record a limit would one day read.
+	 * Usage (D92): stored bytes and AI tokens, by feature, and the plan's
+	 * limits they are measured against (D128). The figures stay exact; the
+	 * sidebar is where they are rounded and drawn as bars.
 	 */
 	import { StatCard } from '$lib/components/molecules/stat-card';
 	import * as Table from '$lib/components/atoms/table';
@@ -42,6 +42,10 @@
 
 	const tokens = (pair: { input: number; output: number }) =>
 		t('settings.usage_tokens_detail', { input: count(pair.input), output: count(pair.output) });
+
+	/** A card's hint with the plan's limit after it; null reads as no limit (PLN-7). */
+	const withLimit = (hint: string, limit: string | null) =>
+		`${hint} · ${limit === null ? t('settings.usage_no_limit') : t('settings.usage_limit', { limit })}`;
 </script>
 
 <svelte:head>
@@ -56,16 +60,22 @@
 
 	{#if data.usage}
 		{@const usage = data.usage}
+		{@const storageLimit = usage.plan.max_storage_bytes}
+		{@const tokenLimit = usage.plan.max_tokens_month}
+		<p class="text-small">{t('settings.usage_plan', { name: usage.plan.name })}</p>
 		<div class="grid gap-4 sm:grid-cols-3">
 			<StatCard
 				label={t('settings.usage_storage')}
 				value={bytes(usage.storage.bytes)}
-				hint={t('settings.usage_storage_detail', { count: count(usage.storage.files) })}
+				hint={withLimit(
+					t('settings.usage_storage_detail', { count: count(usage.storage.files) }),
+					storageLimit === null ? null : formatBytes(storageLimit)
+				)}
 			/>
 			<StatCard
 				label={t('settings.usage_tokens_month')}
 				value={counted(usage.ai.month.input + usage.ai.month.output)}
-				hint={tokens(usage.ai.month)}
+				hint={withLimit(tokens(usage.ai.month), tokenLimit === null ? null : count(tokenLimit))}
 			/>
 			<StatCard
 				label={t('settings.usage_tokens_total')}

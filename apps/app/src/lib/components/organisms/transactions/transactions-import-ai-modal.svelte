@@ -108,7 +108,8 @@
 				</div>
 
 				{#if errorCode}
-					<p class="text-destructive text-small" role="alert">{messageForCode(errorCode)}</p>
+					<!-- Starting a job is refused for `statement_import` only (plans.md); uploads say their own. -->
+					<p class="text-destructive text-small" role="alert">{messageForCode(errorCode, 'statement_import')}</p>
 				{/if}
 			{:else if phase === 'pending'}
 				<!-- Polling. The wall-clock budget is looser here than for a

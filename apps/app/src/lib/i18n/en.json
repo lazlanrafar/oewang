@@ -364,7 +364,16 @@
 		"user_disabled": "This account is disabled. Contact oewang support.",
 		"workspace_suspended": "This workspace is suspended. Contact oewang support.",
 		"console_role_in_use": "Operators still hold this role. Give them another role first.",
-		"plan_in_use": "Workspaces still hold this plan. Give them another plan first."
+		"plan_in_use": "Workspaces still hold this plan. Give them another plan first.",
+		"quota_tokens_exceeded": "This workspace has used its AI tokens for this month. They renew on the first of next month (UTC), or oewang support can change the plan.",
+		"quota_storage_exceeded": "This workspace has no storage left on its plan. Delete files from the vault, or ask oewang support to change the plan.",
+		"feature_not_in_plan": "This workspace's plan does not include this. Contact oewang support to change the plan.",
+		"feature_not_in_plan_named": "This workspace's plan does not include {feature}. Contact oewang support to change the plan."
+	},
+	"plan": {
+		"not_included": "{feature} is not in this workspace's plan.",
+		"not_included_badge": "Not in plan",
+		"mcp_note": "The plan of {workspace} does not include MCP, so an AI app's calls in it are refused. Your tokens still work in the other workspaces they reach."
 	},
 	"style": {
 		"title": "Design system",
@@ -445,7 +454,10 @@
 		"assistant_unavailable": "The assistant's settings could not be read just now, so they are not shown. Nothing has changed. Reload to try again.",
 		"nav_usage": "Usage",
 		"usage_title": "Usage",
-		"usage_description": "What this workspace stores and what the assistant has spent. Recorded and shown, with no limit for now.",
+		"usage_description": "What this workspace stores and what the assistant has spent, against the limits of its plan.",
+		"usage_plan": "Plan: {name}",
+		"usage_limit": "limit {limit}",
+		"usage_no_limit": "no limit",
 		"usage_storage": "Storage",
 		"usage_storage_detail": "{count} {count|file|files} in the vault",
 		"usage_of_reference": "{used} / {reference}",

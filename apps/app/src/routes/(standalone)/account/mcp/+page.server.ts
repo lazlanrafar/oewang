@@ -3,6 +3,7 @@ import { fail, type Actions } from '@sveltejs/kit';
 import { ApiError } from '$lib/server/api';
 import { run, text } from '$lib/server/form-action';
 import * as mcp from '$lib/server/mcp';
+import { workspaceUsage } from '$lib/server/usage';
 
 import type { PageServerLoad } from './$types';
 
@@ -12,13 +13,19 @@ import type { PageServerLoad } from './$types';
  * workspace, which is why this is here and not in a workspace's settings.
  */
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const [tokens, connections] = await Promise.all([
+	const [tokens, connections, usage] = await Promise.all([
 		mcp.listTokens(locals.accessToken).catch(() => null),
-		mcp.listConnections(locals.accessToken).catch(() => null)
+		mcp.listConnections(locals.accessToken).catch(() => null),
+		// MCP is limited per workspace and this page is per person, so it
+		// notes when the current workspace's plan leaves MCP out rather than
+		// hiding anything (PLN-7). Outside the dashboard, so its own read; a
+		// failed one shows no note.
+		workspaceUsage(locals.accessToken).catch(() => null)
 	]);
 	return {
 		tokens: tokens?.data ?? [],
 		connections: connections?.data ?? [],
+		mcpInPlan: usage?.data ? usage.data.plan.features.includes('mcp') : true,
 		mcpUrl: `${url.origin}/mcp`
 	};
 };

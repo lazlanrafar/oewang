@@ -22,7 +22,7 @@
 		PageSkeleton
 	} from '$lib/components/organisms/layouts';
 	import { t } from '$lib/i18n';
-	import { setWorkspaceLists } from '$lib/workspace-data.svelte';
+	import { setWorkspaceFeatures, setWorkspaceLists } from '$lib/workspace-data.svelte';
 	import { applyColors, colorStyle } from '$lib/colors';
 	import { formatMoney } from '$lib/money';
 	import { roleLabel } from '$lib/workspaces';
@@ -36,6 +36,7 @@
 	 * reaches the pickers already on screen.
 	 */
 	setWorkspaceLists(() => data.lists);
+	setWorkspaceFeatures(() => data.usage?.plan.features ?? null);
 
 	/*
 	 * Queued receipts that ended while the person was away (D95): each is

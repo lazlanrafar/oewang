@@ -65,6 +65,8 @@ export type ApiErrorBody = {
 	message: string;
 	hint?: string;
 	fields?: Record<string, string>;
+	/** `FEATURE_NOT_IN_PLAN` names the feature here (PLN-7). */
+	details?: Record<string, unknown>;
 	request_id: string;
 };
 
@@ -73,6 +75,8 @@ export class ApiError extends Error {
 	readonly code: string;
 	readonly status: number;
 	readonly fields?: Record<string, string>;
+	/** The plan feature a `FEATURE_NOT_IN_PLAN` refusal names (PLN-7). */
+	readonly feature?: string;
 
 	constructor(status: number, body: ApiErrorBody) {
 		super(body.message);
@@ -80,6 +84,7 @@ export class ApiError extends Error {
 		this.code = body.code;
 		this.status = status;
 		this.fields = body.fields;
+		if (typeof body.details?.feature === 'string') this.feature = body.details.feature;
 	}
 }
 

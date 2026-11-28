@@ -20,6 +20,8 @@ export type WorkspaceUsage = {
 		name: string;
 		max_tokens_month: number | null;
 		max_storage_bytes: number | null;
+		/** Feature keys the plan includes (`PlanFeature`). */
+		features: string[];
 	};
 };
 

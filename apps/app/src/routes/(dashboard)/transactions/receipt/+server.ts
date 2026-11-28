@@ -42,7 +42,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			await queueReceipt(fileId, locals.accessToken);
 			return json({ queued: true }, { status: 202 });
 		}
-		if (failure instanceof ApiError) error(failure.status, failure.code);
+		if (failure instanceof ApiError) error(failure.status, failure.code, { feature: failure.feature });
 		throw failure;
 	}
 };

@@ -1,6 +1,6 @@
 # Feature: Plans
 
-Status: v0.2, 2026-11-28. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) PLN-1 to PLN-8. Decision D128. Epic OEW-130, stories OEW-131 to OEW-134.
+Status: v0.3, 2026-11-28. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) PLN-1 to PLN-8. Decision D128. Epic OEW-130, stories OEW-131 to OEW-134.
 
 A plan limits a workspace: AI tokens per calendar month, stored bytes, and which features it may use. Operators define plans and assign them in the [console](console.md). There is no payment and no self-serve upgrade.
 
@@ -113,6 +113,33 @@ All three refusals are 403. Not 402, because there is no payment to make (PLN-8)
 | `QUOTA_TOKENS_EXCEEDED` | 403 | A model call at or past the plan's monthly token limit (OEW-132) |
 | `QUOTA_STORAGE_EXCEEDED` | 403 | An upload that would take stored bytes past the plan's limit (OEW-132) |
 | `FEATURE_NOT_IN_PLAN` | 403 | A feature the plan does not include, at one of the entry points above; `details.feature` names it (OEW-133) |
+
+## In the app (OEW-134)
+
+The usage endpoint's `plan` carries `features`, the keys the plan includes. The dashboard layout reads it once per navigation (it already did for the sidebar) and publishes the keys through `$lib/workspace-data.svelte.ts`; a page asks `featureGate()('receipt_scan', 'vault')` for the first one missing. One read, no per-page fetch. When the read fails nothing is withheld: the API still refuses, and a failed read must not take every entry point away. The reason a control is off reads "{feature} is not in this workspace's plan." (`plan.not_included`).
+
+| Feature | What the web app does without it |
+|---|---|
+| `chat` | The composer (`chat-input.svelte`) is disabled with the reason as its placeholder, on the conversation page and the overview. The chat page's suggestions and the overview's chips are disabled; an overview card that asks says the reason in a toast. Past conversations stay open, renamable and deletable |
+| `receipt_scan` | The transactions page's "Scan receipt" dialog shows the reason in place of the dropzone. Needs `vault` too, and names whichever is missing |
+| `statement_import` | The import page's statement button is disabled with the reason beneath it. Needs `vault` too. CSV and spreadsheet import stay |
+| `vault` | The vault page's Upload button is disabled with the reason under the title, the empty state offers no upload, and a drop does nothing. Listing, opening and editing files stay. The composer's attach button is disabled with the reason as its title, and a file dropped on it says the reason |
+| `telegram` | The Apps page's Connect is disabled, the card shows a "Not in plan" badge and the detail sheet the reason. An existing link stays shown and can be disconnected |
+| `mcp` | Nothing is hidden: tokens belong to a person and MCP is limited per workspace. `/account/mcp` reads the plan itself (it is outside the dashboard) and notes that the current workspace's plan leaves MCP out, and that a token still works in the other workspaces it reaches |
+
+Every other upload control (a transaction's attachments, the file picker inside a dropzone) is left to the refusal below.
+
+### Refusals in the app
+
+`$lib/errors.ts` maps the three codes to `errors.quota_tokens_exceeded`, `errors.quota_storage_exceeded` and `errors.feature_not_in_plan`. For `FEATURE_NOT_IN_PLAN`, `details.feature` is carried to the page and named (`errors.feature_not_in_plan_named`, with the console's feature label); a feature this build does not know gets the generic sentence. The API client keeps `details.feature` on `ApiError.feature`, and a route passes it on as `error(status, code, { feature })` or in a form action's `fail()`. How each surface shows it:
+
+| Surface | Where the message appears |
+|---|---|
+| Chat | The stream route answers the refusal before the stream opens; the page reads its code and shows it under the conversation, where a failed turn's error already shows |
+| Receipt scan | The receipt panel's failed state (`requestReceipt` carries code and feature) |
+| Statement import | The statement modal's error line when starting a job; a token refusal inside an accepted job arrives as the job's `error` and shows in the same modal |
+| Uploads (vault, receipt, statement, chat attachments) | Every web upload starts at `POST /vault/files`; `uploadErrorMessage` turns a plan refusal into its sentence, so the dropzone, the composer's toast and the vault page's upload toast say it instead of "upload failed" |
+| Telegram connect | The Apps page's form error |
 
 ## Related docs
 

@@ -56,16 +56,17 @@ The Rust client read the AI service's map-columns answer, `{mapping, model}`, as
 
 | Part | Shows |
 |---|---|
-| Storage | Bytes used and the file count |
-| AI tokens this month | Input and output since the first of the current calendar month, UTC |
+| Plan | The workspace's plan by name |
+| Storage | Bytes used and the file count, and the plan's storage limit or "no limit" |
+| AI tokens this month | Input and output since the first of the current calendar month, UTC, and the plan's monthly token limit or "no limit" |
 | AI tokens all time | Input and output |
 | By feature | Feature, calls, this month, all time |
 
-The headline figures are summed from the per-feature rows in the API, so the cards and the table cannot disagree. The vault page's header shows the same storage figure.
+The headline figures are summed from the per-feature rows in the API, so the cards and the table cannot disagree. Figures and limits are exact here; only the sidebar rounds them. The vault page's header shows the same storage figure.
 
 ## The sidebar
 
-The foot of the app's sidebar shows this month's AI tokens (input plus output) and the vault's stored bytes and file count, and opens `/settings/usage`. It is laid out like the old app's `NavUsage`: a muted caps label with a percentage, the figure over a reference, and a thin bar. The old one measured against a plan's quota; there is none, so the bar is measured against fixed references in `layouts-sidebar-usage.svelte`, 1M tokens a month and 1 GB of storage. They are a yardstick for the bar and are enforced nowhere: a workspace past one reads over 100% with the bar full, and nothing is refused. A real quota, if one is ever built, replaces them with a per-workspace figure from the API. The dashboard layout reads it alongside the pickers' lists, so it refreshes whenever the layout does (a navigation that reloads it, or any form action); a failed read leaves it out rather than blocking the shell. It is hidden on the collapsed rail, and the console's sidebar has none.
+The foot of the app's sidebar shows this month's AI tokens (input plus output) and the vault's stored bytes and file count, and opens `/settings/usage`. It is laid out like the old app's `NavUsage`: a muted caps label with a percentage, the figure over the plan's limit, and a thin bar, in `layouts-sidebar-usage.svelte`. Both are measured against the workspace's [plan](plans.md) (`plan.max_tokens_month`, `plan.max_storage_bytes` from the usage endpoint), the same limits the API enforces. Past a limit reads over 100% with the bar full; a zero limit reads full. An unlimited (null) limit shows the figure alone, with no bar and no percentage, since there is nothing to fill. Tokens are compact ("153.3K / 500K") because the sidebar is narrow. The dashboard layout reads the endpoint alongside the pickers' lists, so it refreshes whenever the layout does (a navigation that reloads it, or any form action), and publishes the plan's features to the pages from the same read ([plans](plans.md#in-the-app-oew-134)). A failed read leaves the block out and withholds no feature, rather than blocking the shell. It is hidden on the collapsed rail, and the console's sidebar has none.
 
 ## Testing
 

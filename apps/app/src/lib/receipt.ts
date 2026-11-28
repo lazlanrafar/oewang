@@ -15,6 +15,7 @@
  * digits themselves.
  */
 
+import { readRefusal } from '$lib/errors';
 import { addDecimals, compareDecimals } from '$lib/money';
 
 export type ReceiptLineItem = {
@@ -253,7 +254,8 @@ export type ReceiptRequest =
 	| { status: 'unreadable' }
 	/** The reader did not answer; the receipt waits in the vault and is saved when it does (D95). */
 	| { status: 'queued' }
-	| { status: 'failed'; code: string };
+	/** `feature` is the one a `FEATURE_NOT_IN_PLAN` refusal names (PLN-7). */
+	| { status: 'failed'; code: string; feature?: string };
 
 /** The app's own route. The browser never calls the API (D5). */
 const RECEIPT_ROUTE = '/transactions/receipt';
@@ -285,8 +287,10 @@ export async function requestReceipt(
 	if (response.status === 202) return { status: 'queued' };
 
 	if (!response.ok) {
-		const code = await failureCode(response);
-		return code === 'RECEIPT_UNREADABLE' ? { status: 'unreadable' } : { status: 'failed', code };
+		const refused = await readRefusal(response);
+		return refused.code === 'RECEIPT_UNREADABLE'
+			? { status: 'unreadable' }
+			: { status: 'failed', ...refused };
 	}
 
 	let body: unknown;
@@ -300,16 +304,6 @@ export async function requestReceipt(
 	// A 200 with nothing usable in it is the same situation as a 422: the
 	// image did not become a draft, and the manual form is the way on.
 	return parsed === null ? { status: 'unreadable' } : { status: 'ready', parsed };
-}
-
-/** The code SvelteKit's `error()` carried, or a generic one. */
-async function failureCode(response: Response): Promise<string> {
-	try {
-		const body = (await response.json()) as { message?: unknown };
-		return typeof body.message === 'string' ? body.message : 'STREAM_FAILED';
-	} catch {
-		return 'STREAM_FAILED';
-	}
 }
 
 export type ReceiptFormItem = {

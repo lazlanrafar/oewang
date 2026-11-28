@@ -171,7 +171,7 @@
 	</div>
 {:else if request?.status === 'failed'}
 	<div class="space-y-4 px-6 py-6">
-		<p class="text-destructive text-small" role="alert">{messageForCode(request.code)}</p>
+		<p class="text-destructive text-small" role="alert">{messageForCode(request.code, request.feature)}</p>
 		<Button type="button" variant="outline" onclick={() => fileId && read(fileId)}>
 			{t('common.retry')}
 		</Button>

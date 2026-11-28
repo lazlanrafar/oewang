@@ -296,6 +296,15 @@ describe('requestReceipt', () => {
 		expect(result).toEqual({ status: 'failed', code: 'RATE_LIMITED' });
 	});
 
+	it('carries the feature a plan left out, so the panel can name it (PLN-7)', async () => {
+		const result = await requestReceipt(
+			'clxfile',
+			answering({ message: 'FEATURE_NOT_IN_PLAN', feature: 'receipt_scan' }, { status: 403 })
+		);
+
+		expect(result).toEqual({ status: 'failed', code: 'FEATURE_NOT_IN_PLAN', feature: 'receipt_scan' });
+	});
+
 	it('treats a 200 with nothing usable in it as unreadable', async () => {
 		expect(await requestReceipt('clxfile', answering({ data: null }))).toEqual({
 			status: 'unreadable'
