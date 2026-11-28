@@ -5,7 +5,7 @@
 	 * theme, and Log out in red. Billing, notifications and language are not
 	 * here, because each belongs to a feature this product does not have.
 	 *
-	 * The trigger shows the name and the role beside the avatar. The console
+	 * The trigger shows the name and email beside the avatar. The console
 	 * uses it too, with the operator's role and
 	 * without Account and MCP, which live on the app's host only (D124).
 	 */
@@ -62,11 +62,12 @@
 				class="flex cursor-pointer items-center gap-3"
 				aria-label={t('account.menu_label')}
 			>
-				<!-- Who is signed in and as what, read without opening the menu.
-				     Hidden on a phone, where the bar has no room for it. -->
+				<!-- Who is signed in, read without opening the menu; the role is
+				     the switcher's line, so it is not repeated here. Hidden on a
+				     phone, where the bar has no room for it. -->
 				<span class="hidden min-w-0 gap-0.5 text-right leading-tight sm:grid">
 					<span class="text-body max-w-48 truncate font-medium">{name || email}</span>
-					{#if role}<span class="text-caption text-subtle max-w-48 truncate tracking-wider uppercase">{role}</span>{/if}
+					{#if name}<span class="text-caption text-subtle max-w-48 truncate">{email}</span>{/if}
 				</span>
 				<Avatar.Root class="size-9 shrink-0 rounded-full">
 					{#if photo}<Avatar.Image src={photo} alt="" />{/if}
