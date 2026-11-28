@@ -36,7 +36,7 @@
 			name={data.operator.name}
 			email={data.operator.email}
 			photo={null}
-			subtitle={data.operator.role.name}
+			role={data.operator.role.name}
 			accountLinks={false}
 		/>
 	{/snippet}

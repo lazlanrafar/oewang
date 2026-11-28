@@ -25,6 +25,7 @@
 	import { setWorkspaceLists } from '$lib/workspace-data.svelte';
 	import { applyColors, colorStyle } from '$lib/colors';
 	import { formatMoney } from '$lib/money';
+	import { roleLabel } from '$lib/workspaces';
 
 	let { children, data } = $props();
 
@@ -114,6 +115,7 @@
 			photo={data.me.user.profile_picture
 				? `/account/photo?v=${encodeURIComponent(data.me.user.profile_picture)}`
 				: null}
+			role={roleLabel(data.me.role)}
 		/>
 	{/snippet}
 

@@ -5,7 +5,8 @@
 	 * theme, and Log out in red. Billing, notifications and language are not
 	 * here, because each belongs to a feature this product does not have.
 	 *
-	 * The console uses it too, with a line for the operator's role and
+	 * The trigger shows the name and the role beside the avatar. The console
+	 * uses it too, with the operator's role and
 	 * without Account and MCP, which live on the app's host only (D124).
 	 */
 	import Check from '@lucide/svelte/icons/check';
@@ -25,15 +26,15 @@
 		name,
 		email,
 		photo,
-		subtitle,
+		role,
 		accountLinks = true
 	}: {
 		name: string | null;
 		email: string;
 		/** The photo's own URL on this app, or null for the initial. */
 		photo: string | null;
-		/** A third line under the email, such as the operator's console role. */
-		subtitle?: string;
+		/** The role this person holds here: the workspace role, or the operator's console role. */
+		role?: string;
 		/** Account and MCP; off where those pages are not served. */
 		accountLinks?: boolean;
 	} = $props();
@@ -55,8 +56,19 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<button {...props} type="button" class="rounded-full" aria-label={t('account.menu_label')}>
-				<Avatar.Root class="size-9 cursor-pointer rounded-full">
+			<button
+				{...props}
+				type="button"
+				class="flex cursor-pointer items-center gap-3"
+				aria-label={t('account.menu_label')}
+			>
+				<!-- Who is signed in and as what, read without opening the menu.
+				     Hidden on a phone, where the bar has no room for it. -->
+				<span class="hidden min-w-0 text-right leading-tight sm:grid">
+					<span class="max-w-48 truncate text-sm font-medium">{name || email}</span>
+					{#if role}<span class="text-subtle max-w-48 truncate text-xs">{role}</span>{/if}
+				</span>
+				<Avatar.Root class="size-9 shrink-0 rounded-full">
 					{#if photo}<Avatar.Image src={photo} alt="" />{/if}
 					<Avatar.Fallback class="rounded-full">{initial}</Avatar.Fallback>
 				</Avatar.Root>
@@ -68,7 +80,7 @@
 			<div class="grid min-w-0 flex-1 text-left text-sm leading-tight">
 				<span class="truncate font-semibold">{name || email}</span>
 				<span class="truncate text-muted-foreground text-xs">{email}</span>
-				{#if subtitle}<span class="truncate text-muted-foreground text-xs">{subtitle}</span>{/if}
+				{#if role}<span class="truncate text-muted-foreground text-xs">{role}</span>{/if}
 			</div>
 		</div>
 		<DropdownMenu.Separator />

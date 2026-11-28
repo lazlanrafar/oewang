@@ -311,7 +311,7 @@
 		<div class="w-56 border">
 			<WorkspaceSwitcher {workspaces} activeId="w1" />
 		</div>
-		<AccountMenu name="Sample person" email={workspace.secondary} photo={null} />
+		<AccountMenu name="Sample person" email={workspace.secondary} photo={null} role="Owner" />
 		<ThemeToggle />
 	</div>
 </Specimen>

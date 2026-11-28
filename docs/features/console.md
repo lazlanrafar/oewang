@@ -87,7 +87,7 @@ A role somebody holds cannot be deleted (`CONSOLE_ROLE_IN_USE`); deleting is sof
 
 ## The shell
 
-The console is drawn in the app's own shell, not a look of its own: `organisms/layouts/layouts-app-shell.svelte` is the dashboard's sidebar, header and content area, shared by both. The console passes its own sidebar groups (`consoleNavFor`, filtered by the operator's permissions) and a brand row in place of the workspace switcher; the account menu shows the role and has no account links, because `/account` is not served on the console host. Every console table is `molecules/data-table` with a column file per D81, and list screens carry no visible title. Overview, usage and health are stat cards and hatched charts (D93), as the app's overview is.
+The console is drawn in the app's own shell, not a look of its own: `organisms/layouts/layouts-app-shell.svelte` is the dashboard's sidebar, header and content area, shared by both. The console passes its own sidebar groups (`consoleNavFor`, filtered by the operator's permissions) and a brand row in place of the workspace switcher; the account menu shows the operator's role, beside the avatar in the top bar the way the app shows the workspace role, and has no account links, because `/account` is not served on the console host. Every console table is `molecules/data-table` with a column file per D81, and list screens carry no visible title. Overview, usage and health are stat cards and hatched charts (D93), as the app's overview is.
 
 ## Screens
 
