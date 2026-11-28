@@ -338,16 +338,21 @@ async def run_turn(
     """
     try:
         started = time.perf_counter()
+        # Attachments are validated on the way in and deliberately not
+        # forwarded: the prompt names them and no more. A receipt is text
+        # somebody else wrote, and the component that reads it is the one
+        # with no tools, never this one (D24, SEC-21). The capture path is
+        # POST /receipt/parse.
         system = build_system_prompt(
-            role=body.role, context=body.context, settings=body.settings, channel=body.channel
+            role=body.role,
+            context=body.context,
+            settings=body.settings,
+            channel=body.channel,
+            attachments=body.attachments,
         )
 
         messages: list[dict[str, Any]] = list(body.bounded_history())
         messages.append({"role": "user", "content": body.message})
-        # Attachments are validated on the way in and deliberately not
-        # forwarded. A receipt is text somebody else wrote, and the component
-        # that reads it is the one with no tools, never this one (D24, SEC-21).
-        # The capture path is POST /receipt/parse.
 
         client = model.model_client()
         usage = model.usage_report(0, 0, config.ai_chat_model)

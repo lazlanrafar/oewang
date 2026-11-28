@@ -13,9 +13,16 @@ another: balances arrive as strings and leave as the same strings.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date
 
-from app.modules.chat.schemas import AgentSettings, Channel, Role, WorkspaceContext
+from app.modules.chat.schemas import (
+    AgentSettings,
+    Attachment,
+    Channel,
+    Role,
+    WorkspaceContext,
+)
 
 CAPABILITY_BY_ROLE = {
     "owner": (
@@ -102,6 +109,16 @@ total, with controls to change the category or wallet or delete it. After a
 successful create_transaction, say at most one short line. Do not repeat
 anything the card shows."""
 
+#: Web only, and only on a turn that carries files (OEW-135). The model never
+#: sees a file (D24); without this it answers that nothing was attached while
+#: the receipt panel is reading it.
+ATTACHED_FILES = """\
+The user attached the files below to this message. You cannot see them, and
+you do not need to: a receipt is read in the receipt panel beside the
+conversation, where the user checks and confirms it. Never ask the user to
+upload or send a file again. Answer what the user wrote; if it is about the
+file, say the receipt panel is reading it."""
+
 ENTITY_LINKS = """\
 Transactions: [Name](#txn:TRANSACTION_ID)
 Wallets:      [Cash](#wallet:WALLET_ID)
@@ -158,11 +175,13 @@ def build_system_prompt(
     context: WorkspaceContext,
     settings: AgentSettings,
     channel: Channel = "web",
+    attachments: Sequence[Attachment] = (),
 ) -> str:
     """The whole system prompt for one turn.
 
     Wallets and categories are in here, which is why the workspace context
-    tool is rarely needed (CHAT-7).
+    tool is rarely needed (CHAT-7). The files the turn carries are named,
+    never read (D24).
     """
     sections = [
         ("Date context", "Computed for you. Never derive a date range yourself.\n\n"
@@ -197,5 +216,8 @@ def build_system_prompt(
         sections.append(("Analysis panel", ANALYSIS_PANEL))
         sections.append(("Saved card", SAVED_CARD))
         sections.append(("Entity links", ENTITY_LINKS))
+        if attachments:
+            files = "\n".join(f"- {file.type} [id: {file.vault_file_id}]" for file in attachments)
+            sections.append(("Attached files", f"{ATTACHED_FILES}\n\n{files}"))
 
     return "\n\n".join(f"## {title}\n\n{body}" for title, body in sections) + "\n"

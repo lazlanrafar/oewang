@@ -11,7 +11,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.modules.chat.prompt import build_system_prompt
-from app.modules.chat.schemas import AgentSettings, Category, Wallet, WorkspaceContext
+from app.modules.chat.schemas import (
+    AgentSettings,
+    Attachment,
+    Category,
+    Wallet,
+    WorkspaceContext,
+)
 
 GOLDEN = Path(__file__).parent / "golden" / "chat_system_prompt.txt"
 
@@ -146,3 +152,32 @@ def test_a_telegram_turn_is_asked_for_plain_text_without_links() -> None:
     # Everything that is a control stays.
     assert "You do no arithmetic" in prompt
     assert "A destructive tool needs a separate confirming turn" in prompt
+
+
+# OEW-135
+def test_a_turn_with_files_is_told_the_receipt_panel_reads_them() -> None:
+    """The model never sees a file (D24). Told nothing, it answers that no
+    file arrived while the panel beside it is reading the receipt."""
+    receipt = Attachment(
+        vault_file_id="clxfile1", type="image/jpeg", url="/v1/vault/files/clxfile1/chunks/0"
+    )
+    prompt = build_system_prompt(
+        role="owner", context=CONTEXT, settings=AgentSettings(), attachments=[receipt]
+    )
+
+    assert "## Attached files" in prompt
+    assert "- image/jpeg [id: clxfile1]" in prompt
+    assert "Never ask the user to" in prompt
+    # The file is named, never fetched: its address stays out of the prompt.
+    assert "/chunks/" not in prompt
+    # A turn without files, and a Telegram turn, carry no such section.
+    assert "## Attached files" not in build_system_prompt(
+        role="owner", context=CONTEXT, settings=AgentSettings()
+    )
+    assert "## Attached files" not in build_system_prompt(
+        role="owner",
+        context=CONTEXT,
+        settings=AgentSettings(),
+        channel="telegram",
+        attachments=[receipt],
+    )

@@ -110,7 +110,7 @@ The workspace context is supplied by the API (CHAT-7). The service does not fetc
 
 `turn_id` is minted by the API, one per user turn, and the service echoes it unchanged on every tool call it makes in that turn ([tool execution](../api/endpoints.md#post-v1internaltoolsexecute-body)). The service never mints one and never reuses one from an earlier turn: the per-turn caps are counted against it, so an id the service produced itself would be a budget the service hands itself.
 
-`attachments[].url` is a path on the API, not a signed storage URL: there are none (D23, VLT-3). It is read back through the API like any other file.
+`attachments[].url` is a path on the API, not a signed storage URL: there are none (D23, VLT-3). It is read back through the API like any other file. The chat loop never reads it: the prompt names each attachment by type and id and no more (D24, [system prompt](#system-prompt)).
 
 `context.timezone` is optional and currently absent: the data model carries no workspace timezone, so `today` is UTC and the prompt drops the timezone line rather than stating one it cannot know.
 
@@ -224,6 +224,8 @@ Categories:   [Food](#cat:CATEGORY_ID)
 Receipts:     [receipt.jpg](#file:FILE_ID)
 Navigation:   [Settings](#navigate:/settings)
 ```
+
+10. **Attached files** (web only, and only on a turn that carries `attachments`). One line per file, its type and vault id, and the note that the model cannot see them, that a receipt is read in the receipt panel beside the conversation, and that it never asks for a re-upload (OEW-135). The file is named, never fetched: the model still reads no file content (D24). A file sent with no words starts no turn at all ([chat](../features/chat.md#receipt-ocr)).
 
 The prompt is built in one module with one function, so a change is one diff and one test.
 
