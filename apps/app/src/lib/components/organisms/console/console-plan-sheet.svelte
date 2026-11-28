@@ -2,8 +2,9 @@
 	/**
 	 * One plan (PLN-1, OEW-131): create it, edit it, or read it. The two
 	 * limits are numbers where empty means unlimited, storage typed in MB;
-	 * the features are a checkbox list of the fixed set. The system plan is
-	 * read only, as the system console role is. The form posts to the page's
+	 * the features are a checkbox list of the fixed set. The system plan's
+	 * limits and features are edited like any plan's; its name is not, so
+	 * it shows read only (posted unchanged). The form posts to the page's
 	 * `?/create` or `?/update`.
 	 */
 	import { Button } from '$lib/components/atoms/button';
@@ -56,9 +57,6 @@
 	<Sheet.Content class="flex h-full flex-col rounded-none border-l p-0 shadow-none sm:max-w-[520px]">
 		<Sheet.Header class="bg-muted/5 shrink-0 space-y-1 border-b p-6 text-left">
 			<Sheet.Title class="font-serif text-xl font-normal">{title}</Sheet.Title>
-			{#if plan?.is_system}
-				<Sheet.Description class="text-muted-foreground text-xs">{t('console.plans.form.system_note')}</Sheet.Description>
-			{/if}
 		</Sheet.Header>
 
 		<!-- Keyed, so each plan starts from its own values, not the last one's draft. -->
@@ -80,8 +78,12 @@
 						maxlength={60}
 						value={plan?.name ?? ''}
 						disabled={readOnly}
+						readonly={plan?.is_system}
 						aria-invalid={fieldErrors?.name ? 'true' : undefined}
 					/>
+					{#if plan?.is_system}
+						<p class="text-subtle text-xs">{t('console.plans.form.system_name_hint')}</p>
+					{/if}
 					<FieldError message={fieldErrors?.name} />
 				</div>
 

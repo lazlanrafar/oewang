@@ -2,8 +2,8 @@
 	/**
 	 * The console's plans (PLN-1, OEW-131), the standard list screen (D81):
 	 * the search on the left of the header line, New plan on the right, the
-	 * table below. A row opens the plan's sheet, editable unless it is the
-	 * system plan.
+	 * table below. A row opens the plan's sheet, editable to an operator
+	 * with the permission; the system plan keeps its name and is not deleted.
 	 */
 	import Plus from '@lucide/svelte/icons/plus';
 
@@ -41,7 +41,7 @@
 	}
 	function openPlan(plan: ConsolePlan) {
 		current = plan;
-		mode = canManage && !plan.is_system ? 'edit' : 'view';
+		mode = canManage ? 'edit' : 'view';
 		sheetOpen = true;
 	}
 

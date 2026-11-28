@@ -647,7 +647,7 @@ export type TranslationKey =
 	| 'console.plans.form.name_label'
 	| 'console.plans.form.save'
 	| 'console.plans.form.storage_label'
-	| 'console.plans.form.system_note'
+	| 'console.plans.form.system_name_hint'
 	| 'console.plans.form.tokens_label'
 	| 'console.plans.form.view_title'
 	| 'console.plans.open_menu'

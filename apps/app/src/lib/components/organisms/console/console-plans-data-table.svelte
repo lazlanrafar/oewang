@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
 	 * The console's plans (PLN-1, OEW-131): the shared `DataTable` with its
-	 * own columns (D81). A row opens the plan's sheet. The system plan
-	 * carries no menu: the API refuses changing or deleting it.
+	 * own columns (D81). A row opens the plan's sheet. The system plan's
+	 * menu has no Delete: the API refuses deleting it.
 	 */
 	import Ellipsis from '@lucide/svelte/icons/ellipsis';
 	import Pencil from '@lucide/svelte/icons/pencil';
@@ -103,7 +103,7 @@
 			</span>
 		{:else if column.key === 'workspaces'}
 			<span class="px-4 tabular-nums">{formatCount(plan.workspaces)}</span>
-		{:else if canManage && !plan.is_system}
+		{:else if canManage}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 			<div class="flex h-full w-full items-center justify-center" onclick={(event) => event.stopPropagation()}>
 				<DropdownMenu.Root>
@@ -120,10 +120,12 @@
 							<Pencil class="mr-2 h-4 w-4" />
 							<span>{t('console.plans.edit')}</span>
 						</DropdownMenu.Item>
-						<DropdownMenu.Item class="text-destructive" onclick={() => onDeleteRow?.(plan)}>
-							<Trash2 class="mr-2 h-4 w-4" />
-							<span>{t('console.plans.delete')}</span>
-						</DropdownMenu.Item>
+						{#if !plan.is_system}
+							<DropdownMenu.Item class="text-destructive" onclick={() => onDeleteRow?.(plan)}>
+								<Trash2 class="mr-2 h-4 w-4" />
+								<span>{t('console.plans.delete')}</span>
+							</DropdownMenu.Item>
+						{/if}
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
 			</div>
