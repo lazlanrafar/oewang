@@ -564,7 +564,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 71);
+        assert_eq!(samples.len(), 72);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {
