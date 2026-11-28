@@ -580,6 +580,8 @@
 		"quantity": "Quantity",
 		"unit": "Unit",
 		"item_amount": "Amount",
+		"item_column_name": "Item",
+		"item_column_category": "Category",
 		"item_category": "Item category",
 		"item_no_category": "No category",
 		"categorise_items": "Categorise items",
