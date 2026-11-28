@@ -7,6 +7,10 @@
 //! stay lower after the first word. Text outside the Latin script has no
 //! Title Case to apply and is left alone.
 //!
+//! A unit standing on its own after the first word is written in capitals
+//! whatever the input ("91 gr" and "91 GR" both read "91 GR"), because a
+//! receipt's "250 ML" is a unit, not a word to Title Case.
+//!
 //! A name with no lowercase at all is shouting, as a receipt usually is, and
 //! there "ES TEH" is two words rather than two acronyms, so only the known
 //! acronyms below survive it.
@@ -17,6 +21,13 @@ const CONNECTORS: &[&str] = &["dan", "di", "ke", "and", "of", "the", "&"];
 /// The acronyms kept even in a name written all in capitals.
 const KNOWN_ACRONYMS: &[&str] = &[
     "PT", "CV", "UD", "TB", "BCA", "BNI", "BRI", "BSI", "BTN", "BPD", "ATM", "KFC", "QR", "ID",
+    "UHT",
+];
+
+/// Units written in capitals when they stand alone after the first word.
+/// "M" is left out: it is as often an initial as a metre.
+const UNITS: &[&str] = &[
+    "ML", "L", "LT", "LTR", "G", "GR", "KG", "MG", "PC", "PCS", "CC", "OZ", "CM", "MM",
 ];
 
 /// Tidy `raw`: collapse runs of whitespace, trim, and Title Case it as
@@ -45,6 +56,11 @@ fn tidy_word(word: &str, first: bool, shouting: bool) -> String {
         .is_some_and(|c| c.is_numeric());
     if letters.is_empty() || starts_with_digit || letters.iter().any(|c| !is_latin(*c)) {
         return word.to_string();
+    }
+
+    let upper = word.to_uppercase();
+    if !first && UNITS.contains(&upper.as_str()) {
+        return upper;
     }
 
     let lower = word.to_lowercase();
@@ -151,6 +167,13 @@ mod tests {
         ("DON'T PANIC", "Don't Panic"),
         ("COCA-COLA", "Coca-Cola"),
         ("CAFÉ LATTE", "Café Latte"),
+        ("SEDAAP MIE GORENG 91 GR", "Sedaap Mie Goreng 91 GR"),
+        ("ULTRA STRAWBERRY MILK 250 ML", "Ultra Strawberry Milk 250 ML"),
+        ("GRANDAIRY UHT FULL CREAM 1 L", "Grandairy UHT Full Cream 1 L"),
+        ("SO KLIN LIQ VIOLET RF BANDED 2X720 G", "So Klin Liq Violet Rf Banded 2X720 G"),
+        ("susu 250 ml", "Susu 250 ML"),
+        ("telur 1 kg", "Telur 1 KG"),
+        ("Gr Coffee", "Gr Coffee"),
     ];
 
     #[test]
