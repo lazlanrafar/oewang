@@ -7,6 +7,7 @@
 	 * to render (TXN-9, UI-8, D55). That is what makes a shared link
 	 * reproduce a view and a refresh keep it.
 	 */
+	import CaseSensitive from '@lucide/svelte/icons/case-sensitive';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import Columns3 from '@lucide/svelte/icons/columns-3';
@@ -60,6 +61,7 @@
 		TransactionFormFields,
 		TransactionFormSheet,
 		TransactionsDataTable,
+		TransactionTidyNamesSheet,
 		type ColumnKey,
 		type Grouping,
 		type TransactionDraft,
@@ -784,6 +786,32 @@
 
 	let exportOpen = $state(false);
 
+	// ------------------------------------------------------- tidy names
+
+	/* Open while `?tidy=names` is in the URL, so the load reads the proposals (D129). */
+	const tidyOpen = $derived(page.url.searchParams.get('tidy') === 'names');
+	const setTidyOpen = (open: boolean) =>
+		writeParams({ tidy: open ? 'names' : null }, { push: true });
+	let tidying = $state(false);
+
+	const afterTidy: SubmitFunction = () => {
+		tidying = true;
+		return async ({ result, update }) => {
+			tidying = false;
+			if (result.type === 'success') {
+				const outcome = (result.data?.data ?? {}) as { applied?: number; skipped?: number };
+				const counts = { applied: outcome.applied ?? 0, skipped: outcome.skipped ?? 0 };
+				toast.success(
+					counts.skipped > 0
+						? t('txn.tidy_names_applied_skipped', counts)
+						: t('txn.tidy_names_applied', counts)
+				);
+				await setTidyOpen(false);
+			}
+			await update({ navigate: false });
+		};
+	};
+
 	/* Hidden forms the floating bars and the sheet submit. */
 	let deleteForm = $state<HTMLFormElement | null>(null);
 
@@ -937,6 +965,11 @@
 						<DropdownMenu.Item onclick={() => (exportOpen = true)}>
 							<FileDown />
 							{t('txn.backup_export')}
+						</DropdownMenu.Item>
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item onclick={() => setTidyOpen(true)}>
+							<CaseSensitive />
+							{t('txn.tidy_names')}
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>
@@ -1283,6 +1316,14 @@
 </ChatCanvas>
 
 {#if canEdit}
+	<TransactionTidyNamesSheet
+		open={tidyOpen}
+		onOpenChange={setTidyOpen}
+		changes={data.tidyNames}
+		saving={tidying}
+		enhance={(node) => enhance(node, afterTidy)}
+	/>
+
 	<TransactionBulkBar
 		count={selection.length}
 		{deleting}

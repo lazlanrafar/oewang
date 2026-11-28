@@ -990,6 +990,22 @@ pub async fn split(
 ) -> Result<(ledger::TransactionListRow, Vec<DebtListRow>)> {
     let (ids, names) = split_people(contact_ids, contact_names)?;
 
+    // A split the assistant writes names its expense the way a chat create
+    // does (D129).
+    let new_name = match &source {
+        SplitSource::New(expense) => Some(
+            crate::transactions::names::stored(
+                pool,
+                actor,
+                crate::transactions::names::NameKind::Transaction,
+                expense.name,
+                None,
+            )
+            .await?,
+        ),
+        SplitSource::Existing(_) => None,
+    };
+
     // Worked out before the write opens: the source, its currency, and the
     // new expense's rate.
     enum Planned<'a> {
@@ -1018,7 +1034,7 @@ pub async fn split(
                 exchange_rate: None,
                 requested_base_rate: None,
                 date: expense.date,
-                name: Some(expense.name),
+                name: new_name.as_deref(),
                 description: None,
                 attachment_ids: None,
             };

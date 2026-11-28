@@ -11,6 +11,7 @@ pub mod fx;
 pub mod ids;
 pub mod items;
 pub mod mcp;
+pub mod names;
 pub mod passkeys;
 pub mod plans;
 pub mod push;

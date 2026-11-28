@@ -15,6 +15,7 @@ pub mod error;
 pub mod files;
 pub mod ledger;
 pub mod money;
+pub mod names;
 pub mod owe1;
 pub mod passkeys;
 pub mod plan;

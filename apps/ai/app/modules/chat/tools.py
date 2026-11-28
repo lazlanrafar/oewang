@@ -119,7 +119,9 @@ def _transaction_fields() -> dict[str, Any]:
             "omit it only when none fits."
         ),
         "date": _date("When it happened. Defaults to today."),
-        "name": _text("What it was, as the user said it. Keep their words."),
+        "name": _text(
+            "What it was, as the user said it. The API tidies the spelling, so send their words."
+        ),
         "description": _text("A longer note, when the user gave one."),
     }
 

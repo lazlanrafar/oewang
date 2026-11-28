@@ -568,6 +568,36 @@ export function bulkDeleteTransactions(ids: string[], token?: string) {
 	});
 }
 
+/** One name the tidy would change (D129). */
+export type TidyNameChange = {
+	kind: 'transaction' | 'item';
+	id: string;
+	transaction_id: string;
+	from: string;
+	to: string;
+};
+
+/** Every live name whose tidied spelling differs. Admin and owner only. */
+export function tidyNamesPreview(token?: string) {
+	return api<TidyNameChange[]>({ path: '/v1/transactions/tidy-names', token });
+}
+
+/**
+ * Apply the ticked changes. The API works out each new name again and skips
+ * a row whose name is no longer `from`.
+ */
+export function applyTidyNames(
+	changes: Pick<TidyNameChange, 'kind' | 'id' | 'from'>[],
+	token?: string
+) {
+	return api<{ applied: number; skipped: number }>({
+		method: 'POST',
+		path: '/v1/transactions/tidy-names',
+		body: { changes },
+		token
+	});
+}
+
 export function createWallet(
 	body: {
 		name: string;

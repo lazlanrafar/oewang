@@ -16,6 +16,7 @@ class NewTransactionDraft {
     this.note,
     this.description,
     this.attachmentIds,
+    this.source,
   });
 
   final TransactionType type;
@@ -33,4 +34,8 @@ class NewTransactionDraft {
 
   /// Vault file ids to attach. Null leaves an edited row's files alone.
   final List<String>? attachmentIds;
+
+  /// `receipt` when the form was seeded from a scanned receipt, so the API
+  /// tidies the names the reader wrote (D129). Null is a typed entry.
+  final String? source;
 }

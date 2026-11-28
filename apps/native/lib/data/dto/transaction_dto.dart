@@ -114,6 +114,7 @@ class TransactionDto {
       'name': draft.note,
       'description': draft.description,
       'attachment_ids': ?draft.attachmentIds,
+      'source': ?draft.source,
     };
   }
 

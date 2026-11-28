@@ -29,6 +29,7 @@ use sqlx::{Postgres, Transaction};
 use crate::{
     audit::{log, snapshot, Actor},
     fx, offline,
+    transactions::names::{self, NameKind},
 };
 
 pub use oewang_db::repositories::transactions::{
@@ -36,7 +37,7 @@ pub use oewang_db::repositories::transactions::{
     TransactionRow,
 };
 
-const ENTITY: &str = "transaction";
+pub(crate) const ENTITY: &str = "transaction";
 
 /// The most rows one bulk edit or bulk delete may touch (TXN-14).
 pub const BULK_LIMIT: usize = 500;
@@ -251,6 +252,28 @@ async fn insert_with_items(
         validate_item(item)?;
     }
 
+    // The assistant's and the receipt reader's names are tidied (D129).
+    let name = match input.name {
+        Some(name) => Some(names::stored(pool, actor, NameKind::Transaction, name, None).await?),
+        None => None,
+    };
+    let input = TransactionInput {
+        name: name.as_deref(),
+        ..input
+    };
+    let mut item_names = Vec::with_capacity(items.len());
+    for item in items {
+        item_names.push(names::stored(pool, actor, NameKind::Item, item.name, None).await?);
+    }
+    let items: Vec<ItemInput<'_>> = items
+        .iter()
+        .zip(&item_names)
+        .map(|(item, name)| ItemInput {
+            name,
+            ..item.clone()
+        })
+        .collect();
+
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
@@ -260,7 +283,7 @@ async fn insert_with_items(
 
     sync_attachments(&mut tx, actor.workspace_id, &row.id, input.attachment_ids).await?;
 
-    for item in items {
+    for item in &items {
         if let Some(category_id) = item.category_id {
             require_category(&mut tx, actor.workspace_id, category_id).await?;
         }
@@ -387,6 +410,20 @@ pub async fn update(
     };
     offline::check(if_match, before.updated_at)?;
     refuse_payment_change(&mut tx, actor.workspace_id, &before, &prepared).await?;
+
+    // Only a name this write changes is tidied: a patch that resends the old
+    // one leaves it as it was (D129).
+    let name = match input.name {
+        Some(name) if before.name.as_deref() != Some(name) => {
+            let kind = NameKind::Transaction;
+            Some(names::stored(&mut *tx, actor, kind, name, Some(id)).await?)
+        }
+        other => other.map(str::to_string),
+    };
+    let input = TransactionInput {
+        name: name.as_deref(),
+        ..input
+    };
 
     let old_effect = effect_of(&before)?;
     let moves = net(reverse(&old_effect)
@@ -1349,7 +1386,7 @@ fn internal(error: sqlx::Error) -> AppError {
 
 pub use oewang_db::repositories::vault::{AttachmentRow, ItemRow};
 
-const ITEM_ENTITY: &str = "transaction_item";
+pub(crate) const ITEM_ENTITY: &str = "transaction_item";
 
 /// What one line item holds. Items do not move a balance; only the parent
 /// transaction's `amount` does (TXN-12).
@@ -1396,6 +1433,11 @@ pub async fn add_item(
     input: ItemInput<'_>,
 ) -> Result<ItemRow> {
     validate_item(&input)?;
+    let name = names::stored(pool, actor, NameKind::Item, input.name, None).await?;
+    let input = ItemInput {
+        name: &name,
+        ..input
+    };
 
     let mut tx = pool.begin().await.map_err(internal)?;
     require_transaction(&mut tx, actor.workspace_id, transaction_id).await?;

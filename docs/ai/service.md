@@ -136,8 +136,8 @@ Twenty-one tools (D17, D88, D103, D120): eleven cut down from thirty-four in the
 
 | Tool | Arguments | Role |
 |---|---|---|
-| `create_transaction` | `type`, `amount`, `to_amount`, `wallet_id`, `to_wallet_id`, `category_id`, `date`, `name`, `description`, `items[]` (optional: `name`, `amount`, `quantity`, `category_id`) | admin+. Items are written with the transaction in one database write (TXN-28) |
-| `update_transaction` | `transaction_id` plus any creatable field, `to_amount` included | admin+ |
+| `create_transaction` | `type`, `amount`, `to_amount`, `wallet_id`, `to_wallet_id`, `category_id`, `date`, `name`, `description`, `items[]` (optional: `name`, `amount`, `quantity`, `category_id`) | admin+. Items are written with the transaction in one database write (TXN-28). The `name` description reads "What it was, as the user said it. The API tidies the spelling, so send their words.": the API, not the model, sets the case and reuses the workspace's spelling of the name and of each item (D129) |
+| `update_transaction` | `transaction_id` plus any creatable field, `to_amount` included | admin+. A changed `name` is tidied the same way; a resent one is left alone |
 | `delete_transaction` | `transaction_id`, `confirmed` | admin+, plus confirmation (CHAT-6) |
 | `add_transaction_items` | `transaction_id`, `items[]` | admin+ |
 | `create_wallet` | `name`, `group_id`, `currency_code` | admin+ |

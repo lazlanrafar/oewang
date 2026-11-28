@@ -107,7 +107,8 @@ class TransactionFormViewModel extends ChangeNotifier {
        _wallets = wallets,
        _categories = categories,
        _vault = vault,
-       _editingId = editing?.id {
+       _editingId = editing?.id,
+       _fromReceipt = receipt != null {
     if (editing != null) _state = _stateFrom(editing);
     if (receipt != null) _state = _stateFromReceipt(receipt);
     save = Command<NewTransactionDraft, Transaction>(_runSave)
@@ -120,6 +121,7 @@ class TransactionFormViewModel extends ChangeNotifier {
   final CategoriesRepository _categories;
   final VaultRepository _vault;
   final String? _editingId;
+  final bool _fromReceipt;
 
   bool get isEditing => _editingId != null;
 
@@ -248,6 +250,7 @@ class TransactionFormViewModel extends ChangeNotifier {
       note: note,
       description: _state.description.isEmpty ? null : _state.description,
       attachmentIds: _state.attachmentIds.isEmpty ? null : _state.attachmentIds,
+      source: _fromReceipt && !isEditing ? 'receipt' : null,
     );
     await save.run(draft);
     final ok = save.result;

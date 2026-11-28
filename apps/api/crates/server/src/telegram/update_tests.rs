@@ -433,7 +433,8 @@ async fn should_save_a_receipt_photo_as_an_expense_with_items_and_the_file(pool:
     .fetch_all(&pool)
     .await
     .unwrap();
-    assert_eq!(items, ["Es teh", "Nasi goreng"]);
+    // The reader wrote "Es teh" and "Nasi goreng"; the API tidies them (D129).
+    assert_eq!(items, ["Es Teh", "Nasi Goreng"]);
 
     // The attachment is the photo itself, through the vault.
     let (status, size): (String, i64) = sqlx::query_as(

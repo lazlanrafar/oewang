@@ -28,6 +28,7 @@ use crate::{
     response::{ApiError, RequestId},
     state::AppState,
     transactions::{
+        names,
         service::{self, Page, TransactionInput},
         statement,
     },
@@ -1050,6 +1051,71 @@ pub async fn bulk_delete(
 
     match service::bulk_delete(&state.db, auth.actor(), &body.ids).await {
         Ok(affected) => Ok(Json(Envelope::data(AffectedView { affected }, id))),
+        Err(error) => Err(ApiError::new(error, id)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TidyNamesBody {
+    pub changes: Vec<TidyChangeBody>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TidyChangeBody {
+    pub kind: String,
+    pub id: String,
+    pub from: String,
+}
+
+/// The names a tidy would change (D129). Admin and owner only, though
+/// nothing is written: it leads to the write below.
+pub async fn tidy_names_preview(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<Vec<names::TidyChange>>>, ApiError> {
+    match names::preview(&state.db, &auth.workspace_id).await {
+        Ok(changes) => Ok(Json(Envelope::data(changes, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+pub async fn tidy_names_apply(
+    State(state): State<AppState>,
+    auth: AuthWrite,
+    request_id: RequestId,
+    Json(body): Json<TidyNamesBody>,
+) -> std::result::Result<Json<Envelope<names::TidyOutcome>>, ApiError> {
+    let id = request_id.0;
+
+    let result = async {
+        let requested = body
+            .changes
+            .into_iter()
+            .map(|change| {
+                let kind = match change.kind.as_str() {
+                    "transaction" => names::NameKind::Transaction,
+                    "item" => names::NameKind::Item,
+                    _ => {
+                        return Err(AppError::validation([(
+                            "kind",
+                            "A change is to a transaction or an item.",
+                        )]))
+                    }
+                };
+                Ok(names::TidyRequest {
+                    kind,
+                    id: change.id,
+                    from: change.from,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        names::apply(&state.db, auth.actor(), &requested).await
+    }
+    .await;
+
+    match result {
+        Ok(outcome) => Ok(Json(Envelope::data(outcome, id))),
         Err(error) => Err(ApiError::new(error, id)),
     }
 }

@@ -259,6 +259,8 @@ Either `{ "transaction_id" }`, a live `expense` (otherwise `SPLIT_SOURCE_NOT_EXP
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
 | POST | `/v1/transactions/bulk-update` | admin+ | Set the category of many; `category_id: null` clears it (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
+| GET | `/v1/transactions/tidy-names` | admin+ | Every live transaction and item whose tidied-and-reused name differs: `[{kind: "transaction" \| "item", id, transaction_id, from, to}]`. Writes nothing (D129) |
+| POST | `/v1/transactions/tidy-names` | admin+ | Body `{changes: [{kind, id, from}]}`, at most 5,000. The new name is worked out again on the server; a row whose name is no longer `from`, or needs no change, is skipped. One audit row per rename, all in one database transaction. Answers `{applied, skipped}` (D129) |
 | POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4). *plan: `statement_import`* |
 | POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
 | POST | `/v1/transactions/import/xlsx` | admin+ | An `.xlsx` as base64 in, its first sheet out as column names and rows of text, the shape a parsed CSV has. Writes nothing (TXN-11, D111) |
