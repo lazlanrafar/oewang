@@ -479,6 +479,32 @@ async fn should_refuse_an_attachment_this_workspace_does_not_have(pool: PgPool) 
     assert!(messages(&pool, &session.id).await.is_empty());
 }
 
+/// PLN-4: a turn past the plan's monthly tokens is refused before the
+/// user's message is written, for the web chat and Telegram alike. The turn
+/// that crossed the limit was never interrupted: only the next one is.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_turn_once_the_plans_tokens_are_used_up(pool: PgPool) {
+    fixture(&pool).await;
+    let session = service::create(&pool, actor(), None).await.unwrap();
+    for sql in [
+        "INSERT INTO plans (id, name, max_tokens_month) VALUES ('p_small', 'Small', 10)",
+        "UPDATE workspaces SET plan_id = 'p_small' WHERE id = 'ws_test'",
+    ] {
+        sqlx::query(sql).execute(&pool).await.unwrap();
+    }
+    // The previous turn, recorded after it finished, took the workspace past.
+    crate::usage::TurnMeter::for_channel(USER, "web")
+        .record(&pool, WORKSPACE, Some(&json!({ "input": 8, "output": 4 })))
+        .await;
+
+    let error = service::begin_turn(&pool, WORKSPACE, USER, Role::Owner, &session.id, "hi", &[])
+        .await
+        .unwrap_err();
+
+    assert!(matches!(error, AppError::QuotaTokensExceeded), "{error:?}");
+    assert!(messages(&pool, &session.id).await.is_empty());
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_store_the_assistant_message_when_the_stream_ends(pool: PgPool) {
     fixture(&pool).await;

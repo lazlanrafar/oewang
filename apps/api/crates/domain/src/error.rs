@@ -191,6 +191,14 @@ pub enum AppError {
     #[error("this tool call is still running")]
     ToolCallInProgress,
 
+    // -- plans
+    /// The workspace's plan has no AI tokens left this month (PLN-4).
+    #[error("the plan's monthly token limit is reached")]
+    QuotaTokensExceeded,
+    /// The upload would take stored bytes past the plan's limit (PLN-5).
+    #[error("the plan's storage limit would be exceeded")]
+    QuotaStorageExceeded,
+
     // -- integrations
     /// The server runs without a Telegram bot configured (D84).
     #[error("telegram is not configured")]
@@ -277,6 +285,8 @@ impl AppError {
             ConfirmationRequired(_) => "CONFIRMATION_REQUIRED",
             ToolCapExceeded => "TOOL_CAP_EXCEEDED",
             ToolCallInProgress => "TOOL_CALL_IN_PROGRESS",
+            QuotaTokensExceeded => "QUOTA_TOKENS_EXCEEDED",
+            QuotaStorageExceeded => "QUOTA_STORAGE_EXCEEDED",
             Internal(_) => "INTERNAL_ERROR",
         }
     }
@@ -288,6 +298,9 @@ impl AppError {
             Unauthenticated | InvalidCredentials | CryptoSessionUnknown | McpTokenInvalid => 401,
             InsufficientRole | NotAMember | NoWorkspace | ToolForbidden | ConsoleForbidden
             | UserDisabled | WorkspaceSuspended => 403,
+            // 403, not 402 or 429: there is no payment to make (PLN-8) and
+            // nothing a retry soon would fix (docs/features/plans.md#refusals).
+            QuotaTokensExceeded | QuotaStorageExceeded => 403,
             EmailTaken
             | LastOwner
             | WalletHasTransactions
@@ -396,6 +409,10 @@ impl AppError {
             }
             ExtractionNoAnswer => "The document was not read. Try again in a moment.",
             RateLimited { .. } => "Wait and try again.",
+            QuotaTokensExceeded => {
+                "The plan's AI tokens for this month are used up. They renew on the first of the month, UTC."
+            }
+            QuotaStorageExceeded => "Delete files from the vault, or ask for a larger plan.",
             _ => return None,
         })
     }
@@ -495,6 +512,8 @@ mod tests {
             AppError::UserDisabled,
             AppError::WorkspaceSuspended,
             AppError::ConsoleRoleInUse,
+            AppError::QuotaTokensExceeded,
+            AppError::QuotaStorageExceeded,
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,
@@ -557,7 +576,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 71);
+        assert_eq!(samples.len(), 73);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {

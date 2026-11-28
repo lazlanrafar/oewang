@@ -160,3 +160,160 @@ fn should_only_ever_insert_into_the_ledger() {
         );
     }
 }
+
+// ------------------------------------------------------- plan limits (PLN-4, PLN-5)
+
+/// Give the workspace a plan with these limits; null is unlimited.
+async fn plan(pool: &PgPool, max_tokens: Option<i64>, max_bytes: Option<i64>) {
+    sqlx::query(
+        "INSERT INTO plans (id, name, max_tokens_month, max_storage_bytes)
+         VALUES ('p_small', 'Small', $1, $2)",
+    )
+    .bind(max_tokens)
+    .bind(max_bytes)
+    .execute(pool)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE workspaces SET plan_id = 'p_small' WHERE id = $1")
+        .bind(WORKSPACE)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+async fn ledger_rows(pool: &PgPool) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM ai_usage WHERE workspace_id = $1")
+        .bind(WORKSPACE)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+fn quota_tokens(result: oewang_domain::Result<()>) -> bool {
+    matches!(result, Err(oewang_domain::AppError::QuotaTokensExceeded))
+}
+
+/// PLN-4: input plus output this month, compared at, below and past the
+/// limit. Last month's tokens and another workspace's do not count.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_a_model_call_at_or_past_the_monthly_tokens(pool: PgPool) {
+    fixture(&pool).await;
+    plan(&pool, Some(100), None).await;
+    sqlx::query(
+        "INSERT INTO ai_usage (id, workspace_id, feature, input_tokens, output_tokens, created_at)
+         VALUES ('u_last', $1, 'chat', 5000, 5000,
+                 date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' - interval '1 second'),
+                ('u_theirs', 'ws_other', 'chat', 5000, 5000, now())",
+    )
+    .bind(WORKSPACE)
+    .execute(&pool)
+    .await
+    .unwrap();
+    let meter = Meter::new(&pool, WORKSPACE, Some(USER));
+
+    meter.record(Feature::Chat, Some(&tokens(60, 39))).await;
+    assert!(meter.check().await.is_ok(), "99 of 100 is below");
+
+    meter.record(Feature::Receipt, Some(&tokens(0, 1))).await;
+    assert!(quota_tokens(meter.check().await), "100 of 100 is at");
+
+    meter.record(Feature::Chat, Some(&tokens(50, 0))).await;
+    assert!(quota_tokens(meter.check().await), "150 of 100 is past");
+}
+
+/// PLN-5: stored bytes are ready, live files, as the usage page sums them;
+/// the new file's declared size is added. Reaching the limit exactly is
+/// allowed, one byte past is not, and the refusal reserves nothing.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_refuse_an_upload_that_would_pass_the_storage_limit(pool: PgPool) {
+    fixture(&pool).await;
+    plan(&pool, None, Some(1_000)).await;
+    file(&pool, "f_ready", WORKSPACE, 600, "ready").await;
+    file(&pool, "f_pending", WORKSPACE, 4_000, "pending").await;
+    file(&pool, "f_theirs", "ws_other", 9_000, "ready").await;
+    let actor = crate::audit::Actor::web(WORKSPACE, USER);
+    let begin = |size| {
+        crate::vault::service::begin(&pool, actor, "r.jpg", "image/jpeg", size, 0, 10_000_000)
+    };
+
+    let error = begin(401).await.unwrap_err();
+    assert!(
+        matches!(error, oewang_domain::AppError::QuotaStorageExceeded),
+        "{error:?}"
+    );
+    let files: i64 = sqlx::query_scalar("SELECT count(*) FROM vault_files WHERE workspace_id = $1")
+        .bind(WORKSPACE)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(files, 2, "nothing reserved, nothing stored touched");
+
+    assert!(super::ensure_storage_left(&pool, WORKSPACE, 399)
+        .await
+        .is_ok());
+    begin(400)
+        .await
+        .expect("exactly at the limit is not past it");
+}
+
+/// PLN-4, PLN-5: null limits are unlimited, and the seeded Free plan has
+/// only nulls, so it blocks nobody.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_block_nothing_on_the_free_plan(pool: PgPool) {
+    fixture(&pool).await;
+    file(&pool, "f_big", WORKSPACE, i64::from(i32::MAX), "ready").await;
+    let meter = Meter::new(&pool, WORKSPACE, Some(USER));
+    meter
+        .record(Feature::Chat, Some(&tokens(i64::MAX, i64::MAX)))
+        .await;
+
+    assert!(meter.check().await.is_ok());
+    assert!(super::ensure_storage_left(&pool, WORKSPACE, i64::MAX)
+        .await
+        .is_ok());
+}
+
+static RECEIPT_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+fn counting_model(_path: &str, _body: &serde_json::Value) -> serde_json::Value {
+    RECEIPT_CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    serde_json::json!({ "usage": { "input": 5, "output": 5 } })
+}
+
+/// PLN-4: a refused call never reaches the AI service and writes no ledger
+/// row. Lifting the limit lets the same call through, which proves the stub
+/// would have counted it.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_not_ask_the_ai_service_when_the_tokens_are_used_up(pool: PgPool) {
+    use std::sync::atomic::Ordering;
+
+    fixture(&pool).await;
+    plan(&pool, Some(0), None).await;
+    let url = crate::test_support::ai_service(pool.clone(), counting_model).await;
+    let ai = crate::test_support::state(pool.clone(), &url).ai;
+    let parse = || {
+        crate::ai::extraction::parse_receipt(
+            &ai,
+            Meter::new(&pool, WORKSPACE, Some(USER)),
+            "req_quota",
+            "IDR",
+            crate::ai::extraction::Document {
+                media_type: "image/jpeg".into(),
+                data: "AA==".into(),
+            },
+        )
+    };
+
+    let error = parse().await.unwrap_err();
+    assert_eq!(error.code(), "QUOTA_TOKENS_EXCEEDED");
+    assert_eq!(RECEIPT_CALLS.load(Ordering::SeqCst), 0);
+    assert_eq!(ledger_rows(&pool).await, 0);
+
+    sqlx::query("UPDATE plans SET max_tokens_month = NULL WHERE id = 'p_small'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    parse().await.expect("unlimited now");
+    assert_eq!(RECEIPT_CALLS.load(Ordering::SeqCst), 1);
+    assert_eq!(ledger_rows(&pool).await, 1);
+}

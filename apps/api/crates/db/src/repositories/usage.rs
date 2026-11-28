@@ -47,6 +47,23 @@ pub struct FeatureTotals {
     pub calls: i64,
 }
 
+/// Input plus output tokens since the start of the current calendar month
+/// (UTC), the month `totals_by_feature` reports. What a plan's limit reads.
+pub async fn month_tokens(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT COALESCE(sum(input_tokens::bigint + output_tokens), 0)::bigint AS "tokens!"
+           FROM ai_usage
+           WHERE workspace_id = $1
+             AND created_at >= date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"#,
+        workspace_id
+    )
+    .fetch_one(executor)
+    .await
+}
+
 pub async fn totals_by_feature(
     executor: impl PgExecutor<'_>,
     workspace_id: &str,

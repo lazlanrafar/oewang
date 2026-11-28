@@ -419,6 +419,10 @@ pub async fn begin_turn(
     // rather than answered (AUTH-4).
     let session = require(pool, workspace_id, session_id).await?;
 
+    // Before the user's message is written, so a refused turn leaves no
+    // half-turn behind (PLN-4). The web chat and Telegram both start here.
+    crate::usage::ensure_tokens_left(pool, workspace_id).await?;
+
     let mut attachments = Vec::with_capacity(attachment_ids.len());
     for id in attachment_ids {
         let file = vault::find_file(pool, workspace_id, id)

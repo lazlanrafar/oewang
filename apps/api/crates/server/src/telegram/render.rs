@@ -58,6 +58,13 @@ pub const DELETED: &str = "🗑️ Deleted. It's no longer in your transactions.
 
 pub const SLOW_DOWN: &str = "That's a lot of messages at once. Please wait a minute and try again.";
 
+/// The plan's limits (PLN-4, PLN-5).
+pub const QUOTA_TOKENS: &str =
+    "This workspace has used its AI allowance for this month. It renews on the 1st.";
+
+pub const QUOTA_STORAGE: &str =
+    "This workspace's storage is full. Delete files from the vault in the app, then send it again.";
+
 pub fn linked(workspace_name: &str) -> String {
     if workspace_name.is_empty() {
         format!("✅ Connected.\n\n{HELP}")

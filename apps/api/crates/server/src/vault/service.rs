@@ -62,6 +62,8 @@ pub async fn begin(
         });
     }
 
+    crate::usage::ensure_storage_left(pool, actor.workspace_id, size_bytes).await?;
+
     let id = cuid2::create_id();
     // Generated from ids, never from the filename (SEC-13). The filename
     // is stored as data and used for nothing else.

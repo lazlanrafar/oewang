@@ -92,7 +92,12 @@ pub async fn handle(state: &AppState, bot: &Bot, message: Message) -> Result<()>
                 say(bot, chat_id, render::MEMBER_CANNOT_WRITE).await;
                 return Ok(());
             }
-            return receipt::handle(state, bot, &link, upload).await;
+            return plan_limit(
+                bot,
+                chat_id,
+                receipt::handle(state, bot, &link, upload).await,
+            )
+            .await;
         }
         Attached::Unsupported => {
             say(bot, chat_id, render::UNSUPPORTED_FILE).await;
@@ -106,7 +111,22 @@ pub async fn handle(state: &AppState, bot: &Bot, message: Message) -> Result<()>
         return Ok(());
     }
 
-    chat::handle(state, bot, &link, role, text).await
+    plan_limit(
+        bot,
+        chat_id,
+        chat::handle(state, bot, &link, role, text).await,
+    )
+    .await
+}
+
+/// A plan's limit is a short message to the user, not an error (PLN-4, PLN-5).
+async fn plan_limit(bot: &Bot, chat_id: i64, result: Result<()>) -> Result<()> {
+    match result {
+        Err(AppError::QuotaTokensExceeded) => say(bot, chat_id, render::QUOTA_TOKENS).await,
+        Err(AppError::QuotaStorageExceeded) => say(bot, chat_id, render::QUOTA_STORAGE).await,
+        other => return other,
+    }
+    Ok(())
 }
 
 /// The argument of `/name`, `/name arg` or `/name@bot arg`.
