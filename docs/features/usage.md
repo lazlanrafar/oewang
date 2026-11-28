@@ -2,7 +2,7 @@
 
 Status: v0.1, 2026-11-05. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) USG-1 to USG-3. Decision D92.
 
-What a workspace stores and what its model calls cost, recorded and shown. Nothing is limited: billing and quotas stay a [non-goal](../prd.md#non-goals-for-v1). This is the record a limit would one day be built on.
+What a workspace stores and what its model calls cost, recorded and shown. Since D128 the workspace's [plan](plans.md) limits both, measured against exactly these figures ([Limits](#limits)). Billing stays a [non-goal](../prd.md#non-goals-for-v1).
 
 ## Update this doc when
 
@@ -39,6 +39,13 @@ What the AI service sends:
 
 **Known gap.** A refused extraction (an error response from the AI service) carries no `usage`, so the tokens spent on it are not recorded. The ledger undercounts failed calls.
 
+## Limits
+
+The plan's limits read these same figures, so the settings page and a refusal cannot disagree (PLN-4, PLN-5). The rule, every check site and the refusals are in [plans](plans.md#limits). In short:
+
+- **Tokens.** Before a model call, this month's input plus output (`usage::month_tokens`, the same calendar month in UTC as the page) is compared with `max_tokens_month`; at or past it the call is refused with `QUOTA_TOKENS_EXCEEDED`, the AI service is not asked and no `ai_usage` row is written. Every extraction call checks through `Meter::check` in `ai/extraction.rs`; a chat turn checks in `begin_turn`, before its `TurnMeter` exists and before the user's message is written. The check is before a call, never during one, so the call that crosses the limit is recorded in full.
+- **Storage.** Starting an upload compares the stored bytes above plus the declared size with `max_storage_bytes`.
+
 ## Found while wiring it
 
 The Rust client read the AI service's map-columns answer, `{mapping, model}`, as a bare `ColumnMapping`. Every field was absent, so AI column mapping always came back empty. It now reads `{mapping, usage}`, with a unit test.
@@ -65,6 +72,7 @@ The foot of the app's sidebar shows this month's AI tokens (input plus output) a
 | Layer | Coverage |
 |---|---|
 | Unit (Rust) | The headline summed from the feature rows; missing token fields read as zero; tokens clamped into the column; the column mapping answer read out of `{mapping, usage}` |
+| DB (Rust) | Limits: tokens below, at and past, last month and other workspaces not counted; storage at and one byte past; null limits and the Free plan block nothing; a refused call reaches no AI service and writes no row; a refused turn writes no message (`usage/db_tests.rs`, `ai/tests.rs`) |
 | pytest | `usage` on every extraction response, summed across ladder passes; `model` in the chat `done` event |
 | Browser | Not yet verified ([US-050](../backlog.md#us-050-usage-tracking-and-the-settings-page)) |
 

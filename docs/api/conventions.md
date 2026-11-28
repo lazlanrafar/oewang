@@ -244,6 +244,15 @@ Only these are returned in plaintext, because the caller may have no working key
 |---|---|---|
 | `TELEGRAM_DISABLED` | 503 | The server runs without a Telegram bot (`TELEGRAM_BOT_TOKEN` unset) |
 
+### Plans
+
+403, not 402 or 429: there is no payment to make (PLN-8), and a retry soon would fail the same way. See [plans](../features/plans.md#refusals).
+
+| Code | Status | Meaning |
+|---|---|---|
+| `QUOTA_TOKENS_EXCEEDED` | 403 | The workspace's plan has no AI tokens left this month (input plus output, calendar month UTC). Checked before the AI service is asked (PLN-4) |
+| `QUOTA_STORAGE_EXCEEDED` | 403 | The upload's declared size would take stored bytes past the plan's limit. Nothing is reserved (PLN-5) |
+
 ## Encoding rules
 
 | Kind | Wire format | Example |
