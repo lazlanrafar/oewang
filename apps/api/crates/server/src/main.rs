@@ -565,6 +565,19 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             "/v1/console/operators/{id}",
             put(console::handler::grant).delete(console::handler::revoke),
         )
+        .route(
+            "/v1/console/plans",
+            get(console::handler::plans).post(console::handler::create_plan),
+        )
+        .route(
+            "/v1/console/plans/{id}",
+            axum::routing::patch(console::handler::update_plan)
+                .delete(console::handler::delete_plan),
+        )
+        .route(
+            "/v1/console/workspaces/{id}/plan",
+            put(console::handler::set_workspace_plan),
+        )
         .route("/v1/console/audit", get(console::handler::audit))
         .route("/v1/console/audit/{id}", get(console::handler::audit_entry))
         // Feedback from settings, any role (FB-1).

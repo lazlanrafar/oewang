@@ -26,12 +26,12 @@ pub mod wallet_totals;
 
 pub use auth::Role;
 pub use console::ConsolePermission;
-pub use plan::Feature;
 pub use envelope::{Envelope, Meta, Page, PageMeta};
 pub use error::{AppError, ErrorBody, FieldErrors};
 pub use money::{
     currency_digits, currency_symbol, format_money, normalize_currency_code, validate_currency_code,
 };
+pub use plan::Feature;
 pub use secret::Secret;
 
 pub type Result<T> = std::result::Result<T, AppError>;

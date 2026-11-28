@@ -1,6 +1,6 @@
 # Feature: Plans
 
-Status: draft v0.1, 2026-11-28. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) PLN-1 to PLN-8. Decision D128. Epic OEW-130, stories OEW-131 to OEW-134.
+Status: v0.2, 2026-11-28. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) PLN-1 to PLN-8. Decision D128. Epic OEW-130, stories OEW-131 to OEW-134.
 
 A plan limits a workspace: AI tokens per calendar month, stored bytes, and which features it may use. Operators define plans and assign them in the [console](console.md). There is no payment and no self-serve upgrade.
 
@@ -14,9 +14,30 @@ A plan limits a workspace: AI tokens per calendar month, stored bytes, and which
 
 - Every workspace holds exactly one plan (`workspaces.plan_id`).
 - The system plan, Free, is held by every workspace given no other, new ones included, and cannot be deleted. It ships unlimited with every feature, so the deploy that starts enforcing blocks nobody (D128).
+- The system plan is also never edited, as the system console role `owner` is not ([console](console.md#operators-roles-and-permissions-csl-2-d125)): its name, limits and features change only with a migration. The console shows it read-only.
 - A plan a workspace holds is not deleted (`PLAN_IN_USE`). Plans are soft deleted.
 - A null limit is unlimited.
 - Tokens count input plus output over the calendar month in UTC, the same month as the [usage](usage.md) page.
+
+## Data (OEW-131)
+
+`plans` and `plan_features` (migration `0025_plans.sql`), and `workspaces.plan_id`, not null, default `free`. Columns in the [data model](../data-model.md#plans-plan_features). The default is what gives a new workspace the system plan, whichever path creates it.
+
+The checks read a workspace's plan with `repositories::plans::workspace_plan(executor, workspace_id)`: `Option<WorkspacePlan { plan_id, name, max_tokens_month, max_storage_bytes, features: Vec<Feature> }>`, none for an unknown or deleted workspace. It takes the pool or a transaction.
+
+## Console (OEW-131)
+
+Every route and screen needs `console.plans.manage`, which the seeded `owner` role holds and `support` and `viewer` do not.
+
+| Route | What |
+|---|---|
+| `GET /v1/console/plans` | Live plans with their features and how many workspaces hold each |
+| `POST /v1/console/plans` | Create. Audited `plan.created` |
+| `PATCH /v1/console/plans/{id}` | Edit; refused for the system plan. Audited `plan.updated` |
+| `DELETE /v1/console/plans/{id}` | Soft delete; refused for the system plan and with `PLAN_IN_USE` while any workspace, deleted ones included, holds it. Audited `plan.deleted` |
+| `PUT /v1/console/workspaces/{id}/plan` | Assign. Audited `workspace.plan_changed` with the workspace row before and after |
+
+Bodies and answers are in [endpoints](../api/endpoints.md#console). A limit is a whole number from 0 to 9007199254740991, the largest a JavaScript number holds exactly, or null for unlimited. Each change writes its `operator_audit` row in the same transaction (CSL-14). Deleted workspaces count as holders because restoring one must find its plan; the console assigns a plan to a deleted workspace for that reason.
 
 ## Features
 

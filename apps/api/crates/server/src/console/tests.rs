@@ -822,8 +822,14 @@ async fn should_give_a_new_workspace_the_unlimited_free_plan(pool: PgPool) {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!((plan.plan_id.as_str(), plan.name.as_str()), ("free", "Free"));
-    assert_eq!((plan.max_tokens_month, plan.max_storage_bytes), (None, None));
+    assert_eq!(
+        (plan.plan_id.as_str(), plan.name.as_str()),
+        ("free", "Free")
+    );
+    assert_eq!(
+        (plan.max_tokens_month, plan.max_storage_bytes),
+        (None, None)
+    );
     let mut features = plan.features.clone();
     features.sort();
     assert_eq!(features, Feature::ALL.to_vec());
@@ -841,7 +847,10 @@ async fn should_give_a_new_workspace_the_unlimited_free_plan(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(plans::workspace_plan(&pool, "ws_new").await.unwrap(), None);
-    assert_eq!(plans::workspace_plan(&pool, "ws_nobody").await.unwrap(), None);
+    assert_eq!(
+        plans::workspace_plan(&pool, "ws_nobody").await.unwrap(),
+        None
+    );
 }
 
 /// D128: the database CHECK and the domain enum list the same features.
@@ -863,4 +872,167 @@ async fn should_keep_the_feature_check_and_the_enum_in_step(pool: PgPool) {
             .execute(&pool)
             .await;
     assert!(unknown.is_err());
+}
+
+/// PLN-1: only a role holding `console.plans.manage` reaches the plan
+/// routes; the seeded support and viewer roles do not.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_gate_plans_behind_plans_manage(pool: PgPool) {
+    person(&pool, "usr_owner", Some("owner")).await;
+    person(&pool, "usr_support", Some("support")).await;
+    person(&pool, "usr_viewer", Some("viewer")).await;
+    assert!(as_operator(&pool, "usr_owner")
+        .await
+        .require(ConsolePermission::PlansManage)
+        .is_ok());
+    for id in ["usr_support", "usr_viewer"] {
+        let error = as_operator(&pool, id)
+            .await
+            .require(ConsolePermission::PlansManage)
+            .unwrap_err();
+        assert_eq!(error.error.code(), "CONSOLE_FORBIDDEN", "{id}");
+    }
+}
+
+/// PLN-1, PLN-2, CSL-14: plans are made, edited, assigned and deleted, each
+/// change audited; the system plan is fixed and a held plan stays.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_manage_plans_and_assign_them(pool: PgPool) {
+    user(&pool, Some("owner")).await;
+    customers(&pool).await;
+    let features = |keys: &[&str]| keys.iter().map(|k| k.to_string()).collect::<Vec<_>>();
+
+    let plan = service::create_plan(
+        &pool,
+        USER,
+        " Pro ",
+        Some(1_000_000),
+        None,
+        &features(&["vault", "chat", "chat"]),
+    )
+    .await
+    .unwrap();
+    assert_eq!(plan.name, "Pro");
+    assert_eq!(
+        (plan.max_tokens_month, plan.max_storage_bytes),
+        (Some(1_000_000), None)
+    );
+    assert_eq!(plan.features, ["chat", "vault"]);
+    assert_eq!(plan.workspaces, 0);
+
+    for (name, tokens, keys) in [
+        ("", None, vec![]),
+        ("pro", None, vec![]),
+        ("Neg", Some(-1), vec![]),
+        ("Huge", Some(service::MAX_LIMIT + 1), vec![]),
+        ("Odd", None, vec!["invoices"]),
+    ] {
+        let error = service::create_plan(&pool, USER, name, tokens, None, &features(&keys))
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, AppError::Validation(_)),
+            "{name}: {error:?}"
+        );
+    }
+
+    // Absent fields stay; an explicit null limit becomes unlimited.
+    let edited = service::update_plan(
+        &pool,
+        USER,
+        &plan.id,
+        None,
+        Some(None),
+        Some(Some(5_000)),
+        Some(&features(&["mcp"])),
+    )
+    .await
+    .unwrap();
+    assert_eq!(edited.name, "Pro");
+    assert_eq!(
+        (edited.max_tokens_month, edited.max_storage_bytes),
+        (None, Some(5_000))
+    );
+    assert_eq!(edited.features, ["mcp"]);
+
+    // The system plan is neither changed nor deleted.
+    let error = service::update_plan(&pool, USER, "free", Some("Gratis"), None, None, None)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+    let error = service::delete_plan(&pool, USER, "free").await.unwrap_err();
+    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+
+    // Every workspace starts on Free and the console shows it.
+    let row = service::workspace(&pool, WORKSPACE)
+        .await
+        .unwrap()
+        .workspace;
+    assert_eq!(
+        (row.plan_id.as_str(), row.plan_name.as_str()),
+        ("free", "Free")
+    );
+
+    // Assigned to a deleted workspace too, which still holds it.
+    let row = service::set_workspace_plan(&pool, USER, GONE, &plan.id)
+        .await
+        .unwrap();
+    assert_eq!(row.plan_name, "Pro");
+    // The same plan again changes nothing and is not audited.
+    service::set_workspace_plan(&pool, USER, GONE, &plan.id)
+        .await
+        .unwrap();
+    let error = service::set_workspace_plan(&pool, USER, GONE, "plan_nobody")
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+    let error = service::set_workspace_plan(&pool, USER, "ws_nobody", &plan.id)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::NotFound), "{error:?}");
+
+    let error = service::delete_plan(&pool, USER, &plan.id)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::PlanInUse), "{error:?}");
+    assert_eq!(error.code(), "PLAN_IN_USE");
+
+    service::set_workspace_plan(&pool, USER, GONE, "free")
+        .await
+        .unwrap();
+    service::delete_plan(&pool, USER, &plan.id).await.unwrap();
+    let left = service::plans(&pool).await.unwrap();
+    assert_eq!(
+        left.iter().map(|p| p.id.as_str()).collect::<Vec<_>>(),
+        ["free"]
+    );
+    assert_eq!(left[0].workspaces, 2);
+    // A deleted plan cannot be assigned or edited.
+    let error = service::set_workspace_plan(&pool, USER, GONE, &plan.id)
+        .await
+        .unwrap_err();
+    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+
+    let actions: Vec<(String, String)> = operator_audit(&pool).await;
+    assert_eq!(
+        actions,
+        [
+            ("plan.created".to_string(), plan.id.clone()),
+            ("plan.updated".to_string(), plan.id.clone()),
+            ("workspace.plan_changed".to_string(), GONE.to_string()),
+            ("workspace.plan_changed".to_string(), GONE.to_string()),
+            ("plan.deleted".to_string(), plan.id.clone()),
+        ]
+    );
+    let (before, after): (serde_json::Value, serde_json::Value) = sqlx::query_as(
+        "SELECT before, after FROM operator_audit WHERE action = 'workspace.plan_changed'
+          ORDER BY created_at LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        (before["plan_id"].as_str(), after["plan_id"].as_str()),
+        (Some("free"), Some(plan.id.as_str()))
+    );
 }

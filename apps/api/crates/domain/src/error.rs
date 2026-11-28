@@ -52,6 +52,9 @@ pub enum AppError {
     /// A console role still held by an operator cannot be deleted (CSL-12).
     #[error("this console role is still held by an operator")]
     ConsoleRoleInUse,
+    /// A plan still held by a workspace cannot be deleted (PLN-2).
+    #[error("this plan is still held by a workspace")]
+    PlanInUse,
 
     // -- validation and general
     #[error("validation failed")]
@@ -221,6 +224,7 @@ impl AppError {
             UserDisabled => "USER_DISABLED",
             WorkspaceSuspended => "WORKSPACE_SUSPENDED",
             ConsoleRoleInUse => "CONSOLE_ROLE_IN_USE",
+            PlanInUse => "PLAN_IN_USE",
             ResetTokenInvalid => "RESET_TOKEN_INVALID",
             Validation(_) => "VALIDATION_FAILED",
             MalformedRequest => "MALFORMED_REQUEST",
@@ -298,6 +302,7 @@ impl AppError {
             | ToolCapExceeded
             | ToolCallInProgress
             | ConsoleRoleInUse
+            | PlanInUse
             | IdTaken
             | Stale(_)
             | ContactHasDebts
@@ -350,6 +355,7 @@ impl AppError {
             NoWorkspace => "Create a workspace or accept an invitation, then switch into it.",
             UserDisabled | WorkspaceSuspended => "Contact oewang support.",
             ConsoleRoleInUse => "Move its operators to another role first.",
+            PlanInUse => "Move its workspaces to another plan first.",
             McpTokenInvalid => "Create a new token in Account, MCP, or connect again.",
             WorkspaceIdNotAllowed => "Drop workspace_id; switch workspace to act in another one.",
             Validation(_) | ToolArgsInvalid(_) => "Fix the listed fields and try again.",
@@ -495,6 +501,7 @@ mod tests {
             AppError::UserDisabled,
             AppError::WorkspaceSuspended,
             AppError::ConsoleRoleInUse,
+            AppError::PlanInUse,
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,

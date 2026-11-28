@@ -141,6 +141,7 @@ Codes are stable, SCREAMING_SNAKE_CASE, and never reused for a different meaning
 | `USER_DISABLED` | 403 | An operator disabled this account: no sign-in, no session (CSL-7, D127) |
 | `WORKSPACE_SUSPENDED` | 403 | An operator suspended this workspace: every channel refuses it until it is unsuspended (CSL-5, D127) |
 | `CONSOLE_ROLE_IN_USE` | 409 | Deleting a console role someone still holds (CSL-12) |
+| `PLAN_IN_USE` | 409 | Deleting a plan a workspace still holds, deleted workspaces included (PLN-2) |
 | `CONSOLE_FORBIDDEN` | 403 | The caller has no live console role, or their role lacks the permission the console route checks (CSL-2, D126) |
 
 ### Validation and general
