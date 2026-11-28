@@ -348,7 +348,7 @@
 											<Table.Cell class="text-right font-mono whitespace-nowrap">{item.amount}</Table.Cell>
 											{#if canEdit}
 												<Table.Cell class="px-1">
-													<div class="flex justify-end">
+													<div class="flex justify-center">
 														<Button
 															variant="ghost"
 															size="icon"

@@ -22,7 +22,7 @@
 	bind:this={ref}
 	data-slot="table"
 	data-density={density}
-	class={cn('group/table w-full caption-bottom text-sm', className)}
+	class={cn('group/table w-full caption-bottom text-sm data-[density=compact]:text-xs', className)}
 	{...restProps}
 >
 	{@render children?.()}
