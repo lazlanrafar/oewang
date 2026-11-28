@@ -340,9 +340,9 @@ describe('toReceiptForm', () => {
 		expect(toReceiptForm(parsed, context)).toEqual({
 			merchant: 'Warung Tekko',
 			date: '2026-11-02',
-			total: '87500.0000',
-			subtotal: '80000.0000',
-			tax: '7500.0000',
+			total: '87500',
+			subtotal: '80000',
+			tax: '7500',
 			currency: 'IDR',
 			walletId: 'w2',
 			categoryId: '',

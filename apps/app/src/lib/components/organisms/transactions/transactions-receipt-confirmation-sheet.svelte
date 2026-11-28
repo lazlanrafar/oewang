@@ -204,7 +204,7 @@
 			{/if}
 
 			<div class="grid gap-2">
-				<div class="flex items-center justify-between gap-2">
+				<div class="flex min-h-7 items-center justify-between gap-2">
 					<Label for="receipt-merchant" class={labelClass}>{t('receipt.merchant')}</Label>
 					{@render mark('merchant')}
 				</div>
@@ -213,7 +213,7 @@
 
 			<div class="grid grid-cols-2 gap-4">
 				<div class="grid gap-2">
-					<div class="flex items-center justify-between gap-2">
+					<div class="flex min-h-7 items-center justify-between gap-2">
 						<Label for="receipt-total" class={labelClass}>{t('receipt.total')}</Label>
 						{@render mark('total')}
 					</div>
@@ -225,7 +225,7 @@
 				</div>
 
 				<div class="grid gap-2">
-					<div class="flex items-center justify-between gap-2">
+					<div class="flex min-h-7 items-center justify-between gap-2">
 						<Label for="receipt-currency" class={labelClass}>{t('receipt.currency')}</Label>
 						{@render mark('currency')}
 					</div>
@@ -243,7 +243,7 @@
 
 			<div class="grid grid-cols-2 gap-4">
 				<div class="grid gap-2">
-					<div class="flex items-center justify-between gap-2">
+					<div class="flex min-h-7 items-center justify-between gap-2">
 						<Label for="receipt-subtotal" class={labelClass}>{t('receipt.subtotal')}</Label>
 						{@render mark('subtotal')}
 					</div>
@@ -252,7 +252,7 @@
 				</div>
 
 				<div class="grid gap-2">
-					<div class="flex items-center justify-between gap-2">
+					<div class="flex min-h-7 items-center justify-between gap-2">
 						<Label for="receipt-tax" class={labelClass}>{t('receipt.tax')}</Label>
 						{@render mark('tax')}
 					</div>
@@ -264,7 +264,7 @@
 			<p class="text-subtle text-xs">{t('receipt.breakdown_hint')}</p>
 
 			<div class="grid gap-2">
-				<div class="flex items-center justify-between gap-2">
+				<div class="flex min-h-7 items-center justify-between gap-2">
 					<Label for="receipt-date" class={labelClass}>{t('receipt.date')}</Label>
 					{@render mark('date')}
 				</div>
@@ -285,7 +285,7 @@
 
 			{#if form.items.length > 0}
 				<div class="space-y-3">
-					<div class="flex items-center justify-between gap-2">
+					<div class="flex min-h-7 items-center justify-between gap-2">
 						<Label class={labelClass}>{t('receipt.items')}</Label>
 						{@render mark('line_items')}
 					</div>

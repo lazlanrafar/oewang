@@ -354,9 +354,9 @@ export function toReceiptForm(
 	return {
 		merchant: parsed.draft.merchant,
 		date: parsed.draft.date || context.today,
-		total: parsed.draft.total,
-		subtotal: parsed.draft.subtotal ?? '',
-		tax: parsed.draft.tax ?? '',
+		total: plainDecimal(parsed.draft.total),
+		subtotal: plainDecimal(parsed.draft.subtotal ?? ''),
+		tax: plainDecimal(parsed.draft.tax ?? ''),
 		currency: parsed.draft.currency || context.baseCurrency,
 		walletId: defaultWalletId(context.wallets),
 		categoryId: matchCategoryId(parsed.draft, context.categories),
