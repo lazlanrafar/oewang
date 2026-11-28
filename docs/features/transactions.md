@@ -179,6 +179,26 @@ because a receipt is confirmed the same way wherever it was dropped. The flow,
 the marks on each field and what is and is not stored are in
 [receipt OCR](chat.md#receipt-ocr).
 
+**A queued receipt and a confirmed one never both save** (OEW-135). A photo the
+reader was too busy for is queued and saved by the queue later (D95), and the
+panel may still read and confirm the same vault file. Both saves go through
+`insert_with_items` and take the `receipt_jobs` row lock for the file first,
+before any wallet, so they wait for each other:
+
+- **A create that attaches a file a job still holds** (`pending` or
+  `processing`) ends that job in the same database transaction: `done`, carrying
+  the new transaction, marked seen so no "saved for later" notice follows, with
+  a `receipt_job.closed` audit row. The queue never claims it again.
+- **The reader's own save** (`create_read_receipt`, the queue and the bot)
+  checks under that lock whether a live transaction already carries the file,
+  and if one does writes nothing and answers with that transaction. The check
+  at the start of `read_and_save` still saves a needless read; this one closes
+  the minute the read takes.
+
+One order is left open: the queue saving first and the user then confirming a
+panel they kept open. That create is an ordinary create of a file already on a
+live transaction, and it is written: a second save, which the user can delete.
+
 ### Import
 
 Two paths, picked by what the file is. The rule behind the split: **deterministic beats model-driven whenever structure exists.**

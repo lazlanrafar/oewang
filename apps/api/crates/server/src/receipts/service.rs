@@ -17,7 +17,7 @@ use crate::{
     ai::{extraction, service as ai},
     audit::Actor,
     state::AppState,
-    transactions::service::{self as transactions, ItemInput, TransactionInput},
+    transactions::service::{self as transactions, ItemInput, ReaderSave, TransactionInput},
 };
 
 /// How reading a receipt ended. Only `Saved` wrote anything.
@@ -184,7 +184,7 @@ pub async fn read_and_save(state: &AppState, actor: Actor<'_>, file_id: &str) ->
         .map(str::trim)
         .filter(|name| !name.is_empty());
 
-    let saved = transactions::create_with_items(
+    let saved = transactions::create_read_receipt(
         &state.db,
         actor,
         TransactionInput {
@@ -207,9 +207,16 @@ pub async fn read_and_save(state: &AppState, actor: Actor<'_>, file_id: &str) ->
     )
     .await?;
 
-    Ok(Read::Saved {
-        transaction_id: saved.id,
-        check,
+    Ok(match saved {
+        ReaderSave::Created(transaction_id) => Read::Saved {
+            transaction_id,
+            check,
+        },
+        // Confirmed by the user while this read ran (OEW-135).
+        ReaderSave::Already(transaction_id) => Read::Saved {
+            transaction_id,
+            check: Vec::new(),
+        },
     })
 }
 

@@ -208,6 +208,52 @@ pub async fn mark_seen(
     .map(|result| result.rows_affected())
 }
 
+/// Lock the jobs holding these files, whatever their state, in id order. A
+/// create that attaches a queued file and the queue's own save both take
+/// this lock first, so one waits for the other (OEW-135).
+pub async fn lock_for_files(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    vault_file_ids: &[String],
+) -> Result<Vec<String>, sqlx::Error> {
+    sqlx::query_scalar!(
+        r#"SELECT id FROM receipt_jobs
+           WHERE workspace_id = $1 AND vault_file_id = ANY($2)
+           ORDER BY id
+           FOR UPDATE"#,
+        workspace_id,
+        vault_file_ids
+    )
+    .fetch_all(executor)
+    .await
+}
+
+/// End the open jobs holding these files: the user saved the receipt
+/// themselves, so the queue must not save it again. Marked seen, because
+/// nothing is left to tell them.
+pub async fn close_for_transaction(
+    executor: impl PgExecutor<'_>,
+    workspace_id: &str,
+    vault_file_ids: &[String],
+    transaction_id: &str,
+) -> Result<Vec<ReceiptJobRow>, sqlx::Error> {
+    sqlx::query_as!(
+        ReceiptJobRow,
+        r#"UPDATE receipt_jobs
+           SET status = 'done', transaction_id = $3, last_error = NULL,
+               seen_at = now(), updated_at = now()
+           WHERE workspace_id = $1 AND vault_file_id = ANY($2)
+             AND status IN ('pending', 'processing')
+           RETURNING id, workspace_id, user_id, vault_file_id, channel, chat_id, status,
+                     attempts, next_attempt_at, last_error, transaction_id, created_at"#,
+        workspace_id,
+        vault_file_ids,
+        transaction_id
+    )
+    .fetch_all(executor)
+    .await
+}
+
 /// The live transaction a file is already attached to, if any.
 pub async fn transaction_for_file(
     executor: impl PgExecutor<'_>,

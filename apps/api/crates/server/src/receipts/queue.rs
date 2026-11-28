@@ -306,7 +306,13 @@ mod tests {
 mod db_tests {
     use chrono::{Duration as ChronoDuration, Utc};
     use oewang_db::repositories::receipts as jobs;
+    use oewang_domain::ledger::TransactionType;
     use sqlx::PgPool;
+
+    use crate::{
+        audit::{Actor, SOURCE_RECEIPT},
+        transactions::service::{self as transactions, ReaderSave, TransactionInput},
+    };
 
     const WORKSPACE: &str = "ws_rq";
     const USER: &str = "usr_rq";
@@ -318,6 +324,10 @@ mod db_tests {
             "INSERT INTO vault_files (id, workspace_id, name, key, size, type, status)
              VALUES ('f1', 'ws_rq', 'a.jpg', 'wsp/ws_rq/f1', 10, 'image/jpeg', 'ready'),
                     ('f2', 'ws_rq', 'b.jpg', 'wsp/ws_rq/f2', 10, 'image/jpeg', 'ready')",
+            "INSERT INTO user_workspaces (id, workspace_id, user_id, role)
+             VALUES ('m_rq', 'ws_rq', 'usr_rq', 'owner')",
+            "INSERT INTO wallets (id, workspace_id, name, currency_code)
+             VALUES ('w_rq', 'ws_rq', 'Cash', 'IDR')",
         ] {
             sqlx::query(sql).execute(pool).await.unwrap();
         }
@@ -420,5 +430,154 @@ mod db_tests {
 
         let other = jobs::unseen_notices(&pool, "ws_other", USER).await.unwrap();
         assert!(other.is_empty(), "scoped by workspace");
+    }
+
+    // ------------------------------------------- a queued receipt saved once
+
+    fn receipt(files: &[String]) -> TransactionInput<'_> {
+        TransactionInput {
+            kind: TransactionType::Expense,
+            wallet_id: "w_rq",
+            to_wallet_id: None,
+            category_id: None,
+            amount: "87500".parse().unwrap(),
+            to_amount: None,
+            original_amount: None,
+            original_currency_code: None,
+            exchange_rate: None,
+            requested_base_rate: None,
+            date: Utc::now(),
+            name: Some("Warung"),
+            description: None,
+            attachment_ids: Some(files),
+        }
+    }
+
+    fn reader() -> Actor<'static> {
+        Actor {
+            workspace_id: WORKSPACE,
+            user_id: USER,
+            source: SOURCE_RECEIPT,
+        }
+    }
+
+    async fn saved_with_file(pool: &PgPool, file: &str) -> i64 {
+        sqlx::query_scalar(
+            "SELECT count(*) FROM transaction_attachments a
+             JOIN transactions t ON t.id = a.transaction_id
+             WHERE a.vault_file_id = $1 AND a.deleted_at IS NULL AND t.deleted_at IS NULL",
+        )
+        .bind(file)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    async fn audited(pool: &PgPool, action: &str) -> Vec<String> {
+        sqlx::query_scalar("SELECT entity_id FROM audit_logs WHERE action = $1")
+            .bind(action)
+            .fetch_all(pool)
+            .await
+            .unwrap()
+    }
+
+    async fn job_row(pool: &PgPool) -> (String, Option<String>, bool) {
+        sqlx::query_as(
+            "SELECT status, transaction_id, seen_at IS NOT NULL FROM receipt_jobs WHERE id = 'j1'",
+        )
+        .fetch_one(pool)
+        .await
+        .unwrap()
+    }
+
+    fn files() -> Vec<String> {
+        vec!["f1".to_string()]
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_end_the_queued_job_when_the_user_confirms_the_receipt(pool: PgPool) {
+        fixture(&pool).await;
+        jobs::enqueue(
+            &pool,
+            job("j1", "f1", Utc::now() - ChronoDuration::minutes(1)),
+        )
+        .await
+        .unwrap();
+
+        let files = files();
+        let confirmed = transactions::create(&pool, Actor::web(WORKSPACE, USER), receipt(&files))
+            .await
+            .unwrap();
+
+        assert_eq!(
+            job_row(&pool).await,
+            ("done".into(), Some(confirmed.id.clone()), true),
+            "ended with the user's transaction, and nothing left to tell"
+        );
+        assert_eq!(
+            audited(&pool, "receipt_job.closed").await,
+            vec!["j1".to_string()]
+        );
+        assert!(
+            jobs::claim_due(&pool, 10).await.unwrap().is_empty(),
+            "the queue has nothing left to save"
+        );
+        assert_eq!(saved_with_file(&pool, "f1").await, 1);
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_not_save_a_receipt_the_user_confirmed_while_the_reader_read_it(pool: PgPool) {
+        fixture(&pool).await;
+        jobs::enqueue(
+            &pool,
+            job("j1", "f1", Utc::now() - ChronoDuration::minutes(1)),
+        )
+        .await
+        .unwrap();
+        // The queue took the job and is reading the photo...
+        assert_eq!(jobs::claim_due(&pool, 10).await.unwrap().len(), 1);
+
+        // ...when the user confirms the same file from the panel.
+        let files = files();
+        let confirmed = transactions::create(&pool, Actor::web(WORKSPACE, USER), receipt(&files))
+            .await
+            .unwrap();
+
+        let save = transactions::create_read_receipt(&pool, reader(), receipt(&files), &[])
+            .await
+            .unwrap();
+        match save {
+            ReaderSave::Already(id) => assert_eq!(id, confirmed.id),
+            ReaderSave::Created(_) => panic!("the reader saved the receipt a second time"),
+        }
+        assert_eq!(saved_with_file(&pool, "f1").await, 1);
+        assert_eq!(
+            audited(&pool, "transaction.created").await,
+            vec![confirmed.id]
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_leave_the_readers_own_job_for_the_queue_to_finish(pool: PgPool) {
+        fixture(&pool).await;
+        jobs::enqueue(
+            &pool,
+            job("j1", "f1", Utc::now() - ChronoDuration::minutes(1)),
+        )
+        .await
+        .unwrap();
+        jobs::claim_due(&pool, 10).await.unwrap();
+
+        let files = files();
+        let save = transactions::create_read_receipt(&pool, reader(), receipt(&files), &[])
+            .await
+            .unwrap();
+        assert!(matches!(save, ReaderSave::Created(_)));
+        assert_eq!(
+            job_row(&pool).await,
+            ("processing".into(), None, false),
+            "the queue marks it done and tells the person, not the save"
+        );
+        assert!(audited(&pool, "receipt_job.closed").await.is_empty());
     }
 }

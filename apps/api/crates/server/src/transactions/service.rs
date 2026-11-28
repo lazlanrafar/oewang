@@ -11,7 +11,8 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use oewang_db::{
     repositories::{
-        accounts, audit, categories, debts, items, transactions as repo, vault, wallets,
+        accounts, audit, categories, debts, items, receipts as receipt_jobs, transactions as repo,
+        vault, wallets,
     },
     PgPool,
 };
@@ -195,9 +196,39 @@ pub async fn create_with_items(
     input: TransactionInput<'_>,
     items: &[ItemInput<'_>],
 ) -> Result<TransactionRow> {
-    insert_with_items(pool, actor, &cuid2::create_id(), input, items)
-        .await?
-        .ok_or_else(|| AppError::Internal(anyhow::anyhow!("a generated id was already taken")))
+    match insert_with_items(pool, actor, &cuid2::create_id(), input, items, false).await? {
+        Inserted::Row(row) => Ok(*row),
+        _ => Err(AppError::Internal(anyhow::anyhow!(
+            "a generated id was already taken"
+        ))),
+    }
+}
+
+/// What the receipt reader's save did (D95).
+pub enum ReaderSave {
+    /// The new transaction's id.
+    Created(String),
+    /// A live transaction already carries the file: the user confirmed the
+    /// same receipt while the reader was reading it. Nothing was written.
+    Already(String),
+}
+
+/// The receipt reader's create, for the queue and the bot. Checked under
+/// the receipt job's lock, so a confirm that committed while the reader
+/// was reading is seen and the receipt is not saved twice (OEW-135).
+pub async fn create_read_receipt(
+    pool: &PgPool,
+    actor: Actor<'_>,
+    input: TransactionInput<'_>,
+    items: &[ItemInput<'_>],
+) -> Result<ReaderSave> {
+    match insert_with_items(pool, actor, &cuid2::create_id(), input, items, true).await? {
+        Inserted::Row(row) => Ok(ReaderSave::Created(row.id)),
+        Inserted::Already(id) => Ok(ReaderSave::Already(id)),
+        Inserted::IdTaken => Err(AppError::Internal(anyhow::anyhow!(
+            "a generated id was already taken"
+        ))),
+    }
 }
 
 /// The create `POST /v1/transactions` runs: the row as the list reads it,
@@ -223,10 +254,10 @@ pub async fn create_with_id(
     }
 
     let id = id.map_or_else(cuid2::create_id, str::to_string);
-    match insert_with_items(pool, actor, &id, input, items).await? {
-        Some(_) => Ok((find(pool, actor.workspace_id, &id).await?, true)),
+    match insert_with_items(pool, actor, &id, input, items, false).await? {
+        Inserted::Row(_) => Ok((find(pool, actor.workspace_id, &id).await?, true)),
         // A concurrent create with the same id committed first.
-        None => Ok((repeated(pool, actor.workspace_id, &id).await?, false)),
+        _ => Ok((repeated(pool, actor.workspace_id, &id).await?, false)),
     }
 }
 
@@ -239,15 +270,27 @@ async fn repeated(pool: &PgPool, workspace_id: &str, id: &str) -> Result<Transac
         .ok_or(AppError::IdTaken)
 }
 
-/// `None` when `id` is already taken: the database transaction is dropped,
-/// which rolls back the balance it had moved.
+enum Inserted {
+    Row(Box<TransactionRow>),
+    /// `id` is already taken: the database transaction is dropped, which
+    /// rolls back the balance it had moved.
+    IdTaken,
+    /// Only for the reader: a live transaction already carries the file.
+    Already(String),
+}
+
+/// `by_reader` is the receipt reader saving a queued or sent photo. It
+/// writes nothing when the file is already on a live transaction. Any other
+/// create that attaches a file a receipt job still holds ends that job, so
+/// a queued receipt and a confirmed one never both save (OEW-135).
 async fn insert_with_items(
     pool: &PgPool,
     actor: Actor<'_>,
     id: &str,
     input: TransactionInput<'_>,
     items: &[ItemInput<'_>],
-) -> Result<Option<TransactionRow>> {
+    by_reader: bool,
+) -> Result<Inserted> {
     for item in items {
         validate_item(item)?;
     }
@@ -277,11 +320,50 @@ async fn insert_with_items(
     let prepared = prepare(pool, actor.workspace_id, &input).await?;
 
     let mut tx = pool.begin().await.map_err(internal)?;
+    let files = input.attachment_ids.unwrap_or_default();
+    if !files.is_empty() {
+        // Job rows before wallets, on every create, so the two saves of one
+        // receipt wait for each other instead of deadlocking.
+        receipt_jobs::lock_for_files(&mut *tx, actor.workspace_id, files)
+            .await
+            .map_err(internal)?;
+        if by_reader {
+            for file_id in files {
+                if let Some(existing) =
+                    receipt_jobs::transaction_for_file(&mut *tx, actor.workspace_id, file_id)
+                        .await
+                        .map_err(internal)?
+                {
+                    return Ok(Inserted::Already(existing));
+                }
+            }
+        }
+    }
+
     let Some(row) = write_row(&mut tx, actor, id, &input, &prepared).await? else {
-        return Ok(None);
+        return Ok(Inserted::IdTaken);
     };
 
     sync_attachments(&mut tx, actor.workspace_id, &row.id, input.attachment_ids).await?;
+
+    if !by_reader && !files.is_empty() {
+        let closed =
+            receipt_jobs::close_for_transaction(&mut *tx, actor.workspace_id, files, &row.id)
+                .await
+                .map_err(internal)?;
+        for job in &closed {
+            log(
+                &mut tx,
+                actor,
+                "receipt_job.closed",
+                "receipt_job",
+                &job.id,
+                None,
+                snapshot(job)?,
+            )
+            .await?;
+        }
+    }
 
     for item in &items {
         if let Some(category_id) = item.category_id {
@@ -320,7 +402,7 @@ async fn insert_with_items(
 
     tx.commit().await.map_err(internal)?;
     crate::push::service::budgets_after_write(pool, actor.workspace_id, [row.date]).await;
-    Ok(Some(row))
+    Ok(Inserted::Row(Box::new(row)))
 }
 
 /// Lock the wallets, move the balances and insert the row, on the caller's
