@@ -46,7 +46,8 @@
 		enhance,
 		onCancel,
 		onManualEntry,
-		onParsed
+		onParsed,
+		onStatus
 	}: {
 		/** The vault file the panel is open on, or null while it is closed. */
 		fileId: string | null;
@@ -65,6 +66,8 @@
 		onManualEntry: () => void;
 		/** What was read, so the page can carry it into the manual form. */
 		onParsed?: (form: ReceiptForm | null) => void;
+		/** How the read of `id` stands, so the page can say so beside the panel (OEW-135). */
+		onStatus?: (id: string, status: 'reading' | ReceiptRequest['status']) => void;
 	} = $props();
 
 	let request = $state<ReceiptRequest | null>(null);
@@ -114,8 +117,12 @@
 		request = null;
 		form = null;
 		onParsed?.(null);
+		onStatus?.(id, 'reading');
 
 		const result = await requestReceipt(id, fetch);
+		// Told even when the panel closed meanwhile: the page still shows how
+		// the read of `id` ended.
+		onStatus?.(id, result.status);
 		// The panel may have moved on while the model was reading.
 		if (requestedFor !== id) return;
 

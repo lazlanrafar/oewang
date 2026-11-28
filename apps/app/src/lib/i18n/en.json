@@ -165,7 +165,14 @@
 		"composer_expand": "Write a message",
 		"thinking": "Thinking",
 		"tool_get_budget_status": "Checking your budget",
-		"command_budget": "Show budget versus actual spending"
+		"command_budget": "Show budget versus actual spending",
+		"receipt_status_reading": "Reading the receipt. A long one can take a minute.",
+		"receipt_status_ready": "Read it. Check the receipt on the right and confirm.",
+		"receipt_status_queued": "The reader is busy. Your receipt is kept and will be saved automatically; I'll show it here.",
+		"receipt_status_unreadable": "I couldn't read it. Enter it by hand on the right.",
+		"receipt_status_open": "Open the receipt",
+		"card_items_hint": "· {count} {count|item|items}",
+		"card_items_caption": "{name} · {count} {count|item|items}"
 	},
 	"canvas": {
 		"close": "Close the panel",

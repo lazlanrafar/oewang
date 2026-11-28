@@ -13,7 +13,21 @@ const payload = {
 	wallet_name: 'Cash',
 	to_wallet_name: null,
 	date: '2026-11-03',
-	items: [{ name: 'Noodles', amount_formatted: 'Rp 50.000' }],
+	items: [
+		{
+			id: 'item1',
+			name: 'Noodles',
+			brand: null,
+			quantity: '2',
+			unit: 'pcs',
+			unit_price: '25000.0000',
+			amount: '50000.0000',
+			amount_formatted: 'Rp 50.000',
+			category_id: 'cat2',
+			category_name: 'Snacks',
+			notes: null
+		}
+	],
 	month_total_formatted: 'Rp 1.250.000',
 	deleted: false
 };

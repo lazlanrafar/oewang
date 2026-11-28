@@ -52,7 +52,9 @@
 		activeArtifactId = null,
 		activity = null,
 		canEdit = false,
-		emptyActions
+		emptyActions,
+		noteFor = null,
+		note
 	}: {
 		messages: MessageItem[];
 		emptyTitle?: string;
@@ -74,6 +76,10 @@
 		canEdit?: boolean;
 		/** Suggestion chips, mounted by the page on an empty conversation. */
 		emptyActions?: Snippet;
+		/** The message `note` sits under, on the assistant's side. */
+		noteFor?: string | null;
+		/** A line that is not a stored message: the receipt panel's progress (OEW-135). */
+		note?: Snippet;
 	} = $props();
 
 	const rendered = (message: MessageItem) =>
@@ -230,6 +236,9 @@
 					{/if}
 				</div>
 			</li>
+			{#if note && message.id === noteFor}
+				<li class="flex">{@render note()}</li>
+			{/if}
 		{/each}
 	</ol>
 {/if}

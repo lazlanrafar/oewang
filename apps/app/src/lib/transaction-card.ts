@@ -23,10 +23,29 @@ export type TransactionCard = {
 	to_wallet_name: string | null;
 	/** YYYY-MM-DD. */
 	date: string;
-	items: { name: string; amount_formatted: string }[];
+	items: TransactionCardItem[];
 	/** This month's expense total when the row was saved. */
 	month_total_formatted?: string | null;
 	deleted: boolean;
+};
+
+/**
+ * One line of the transaction, with its own category (TXN-24). The raw
+ * fields are there because a category change replaces the item whole, so
+ * the rest is sent back as it was read (TXN-27). Money stays a string (D12).
+ */
+export type TransactionCardItem = {
+	id: string;
+	name: string;
+	brand: string | null;
+	quantity: string | null;
+	unit: string | null;
+	unit_price: string | null;
+	amount: string;
+	amount_formatted: string;
+	category_id: string | null;
+	category_name: string | null;
+	notes: string | null;
 };
 
 /** A card from loose JSON: the stream frame or the stored attachment. */

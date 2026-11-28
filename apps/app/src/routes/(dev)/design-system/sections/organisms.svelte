@@ -67,8 +67,32 @@
 		to_wallet_name: null,
 		date: '2026-10-23',
 		items: [
-			{ name: 'Mineral water', amount_formatted: 'Rp 20.000' },
-			{ name: 'Pho special', amount_formatted: 'Rp 81.000' }
+			{
+				id: 'i1',
+				name: 'Mineral water',
+				brand: null,
+				quantity: '2',
+				unit: 'btl',
+				unit_price: '10000.0000',
+				amount: '20000.0000',
+				amount_formatted: 'Rp 20.000',
+				category_id: null,
+				category_name: 'Drinks',
+				notes: null
+			},
+			{
+				id: 'i2',
+				name: 'Pho special',
+				brand: null,
+				quantity: null,
+				unit: null,
+				unit_price: null,
+				amount: '81000.0000',
+				amount_formatted: 'Rp 81.000',
+				category_id: null,
+				category_name: null,
+				notes: null
+			}
 		],
 		month_total_formatted: 'Rp 1.250.000',
 		deleted: false

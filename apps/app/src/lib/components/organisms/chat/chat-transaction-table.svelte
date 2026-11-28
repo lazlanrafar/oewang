@@ -13,6 +13,11 @@
 	 * lock order, the audit row and the soft delete stay in the API (D5,
 	 * D13, D14, OPS-2). What a row shows afterwards is the conversation read
 	 * again: the API re-reads each saved row by id when it serves one.
+	 *
+	 * A row's items are a table of their own under this one, one per row in
+	 * the same order, because each item has its own category (TXN-24, D123)
+	 * and a 21-item receipt listed in the name cell made one row a page tall.
+	 * Their pickers save through the detail sheet's item action.
 	 */
 	import Ellipsis from '@lucide/svelte/icons/ellipsis';
 	import { toast } from 'svelte-sonner';
@@ -21,7 +26,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
-	import type { TransactionCard } from '$lib/transaction-card';
+	import type { TransactionCard, TransactionCardItem } from '$lib/transaction-card';
 
 	import { Button } from '../../atoms/button/index.js';
 	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
@@ -39,29 +44,56 @@
 		canEdit?: boolean;
 	} = $props();
 
-	/** The row a change is in flight for, so only its controls wait. */
+	/** The row or item a change is in flight for, so only its controls wait. */
 	let pending = $state<string | null>(null);
 	let deleting = $state<TransactionCard | null>(null);
 	let confirming = $state(false);
 
 	const nameOf = (card: TransactionCard) => card.name ?? t('chat.card_untitled');
 	const live = $derived(cards.filter((card) => !card.deleted).length);
+	const itemized = $derived(cards.filter((card) => !card.deleted && card.items.length > 0));
 
-	async function post(
+	const SAVED = {
+		setCategory: 'txn.updated',
+		setWallet: 'txn.updated',
+		delete: 'txn.deleted',
+		saveItem: 'txn.item_saved'
+	} as const;
+
+	function postRow(
 		card: TransactionCard,
 		action: 'setCategory' | 'setWallet' | 'delete',
 		fields: Record<string, string> = {}
 	) {
-		pending = card.transaction_id;
+		return post(card.transaction_id, action, { id: card.transaction_id, ...fields });
+	}
+
+	/** The API replaces an item whole, so the rest goes back as it was read (TXN-27). */
+	function setItemCategory(card: TransactionCard, item: TransactionCardItem, categoryId: string) {
+		return post(item.id, 'saveItem', {
+			transaction_id: card.transaction_id,
+			item_id: item.id,
+			name: item.name,
+			brand: item.brand ?? '',
+			quantity: item.quantity ?? '',
+			unit: item.unit ?? '',
+			unit_price: item.unit_price ?? '',
+			amount: item.amount,
+			category_id: categoryId,
+			notes: item.notes ?? ''
+		});
+	}
+
+	async function post(key: string, action: keyof typeof SAVED, fields: Record<string, string>) {
+		pending = key;
 		const body = new FormData();
-		body.set('id', card.transaction_id);
-		for (const [key, value] of Object.entries(fields)) body.set(key, value);
+		for (const [name, value] of Object.entries(fields)) body.set(name, value);
 
 		try {
 			const response = await fetch(`/transactions?/${action}`, { method: 'POST', body });
 			const result = deserialize(await response.text());
 			if (result.type === 'success') {
-				toast.success(t(action === 'delete' ? 'txn.deleted' : 'txn.updated'));
+				toast.success(t(SAVED[action]));
 			} else {
 				toast.error(
 					messageForCode(result.type === 'failure' ? String(result.data?.code ?? '') : '')
@@ -103,9 +135,9 @@
 					{:else}
 						<Table.Cell class="wrap-break-word">
 							{nameOf(card)}
-							{#each card.items as item, index (index)}
-								<span class="text-subtle block">• {item.name} {item.amount_formatted}</span>
-							{/each}
+							{#if card.items.length > 0}
+								<span class="text-subtle">{t('chat.card_items_hint', { count: card.items.length })}</span>
+							{/if}
 						</Table.Cell>
 						<Table.Cell class="text-right font-mono whitespace-nowrap">{card.amount_formatted}</Table.Cell>
 						<!-- Keyed on the row, so a picker a refused change moved goes
@@ -123,7 +155,7 @@
 										disabled={pending !== null}
 										updating={pending === card.transaction_id}
 										onChange={(id) => {
-											if (id !== card.category_id) void post(card, 'setCategory', { category_id: id });
+											if (id !== card.category_id) void postRow(card, 'setCategory', { category_id: id });
 										}}
 									/>
 								{:else}
@@ -139,7 +171,7 @@
 										disabled={pending !== null}
 										updating={pending === card.transaction_id}
 										onChange={(id) => {
-											if (id !== card.wallet_id) void post(card, 'setWallet', { wallet_id: id });
+											if (id !== card.wallet_id) void postRow(card, 'setWallet', { wallet_id: id });
 										}}
 									/>
 								{:else}
@@ -183,6 +215,58 @@
 			{/each}
 		</Table.Body>
 	</Table.Root>
+
+	{#each itemized as card (card.transaction_id)}
+		<p class="text-caption text-subtle pt-2">
+			{t('chat.card_items_caption', { name: nameOf(card), count: card.items.length })}
+		</p>
+		<Table.Root density="compact" class="table-fixed">
+			<Table.Header>
+				<Table.Row>
+					<Table.Head>{t('txn.item_column_name')}</Table.Head>
+					<Table.Head class="w-40">{t('txn.item_column_category')}</Table.Head>
+					<Table.Head class="w-28 text-right">{t('txn.item_amount')}</Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each card.items as item, index (item.id ?? index)}
+					<Table.Row>
+						<Table.Cell class="wrap-break-word">
+							{item.name}
+							{#if item.quantity}
+								<span class="text-subtle text-xs">
+									· {item.quantity}{item.unit ? ` ${item.unit}` : ''}
+								</span>
+							{/if}
+						</Table.Cell>
+						<!-- Keyed on the item, so a pick the API refused goes back to
+						     what the conversation says when it is read again. -->
+						{#key item}
+							<Table.Cell>
+								{#if canEdit && card.type !== 'transfer' && item.id}
+									<SelectCategory
+										type={card.type}
+										inDataTable
+										clearLabel={t('txn.item_no_category')}
+										placeholder={t('txn.item_category')}
+										value={item.category_id ?? ''}
+										disabled={pending !== null}
+										updating={pending === item.id}
+										onChange={(id) => {
+											if (id !== (item.category_id ?? '')) void setItemCategory(card, item, id);
+										}}
+									/>
+								{:else}
+									<span class="text-subtle">{item.category_name ?? ''}</span>
+								{/if}
+							</Table.Cell>
+						{/key}
+						<Table.Cell class="text-right font-mono whitespace-nowrap">{item.amount_formatted}</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+	{/each}
 </div>
 
 {#if canEdit}
@@ -194,7 +278,7 @@
 		onConfirm={() => {
 			const card = deleting;
 			deleting = null;
-			if (card) void post(card, 'delete');
+			if (card) void postRow(card, 'delete');
 		}}
 	/>
 {/if}

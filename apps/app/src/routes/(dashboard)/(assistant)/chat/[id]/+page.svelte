@@ -70,7 +70,9 @@
 		ChatHistory,
 		ChatInput,
 		ChatMessages,
-		ChatSuggestions
+		ChatReceiptStatus,
+		ChatSuggestions,
+		type ReceiptStatus
 	} from '$lib/components/organisms/chat';
 	import {
 		emptyDraft,
@@ -505,6 +507,34 @@
 
 	const manualWalletCurrency = $derived(walletCurrencies[manualDraft.accountId] ?? baseCurrency);
 
+	/**
+	 * How the panel's read of a receipt stands, kept after the panel closes
+	 * so the conversation can still say so (OEW-135). Reported by the panel
+	 * itself, so the receipt is read once. Page state, not URL state: it is
+	 * the progress of a request, and a reload reads the receipt again.
+	 */
+	let receiptStatus = $state<{ fileId: string; status: ReceiptStatus } | null>(null);
+
+	function onReceiptStatus(fileId: string, status: 'reading' | ReceiptStatus | 'failed') {
+		// A new read takes the line; a late answer for another file does not.
+		if (status !== 'reading' && receiptStatus?.fileId !== fileId) return;
+		// A failed read says why in the panel, with its retry.
+		receiptStatus = status === 'failed' ? null : { fileId, status };
+	}
+
+	/** The newest message of files alone that carries the receipt being read. */
+	const receiptNoteFor = $derived.by(() => {
+		const fileId = receiptStatus?.fileId;
+		if (!fileId) return null;
+		const sent = messages.findLast(
+			(message) =>
+				message.role === 'user' &&
+				message.content === '' &&
+				message.files.some((file) => file.id === fileId)
+		);
+		return sent?.id ?? null;
+	});
+
 	/** A refused write, by code, shown in the panel rather than as a toast. */
 	let canvasError = $state<string | null>(null);
 
@@ -535,6 +565,8 @@
 
 			if (result.type !== 'success') return;
 
+			// The saved table answers the receipt from here on.
+			receiptStatus = null;
 			await closeCanvas();
 			const created = result.data?.data?.data?.id;
 			if (typeof created === 'string') {
@@ -578,9 +610,20 @@
 			onCopy={copy}
 			onRegenerate={regenerate}
 			onArtifact={openArtifact}
+			noteFor={receiptNoteFor}
 		>
 			{#snippet emptyActions()}
 				<ChatSuggestions disabled={isActive(turn) || chatOff !== null} onSelect={send} />
+			{/snippet}
+			{#snippet note()}
+				{#if receiptStatus}
+					{@const fileId = receiptStatus.fileId}
+					<ChatReceiptStatus
+						status={receiptStatus.status}
+						panelOpen={canvas?.kind === 'receipt' && canvas.id === fileId}
+						onOpen={() => openCanvas('receipt', fileId)}
+					/>
+				{/if}
 			{/snippet}
 		</ChatMessages>
 
@@ -697,6 +740,7 @@
 			onCancel={closeCanvas}
 			onManualEntry={() => openCanvas('transaction', canvas?.id ?? '')}
 			onParsed={(form) => (receiptForm = form)}
+			onStatus={onReceiptStatus}
 		/>
 	{/if}
 </ChatCanvas>
