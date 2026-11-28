@@ -12,6 +12,7 @@ Transactions are the product. Every movement of money is one row: income, expens
 - Changing the CSV export columns, the import wizard steps, or the statement import job.
 - Changing the receipt confirmation sheet or what it writes.
 - Changing how attachments are shown, picked or saved. The file sheet itself is in [vault](vault.md).
+- Changing how names are tidied, which surfaces tidy them, or the tidy-names sheet.
 
 ## Data
 
@@ -67,6 +68,17 @@ All of it inside one database transaction, with the affected wallet rows locked 
 
 A payment on a debt through a wallet is an ordinary `expense` or `income` row and moves the balance by the rules above ([debts](debts.md)). Deleting it by any route (single, bulk, chat, MCP) also cancels the payment, in the same database transaction, and restores the debt's remaining amount (DEBT-8). Deleting a transaction that a debt was made from clears the debt's link and leaves the debt alone (DEBT-9).
 
+### Names the assistant and the receipt reader write
+
+A transaction name or an item name written by the assistant (web chat and Telegram, `source` `chat`) or by the receipt reader (`receipt`, and `telegram` for a photo sent to the bot) is tidied before it is stored (D129). A name a person types in a form (`web`) is stored as typed, and so is an import's, an MCP tool's, and a debt payment's (which is the contact's name).
+
+1. **Tidy.** `oewang_domain::names::tidy_name` collapses runs of whitespace, trims, and sets Title Case: "es teh poci" becomes "Es Teh Poci", "MIXUE" becomes "Mixue", "MINERAL WATER (Bottle)" becomes "Mineral Water (Bottle)". A word that already mixes case is kept ("DriveThru", "iPhone", "McDonald's"). A two- or three-letter all-caps word is kept as an acronym ("ACK Pering DriveThru", "Transfer BCA"), except in a name written entirely in capitals, where only the known acronyms in that module survive (PT, CV, BCA, BNI and a few more): a shouted receipt line "ES TEH" is two words. `dan`, `di`, `ke`, `and`, `of`, `the` and `&` stay lower after the first word. A word that starts with a digit ("1L", "500ml"), and text outside the Latin script, is left alone.
+2. **Reuse.** When the workspace already has a live name of the same kind whose item key (`lower(btrim(name))`, ITM-1) equals the tidied one, the most recently written of those spellings is stored instead, whatever its case. Transaction names are matched against transaction names, item names against item names. Only exact key matches count.
+
+Where it runs, all in the transactions service, keyed on the actor's `source`: a create with its items (`create_with_items`, so the chat tool, the receipt confirm on the web and on mobile, the Telegram photo and the receipt queue's retries), an added item (the chat's `add_transaction_items`), a chat split's new expense (`debts::service::split`), and an update, but only when the update changes the name: the chat's patch resends the old name, and that is left as it was. A rename is never matched against the row's own old spelling, so "rename it to Mixue" is not answered with "MIXUE". The mobile form sends `source: receipt` when it was opened from a scanned receipt.
+
+**Tidy names** in the toolbar's Backup menu (admin and owner) opens a sheet at `?tidy=names` listing every live transaction and item whose name would change, from and to, all ticked. Within one key, every spelling becomes the newest spelling that is already tidy, or else the tidy form of the newest; an untidy spelling is never the target here, otherwise a lone "MIXUE" could never be fixed. Applying sends the ticked rows with the name each showed; the API works out the new name again, renames each with its own audit row in one database transaction, and skips a row whose name changed in between. The empty states are "All names are tidy" and, when every row is unticked, "Nothing selected".
+
 ### Audit
 
 Every create, update and delete writes an `audit_logs` row inside the same database transaction (OPS-1, D14), with `before` and `after` snapshots and a `source` of `web`, `chat`, `import` or `receipt`.
@@ -84,6 +96,7 @@ Route tables are in [endpoints](../api/endpoints.md#transactions). The shape of 
 | List and read | `GET /v1/transactions`, `GET /v1/transactions/{id}`, `GET /v1/transactions/summary` |
 | Write | `POST`, `PATCH /v1/transactions/{id}`, `DELETE /v1/transactions/{id}` |
 | Bulk | `POST /v1/transactions/bulk`, `/bulk-update`, `/bulk-delete` |
+| Tidy names | `GET`, `POST /v1/transactions/tidy-names` (D129) |
 | Export and import | `GET /v1/transactions/export`, `POST /v1/transactions/import`, `GET /v1/transactions/import/{job_id}` |
 | Line items | `GET`, `POST`, `PUT`, `DELETE` under `/v1/transactions/{id}/items` |
 
