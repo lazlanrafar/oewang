@@ -92,7 +92,7 @@
 					aria-label={collapsed ? t('nav.switch_workspace') : undefined}
 				>
 					<span
-						class="flex aspect-square size-8 shrink-0 items-center justify-center rounded bg-primary font-semibold text-primary-foreground text-sm"
+						class="flex aspect-square size-8 shrink-0 items-center justify-center bg-primary font-semibold text-primary-foreground text-sm"
 					>
 						{#if switching}
 							<Loader2 class="size-4 animate-spin" />
