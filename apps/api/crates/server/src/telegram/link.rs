@@ -80,6 +80,8 @@ pub async fn issue(
     workspace_id: &str,
     user_id: &str,
 ) -> Result<IssuedLink> {
+    crate::plans::require(pool, workspace_id, oewang_domain::Feature::Telegram).await?;
+
     // 32 random bytes as URL-safe base64: 43 characters of [A-Za-z0-9_-],
     // inside Telegram's 64-character `start` limit and its alphabet.
     let issued = token::issue_refresh_token();

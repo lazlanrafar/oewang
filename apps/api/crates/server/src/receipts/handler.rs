@@ -55,6 +55,12 @@ pub async fn queue_receipt(
     let id = request_id.0;
 
     let result = async {
+        crate::plans::require(
+            &state.db,
+            &auth.workspace_id,
+            oewang_domain::Feature::ReceiptScan,
+        )
+        .await?;
         // The workspace filter and the ready check are the vault's own.
         let file = vault::find(&state.db, &auth.workspace_id, &body.vault_file_id).await?;
         if file.status != "ready" {

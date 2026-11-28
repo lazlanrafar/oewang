@@ -8,7 +8,7 @@
 
 use oewang_clients::telegram::Message;
 use oewang_db::repositories::telegram as links;
-use oewang_domain::{AppError, Result};
+use oewang_domain::{AppError, Feature, Result};
 
 use crate::{
     auth::service::current_role,
@@ -76,13 +76,23 @@ pub async fn handle(state: &AppState, bot: &Bot, message: Message) -> Result<()>
         Err(error) => return Err(error),
     };
 
-    if command(text, "start").is_some() || command(text, "help").is_some() {
-        say(bot, chat_id, render::HELP).await;
-        return Ok(());
-    }
     if command(text, "disconnect").is_some() {
         link::revoke(&state.db, &link).await?;
         say(bot, chat_id, render::DISCONNECTED).await;
+        return Ok(());
+    }
+    // Answered, never silent; the link stays, so adding the feature back is
+    // all it takes (PLN-6). `/disconnect` above still works.
+    match crate::plans::require(&state.db, &link.workspace_id, Feature::Telegram).await {
+        Ok(()) => {}
+        Err(AppError::FeatureNotInPlan(_)) => {
+            say(bot, chat_id, render::TELEGRAM_NOT_IN_PLAN).await;
+            return Ok(());
+        }
+        Err(error) => return Err(error),
+    }
+    if command(text, "start").is_some() || command(text, "help").is_some() {
+        say(bot, chat_id, render::HELP).await;
         return Ok(());
     }
 

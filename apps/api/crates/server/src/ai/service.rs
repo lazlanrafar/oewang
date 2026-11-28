@@ -737,6 +737,8 @@ pub async fn parse_receipt(
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)?;
+    // Every receipt read passes here: the web's parse, the bot, the queue.
+    crate::plans::require(pool, workspace_id, oewang_domain::Feature::ReceiptScan).await?;
 
     let document = crate::ai::extraction::document(pool, store, workspace_id, file_id).await?;
     let answer = crate::ai::extraction::parse_receipt(

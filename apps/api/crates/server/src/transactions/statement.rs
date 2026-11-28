@@ -89,6 +89,13 @@ pub async fn start(
         row_limit,
     } = request;
 
+    crate::plans::require(
+        pool,
+        actor.workspace_id,
+        oewang_domain::Feature::StatementImport,
+    )
+    .await?;
+
     // A wallet from another workspace is a wallet that does not exist
     // (AUTH-4).
     wallets::find_wallet(pool, actor.workspace_id, wallet_id)

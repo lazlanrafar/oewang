@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
+use crate::Feature;
+
 /// Per-field validation messages, keyed by field name.
 pub type FieldErrors = BTreeMap<String, String>;
 
@@ -52,6 +54,10 @@ pub enum AppError {
     /// A console role still held by an operator cannot be deleted (CSL-12).
     #[error("this console role is still held by an operator")]
     ConsoleRoleInUse,
+    /// The workspace's plan leaves this feature out (PLN-6, D128). Carries
+    /// the feature, so the answer can name it (PLN-7).
+    #[error("the workspace's plan does not include {}", .0.key())]
+    FeatureNotInPlan(Feature),
 
     // -- validation and general
     #[error("validation failed")]
@@ -221,6 +227,7 @@ impl AppError {
             UserDisabled => "USER_DISABLED",
             WorkspaceSuspended => "WORKSPACE_SUSPENDED",
             ConsoleRoleInUse => "CONSOLE_ROLE_IN_USE",
+            FeatureNotInPlan(_) => "FEATURE_NOT_IN_PLAN",
             ResetTokenInvalid => "RESET_TOKEN_INVALID",
             Validation(_) => "VALIDATION_FAILED",
             MalformedRequest => "MALFORMED_REQUEST",
@@ -287,7 +294,7 @@ impl AppError {
         match self {
             Unauthenticated | InvalidCredentials | CryptoSessionUnknown | McpTokenInvalid => 401,
             InsufficientRole | NotAMember | NoWorkspace | ToolForbidden | ConsoleForbidden
-            | UserDisabled | WorkspaceSuspended => 403,
+            | UserDisabled | WorkspaceSuspended | FeatureNotInPlan(_) => 403,
             EmailTaken
             | LastOwner
             | WalletHasTransactions
@@ -349,6 +356,7 @@ impl AppError {
             LastOwner => "Promote another member to owner first.",
             NoWorkspace => "Create a workspace or accept an invitation, then switch into it.",
             UserDisabled | WorkspaceSuspended => "Contact oewang support.",
+            FeatureNotInPlan(_) => "Contact oewang support to change the workspace's plan.",
             ConsoleRoleInUse => "Move its operators to another role first.",
             McpTokenInvalid => "Create a new token in Account, MCP, or connect again.",
             WorkspaceIdNotAllowed => "Drop workspace_id; switch workspace to act in another one.",
@@ -442,7 +450,8 @@ pub struct ErrorBody {
     pub hint: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<FieldErrors>,
-    /// Structured detail beyond `fields`. Only `STALE` carries any (D115).
+    /// Structured detail beyond `fields`: `STALE` carries the row (D115),
+    /// `FEATURE_NOT_IN_PLAN` the feature (PLN-7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<serde_json::Value>,
     pub request_id: String,
@@ -462,6 +471,9 @@ impl AppError {
             fields: self.fields().cloned(),
             details: match self {
                 AppError::Stale(current) => Some(serde_json::json!({ "current": current })),
+                AppError::FeatureNotInPlan(feature) => {
+                    Some(serde_json::json!({ "feature": feature.key() }))
+                }
                 _ => None,
             },
             request_id: request_id.into(),
@@ -495,6 +507,7 @@ mod tests {
             AppError::UserDisabled,
             AppError::WorkspaceSuspended,
             AppError::ConsoleRoleInUse,
+            AppError::FeatureNotInPlan(Feature::Chat),
             AppError::Validation(FieldErrors::new()),
             AppError::MalformedRequest,
             AppError::NotFound,
@@ -557,7 +570,7 @@ mod tests {
 
         // Every catalog entry but TRANSPORT_UNEXPECTED_RESPONSE, a
         // client-side condition with no server variant by design.
-        assert_eq!(samples.len(), 71);
+        assert_eq!(samples.len(), 72);
 
         let mut seen = std::collections::HashSet::new();
         for error in &samples {
@@ -588,6 +601,18 @@ mod tests {
         let body = AppError::Stale(Some(serde_json::json!({ "id": "a" }))).to_body("req-1");
         assert_eq!(body.details.unwrap()["current"]["id"], "a");
         assert!(AppError::IdTaken.to_body("req-1").details.is_none());
+    }
+
+    /// PLN-7: the refusal names the feature, as a key the app can map.
+    #[test]
+    fn should_name_the_feature_when_not_in_plan() {
+        let body = AppError::FeatureNotInPlan(Feature::ReceiptScan).to_body("req-1");
+        assert_eq!(body.code, "FEATURE_NOT_IN_PLAN");
+        assert_eq!(
+            body.details,
+            Some(serde_json::json!({ "feature": "receipt_scan" }))
+        );
+        assert_eq!(AppError::FeatureNotInPlan(Feature::Vault).status(), 403);
     }
 
     #[test]
