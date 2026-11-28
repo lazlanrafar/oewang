@@ -18,10 +18,11 @@
 /// Lowercase after the first word.
 const CONNECTORS: &[&str] = &["dan", "di", "ke", "and", "of", "the", "&"];
 
-/// The acronyms kept even in a name written all in capitals.
+/// Known acronyms: written in capitals wherever they stand and however they
+/// were typed ("cv maju jaya" reads "CV Maju Jaya"), whatever their length.
 const KNOWN_ACRONYMS: &[&str] = &[
     "PT", "CV", "UD", "TB", "BCA", "BNI", "BRI", "BSI", "BTN", "BPD", "ATM", "KFC", "QR", "ID",
-    "UHT",
+    "UHT", "PLN", "PDAM", "BPJS", "SPBU", "BBM", "PPN", "NPWP",
 ];
 
 /// Units written in capitals when they stand alone after the first word.
@@ -34,7 +35,8 @@ const UNITS: &[&str] = &[
 /// described above. Idempotent.
 pub fn tidy_name(raw: &str) -> String {
     let words: Vec<&str> = raw.split_whitespace().collect();
-    let shouting = is_shouting(&words);
+    // A lone short capital word ("PLN", "ACK") is an acronym, not shouting.
+    let shouting = is_shouting(&words) && !(words.len() == 1 && words[0].chars().count() <= 3);
     let mut seen_letter = false;
 
     words
@@ -61,6 +63,13 @@ fn tidy_word(word: &str, first: bool, shouting: bool) -> String {
     let upper = word.to_uppercase();
     if !first && UNITS.contains(&upper.as_str()) {
         return upper;
+    }
+
+    let bare = word
+        .trim_matches(|c: char| !c.is_alphabetic())
+        .to_uppercase();
+    if KNOWN_ACRONYMS.contains(&bare.as_str()) {
+        return word.to_uppercase();
     }
 
     let lower = word.to_lowercase();
@@ -163,7 +172,13 @@ mod tests {
         ("Transfer BCA", "Transfer BCA"),
         ("TRANSFER BCA", "Transfer BCA"),
         ("topup BNI", "Topup BNI"),
-        ("cv maju jaya", "Cv Maju Jaya"),
+        ("cv maju jaya", "CV Maju Jaya"),
+        ("PLN", "PLN"),
+        ("pln token", "PLN Token"),
+        ("BAYAR PLN", "Bayar PLN"),
+        ("bpjs kesehatan", "BPJS Kesehatan"),
+        ("ACK", "ACK"),
+        ("topup bca", "Topup BCA"),
         ("DON'T PANIC", "Don't Panic"),
         ("COCA-COLA", "Coca-Cola"),
         ("CAFÉ LATTE", "Café Latte"),
