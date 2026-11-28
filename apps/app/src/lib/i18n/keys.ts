@@ -1343,6 +1343,7 @@ export type TranslationKey =
 	| 'settings.usage_feature_receipt'
 	| 'settings.usage_feature_telegram'
 	| 'settings.usage_month'
+	| 'settings.usage_of_reference'
 	| 'settings.usage_storage'
 	| 'settings.usage_storage_detail'
 	| 'settings.usage_title'

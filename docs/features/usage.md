@@ -58,7 +58,7 @@ The headline figures are summed from the per-feature rows in the API, so the car
 
 ## The sidebar
 
-The foot of the app's sidebar shows this month's AI tokens (input plus output) and the vault's stored bytes and file count, and opens `/settings/usage`. It is set like the old app's `NavUsage`, a muted caps label over each figure, without its progress bars and percentages: those measured use against a plan's quota, and nothing here is limited. The dashboard layout reads it alongside the pickers' lists, so it refreshes whenever the layout does (a navigation that reloads it, or any form action); a failed read leaves it out rather than blocking the shell. It is hidden on the collapsed rail, and the console's sidebar has none.
+The foot of the app's sidebar shows this month's AI tokens (input plus output) and the vault's stored bytes and file count, and opens `/settings/usage`. It is laid out like the old app's `NavUsage`: a muted caps label with a percentage, the figure over a reference, and a thin bar. The old one measured against a plan's quota; there is none, so the bar is measured against fixed references in `layouts-sidebar-usage.svelte`, 1M tokens a month and 1 GB of storage. They are a yardstick for the bar and are enforced nowhere: a workspace past one reads over 100% with the bar full, and nothing is refused. A real quota, if one is ever built, replaces them with a per-workspace figure from the API. The dashboard layout reads it alongside the pickers' lists, so it refreshes whenever the layout does (a navigation that reloads it, or any form action); a failed read leaves it out rather than blocking the shell. It is hidden on the collapsed rail, and the console's sidebar has none.
 
 ## Testing
 

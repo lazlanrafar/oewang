@@ -447,6 +447,7 @@
 		"usage_description": "What this workspace stores and what the assistant has spent. Recorded and shown, with no limit for now.",
 		"usage_storage": "Storage",
 		"usage_storage_detail": "{count} {count|file|files} in the vault",
+		"usage_of_reference": "{used} / {reference}",
 		"usage_tokens_month": "AI tokens this month",
 		"usage_tokens_total": "AI tokens, all time",
 		"usage_tokens_detail": "{input} in · {output} out",
