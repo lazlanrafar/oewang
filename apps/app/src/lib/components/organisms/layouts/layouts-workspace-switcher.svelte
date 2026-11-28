@@ -82,8 +82,8 @@
 					{...props}
 					type="button"
 					class={cn(
-						'flex w-full items-center gap-2 overflow-hidden text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
-						collapsed ? 'size-8 justify-center p-0' : 'h-12 p-2'
+						'flex w-full items-center gap-2 overflow-hidden border border-sidebar-border text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
+						collapsed ? 'size-8 justify-center border-transparent p-0' : 'h-12 p-2'
 					)}
 					aria-label={collapsed ? t('nav.switch_workspace') : undefined}
 				>
