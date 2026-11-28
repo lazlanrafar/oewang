@@ -648,6 +648,38 @@ async fn should_create_a_transaction_and_move_the_balance(pool: PgPool) {
     assert_eq!(balance, Decimal::new(4_125_000, 1));
 }
 
+/// D129
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_store_the_names_a_chat_create_writes_tidied(pool: PgPool) {
+    fixture(&pool).await;
+    let turns = store();
+
+    run(
+        &pool,
+        &turns,
+        "create_transaction",
+        json!({
+            "type": "expense",
+            "amount": "30000",
+            "wallet_id": "wal_cash",
+            "date": "2026-11-03",
+            "name": "jus  alpukat dede",
+            "items": [{ "name": "ES TEH POCI", "amount": "30000" }]
+        }),
+    )
+    .await
+    .unwrap();
+
+    let names: (String, String) = sqlx::query_as(
+        "SELECT t.name, i.name FROM transactions t
+         JOIN transaction_items i ON i.transaction_id = t.id",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(names, ("Jus Alpukat Dede".into(), "Es Teh Poci".into()));
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn should_attribute_a_chat_write_to_the_real_user(pool: PgPool) {
     fixture(&pool).await;

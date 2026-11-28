@@ -643,6 +643,11 @@ fn protected_routes(state: AppState) -> Router<AppState> {
             post(transactions::handler::bulk_delete),
         )
         .route(
+            "/v1/transactions/tidy-names",
+            get(transactions::handler::tidy_names_preview)
+                .post(transactions::handler::tidy_names_apply),
+        )
+        .route(
             "/v1/transactions/{id}",
             get(transactions::handler::get)
                 .patch(transactions::handler::update)

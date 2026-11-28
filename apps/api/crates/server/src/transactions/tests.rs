@@ -2975,3 +2975,314 @@ mod item_categories {
         assert_eq!(cigarettes.total, decimal("80000"));
     }
 }
+
+// -------------------------------------------------------------- tidy names
+
+/// D129: the assistant's and the receipt reader's names are tidied and
+/// reused; a form's are stored as typed.
+mod tidy_names {
+    use axum::{body::Body, http::Request, routing::get, Router};
+    use oewang_domain::Role;
+    use tower::ServiceExt;
+
+    use super::*;
+    use crate::{
+        audit::{SOURCE_CHAT, SOURCE_RECEIPT},
+        auth::token,
+        test_support,
+        transactions::{
+            handler,
+            names::{self, NameKind, TidyRequest},
+            service::ItemInput,
+        },
+    };
+
+    fn item(name: &str) -> ItemInput<'_> {
+        ItemInput {
+            name,
+            brand: None,
+            quantity: None,
+            unit: None,
+            unit_price: None,
+            amount: decimal("10000"),
+            category_id: None,
+            notes: None,
+        }
+    }
+
+    fn named<'a>(wallet_id: &'a str, name: &'a str) -> TransactionInput<'a> {
+        TransactionInput {
+            name: Some(name),
+            ..expense(wallet_id, "10000")
+        }
+    }
+
+    async fn item_names(pool: &PgPool, transaction_id: &str) -> Vec<String> {
+        service::list_items(pool, WORKSPACE, transaction_id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|item| item.name)
+            .collect()
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_store_a_chat_create_tidied(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        let chat = actor().with_source(SOURCE_CHAT);
+        let row = service::create_with_items(
+            &pool,
+            chat,
+            named(&cash, "  es teh   poci "),
+            &[item("MINERAL WATER (Bottle)"), item("aqua 1L")],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(row.name.as_deref(), Some("Es Teh Poci"));
+        assert_eq!(
+            item_names(&pool, &row.id).await,
+            ["Mineral Water (Bottle)", "Aqua 1L"]
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_store_a_receipt_save_with_the_newest_existing_spelling(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        // Typed by a person, and kept exactly as typed.
+        let typed = service::create_with_items(
+            &pool,
+            actor(),
+            named(&cash, "ACK Pering DriveThru"),
+            &[item("es TEH manis")],
+        )
+        .await
+        .unwrap();
+        assert_eq!(typed.name.as_deref(), Some("ACK Pering DriveThru"));
+        assert_eq!(item_names(&pool, &typed.id).await, ["es TEH manis"]);
+
+        // The receipt confirm `POST /v1/transactions` runs with `source: receipt`.
+        let receipt = actor().with_source(SOURCE_RECEIPT);
+        let (row, _) = service::create_with_id(
+            &pool,
+            receipt,
+            None,
+            named(&cash, "ACK PERING DRIVETHRU"),
+            &[item("ES TEH MANIS"), item("NASI GORENG")],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(row.name.as_deref(), Some("ACK Pering DriveThru"));
+        assert_eq!(
+            item_names(&pool, &row.id).await,
+            ["es TEH manis", "Nasi Goreng"]
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_keep_a_form_name_as_typed(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+
+        let row = service::create(&pool, actor(), named(&cash, "es teh poci"))
+            .await
+            .unwrap();
+        assert_eq!(row.name.as_deref(), Some("es teh poci"));
+
+        let item = service::add_item(&pool, actor(), &row.id, item("MIXUE cone"))
+            .await
+            .unwrap();
+        assert_eq!(item.name, "MIXUE cone");
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_tidy_only_the_name_a_chat_update_changes(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        let cash = wallet(&pool, "w_cash", "IDR").await;
+        let chat = actor().with_source(SOURCE_CHAT);
+
+        let row = service::create(&pool, actor(), named(&cash, "MIXUE"))
+            .await
+            .unwrap();
+
+        // The patch resends the old name: left alone.
+        let same = service::update(&pool, chat, &row.id, named(&cash, "MIXUE"), None)
+            .await
+            .unwrap();
+        assert_eq!(same.name.as_deref(), Some("MIXUE"));
+
+        // A rename to the same key in other case is not answered with the
+        // row's own old spelling.
+        let renamed = service::update(&pool, chat, &row.id, named(&cash, "mixue"), None)
+            .await
+            .unwrap();
+        assert_eq!(renamed.name.as_deref(), Some("Mixue"));
+    }
+
+    // ------------------------------------------------------- preview, apply
+
+    async fn untidy_ledger(pool: &PgPool) -> (String, String) {
+        fixture(pool, "IDR").await;
+        let cash = wallet(pool, "w_cash", "IDR").await;
+        service::create(pool, actor(), named(&cash, "Paborito Coffee"))
+            .await
+            .unwrap();
+        let row = service::create_with_items(
+            pool,
+            actor(),
+            named(&cash, "PABORITO COFFEE"),
+            &[item("es teh"), item("Croissant")],
+        )
+        .await
+        .unwrap();
+        let es_teh = service::list_items(pool, WORKSPACE, &row.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|item| item.name == "es teh")
+            .unwrap()
+            .id;
+        (row.id, es_teh)
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_preview_only_the_names_that_change(pool: PgPool) {
+        let (transaction_id, item_id) = untidy_ledger(&pool).await;
+
+        let changes = names::preview(&pool, WORKSPACE).await.unwrap();
+        let shape: Vec<_> = changes
+            .iter()
+            .map(|c| (c.kind, c.id.as_str(), c.from.as_str(), c.to.as_str()))
+            .collect();
+        assert_eq!(
+            shape,
+            [
+                (
+                    "transaction",
+                    transaction_id.as_str(),
+                    "PABORITO COFFEE",
+                    "Paborito Coffee"
+                ),
+                ("item", item_id.as_str(), "es teh", "Es Teh"),
+            ]
+        );
+        assert_eq!(changes[1].transaction_id, transaction_id);
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_apply_with_an_audit_row_each_and_skip_a_stale_one(pool: PgPool) {
+        let (transaction_id, item_id) = untidy_ledger(&pool).await;
+
+        // Another edit lands on the item between preview and apply.
+        sqlx::query("UPDATE transaction_items SET name = 'es teh manis' WHERE id = $1")
+            .bind(&item_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let outcome = names::apply(
+            &pool,
+            actor(),
+            &[
+                TidyRequest {
+                    kind: NameKind::Transaction,
+                    id: transaction_id.clone(),
+                    from: "PABORITO COFFEE".into(),
+                },
+                TidyRequest {
+                    kind: NameKind::Item,
+                    id: item_id.clone(),
+                    from: "es teh".into(),
+                },
+            ],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!((outcome.applied, outcome.skipped), (1, 1));
+        let row = service::find(&pool, WORKSPACE, &transaction_id)
+            .await
+            .unwrap();
+        assert_eq!(row.name.as_deref(), Some("Paborito Coffee"));
+        assert_eq!(
+            audit_actions(&pool, &transaction_id).await,
+            ["transaction.created", "transaction.updated"]
+        );
+        assert_eq!(
+            item_names(&pool, &transaction_id).await,
+            ["es teh manis", "Croissant"]
+        );
+        assert_eq!(
+            audit_actions(&pool, &item_id).await,
+            ["transaction_item.created"]
+        );
+    }
+
+    #[sqlx::test(migrations = "../../migrations")]
+    async fn should_refuse_a_member(pool: PgPool) {
+        fixture(&pool, "IDR").await;
+        sqlx::query(
+            "INSERT INTO users (id, email, password_hash)
+             VALUES ('usr_member', 'm@example.com', 'x')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO user_workspaces (id, workspace_id, user_id, role)
+             VALUES ('m_member', $1, 'usr_member', 'member')",
+        )
+        .bind(WORKSPACE)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let state = test_support::state(pool.clone(), test_support::NOWHERE);
+        let bearer = |user: &str, role: Role| {
+            let scope = Some((WORKSPACE, role));
+            let ttl = std::time::Duration::from_secs(60);
+            let token = token::issue_access_token(&state.config.jwt_secret, user, scope, ttl);
+            format!("Bearer {}", token.unwrap().token)
+        };
+        let app = Router::new()
+            .route(
+                "/v1/transactions/tidy-names",
+                get(handler::tidy_names_preview).post(handler::tidy_names_apply),
+            )
+            .with_state(state.clone());
+        let call = |method: &str, authorization: String| {
+            let body = if method == "POST" {
+                r#"{"changes":[]}"#
+            } else {
+                ""
+            };
+            Request::builder()
+                .method(method)
+                .uri("/v1/transactions/tidy-names")
+                .header("authorization", authorization)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+
+        for method in ["GET", "POST"] {
+            let response = app
+                .clone()
+                .oneshot(call(method, bearer("usr_member", Role::Member)))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), 403, "{method} as a member");
+        }
+        let response = app
+            .clone()
+            .oneshot(call("GET", bearer(USER, Role::Owner)))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 200);
+    }
+}
