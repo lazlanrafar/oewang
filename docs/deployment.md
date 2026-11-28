@@ -207,7 +207,7 @@ Two roles on the same database:
 | Role | Rights | Used by |
 |---|---|---|
 | Migration role (`oewang_migrator`) | Owns the schema, full DDL | `MIGRATION_DATABASE_URL` |
-| Application role (`oewang_app`) | `SELECT`, `INSERT`, `UPDATE` on every table, `DELETE` on `telegram_updates` only, `USAGE` on sequences. No `CREATE`, no `DROP`, no `ALTER` | `DATABASE_URL` |
+| Application role (`oewang_app`) | `SELECT`, `INSERT`, `UPDATE` on every table, `DELETE` on `telegram_updates`, `plan_features` and `console_role_permissions` only, `USAGE` on sequences. No `CREATE`, no `DROP`, no `ALTER` | `DATABASE_URL` |
 
 The step: `api` applies its embedded migrations over one connection as the `MIGRATION_DATABASE_URL` role, closes it, and only then opens the application pool. The variable is required in production; in development the step is skipped when it is unset. A migration that fails stops the process, so the old container keeps serving.
 
@@ -219,7 +219,7 @@ A migration the binary does not know is ignored rather than refused, so rolling 
 
 Both URLs sit in the `api` container's environment. The split therefore does not protect against someone who controls that container, who holds the data either way. It protects against SQL that reaches the application pool: an injected statement runs as a role that cannot drop or alter anything.
 
-`telegram_updates` is the one table the application deletes from: it is a de-duplication log of Telegram update ids, not workspace data, and its old rows are pruned.
+The application deletes from three tables, none of them workspace data: `telegram_updates`, a de-duplication log of Telegram update ids whose old rows are pruned, and `plan_features` and `console_role_permissions`, whose sets are replaced whole when an operator saves a plan or a console role (each change is audited). Migration `0026` grants `DELETE` on the last two; it was missing until then, and both console saves failed in production with `permission denied`.
 
 The roles were created once, as `postgres`:
 
