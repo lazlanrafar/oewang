@@ -1,7 +1,7 @@
 //! `GET /v1/workspaces/current/usage` (USG-3).
 
 use axum::{extract::State, Json};
-use oewang_db::repositories::{usage, vault};
+use oewang_db::repositories::{plans, usage, vault};
 use oewang_domain::{AppError, Envelope};
 use serde::Serialize;
 
@@ -15,6 +15,17 @@ use crate::{
 pub struct UsageView {
     pub storage: vault::StorageUsage,
     pub ai: AiUsageView,
+    pub plan: PlanView,
+}
+
+/// The limits the figures above are measured against (PLN-7). Null is
+/// unlimited.
+#[derive(Debug, Serialize)]
+pub struct PlanView {
+    pub id: String,
+    pub name: String,
+    pub max_tokens_month: Option<i64>,
+    pub max_storage_bytes: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Default)]
@@ -53,9 +64,19 @@ pub async fn get(
         let rows = usage::totals_by_feature(&state.db, &auth.workspace_id)
             .await
             .map_err(internal)?;
+        let plan = plans::workspace_plan(&state.db, &auth.workspace_id)
+            .await
+            .map_err(internal)?
+            .ok_or(AppError::NotFound)?;
         Ok::<_, AppError>(UsageView {
             storage,
             ai: summarize(rows),
+            plan: PlanView {
+                id: plan.plan_id,
+                name: plan.name,
+                max_tokens_month: plan.max_tokens_month,
+                max_storage_bytes: plan.max_storage_bytes,
+            },
         })
     }
     .await;
