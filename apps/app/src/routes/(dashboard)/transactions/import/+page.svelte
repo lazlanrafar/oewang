@@ -40,6 +40,7 @@
 	import { parseDelimited, type ParsedFile } from '$lib/csv';
 	import { messageForCode } from '$lib/errors';
 	import { t, type TranslationKey } from '$lib/i18n';
+	import { notInPlan } from '$lib/plans';
 	import { pageTitle } from '$lib/page-title';
 	import {
 		IMPORT_POLL_INTERVAL,
@@ -49,6 +50,7 @@
 		type ImportJob
 	} from '$lib/import-job';
 	import { readParam, writeParams } from '$lib/url-state';
+	import { featureGate } from '$lib/workspace-data.svelte';
 
 	import type { ActionData, PageData } from './$types';
 
@@ -247,6 +249,12 @@
 	 * watching: the modal is told what the job says and decides nothing.
 	 */
 	let statementOpen = $state(false);
+	/*
+	 * A statement is uploaded into the vault before the job reads it, so the
+	 * path needs both features; the section names the missing one (PLN-7).
+	 */
+	const gate = featureGate();
+	const statementOff = $derived(gate('statement_import', 'vault'));
 	let statementFiles = $state<UploadedFile[]>([]);
 	let statementWallet = $state('');
 	let job = $state<ImportJob | null>(null);
@@ -469,7 +477,10 @@
 		<section class="space-y-3 border p-6">
 			<h2 class="text-small font-medium">{t('import.statement_title')}</h2>
 			<p class="text-subtle text-small">{t('import.statement_hint')}</p>
-			<Button variant="outline" onclick={() => (statementOpen = true)}>
+			{#if statementOff}
+				<p class="text-subtle text-small" role="status">{notInPlan(statementOff)}</p>
+			{/if}
+			<Button variant="outline" disabled={statementOff !== null} onclick={() => (statementOpen = true)}>
 				<FileUp />
 				{t('import.statement_open')}
 			</Button>

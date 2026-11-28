@@ -35,6 +35,8 @@
 
 	import { commandQuery, filterCommands, CHAT_COMMANDS, type ChatCommand } from '$lib/chat-commands';
 	import { ACCEPTED_FILE_TYPES, uploadErrorMessage, uploadFile } from '$lib/files';
+	import { notInPlan } from '$lib/plans';
+	import { featureGate } from '$lib/workspace-data.svelte';
 	import { t } from '$lib/i18n';
 	import { cn } from '$lib/utils.js';
 
@@ -71,6 +73,16 @@
 		onSend: (message: string) => void;
 		onStop: () => void;
 	} = $props();
+
+	/*
+	 * A plan without chat turns the composer off with the reason as its
+	 * placeholder, and one without the vault turns off attaching, which
+	 * uploads (PLN-7). The API refuses both anyway; this saves the click.
+	 */
+	const gate = featureGate();
+	const chatOff = $derived(gate('chat'));
+	const vaultOff = $derived(gate('vault'));
+	const off = $derived(disabled || chatOff !== null);
 
 	let root = $state<HTMLDivElement | null>(null);
 	let field = $state<HTMLTextAreaElement | null>(null);
@@ -130,7 +142,7 @@
 
 	const uploading = $derived(pending.length > 0);
 	const canSend = $derived(
-		!disabled && !uploading && (value.trim() !== '' || files.length > 0)
+		!off && !uploading && (value.trim() !== '' || files.length > 0)
 	);
 
 	function submit() {
@@ -241,7 +253,11 @@
 	// ------------------------------------------------------------ files
 
 	async function add(list: FileList | File[]) {
-		if (disabled || streaming) return;
+		if (off || streaming) return;
+		if (vaultOff) {
+			toast.error(notInPlan(vaultOff));
+			return;
+		}
 
 		for (const file of Array.from(list)) {
 			if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
@@ -437,8 +453,8 @@
 							bind:ref={field}
 							bind:value
 							variant="prompt"
-							{placeholder}
-							{disabled}
+							placeholder={chatOff ? notInPlan(chatOff) : placeholder}
+							disabled={off}
 							rows={1}
 							aria-label={t('chat.input_label')}
 							aria-describedby="composer-hint"
@@ -476,8 +492,8 @@
 							variant="ghost"
 							size="icon"
 							class="text-muted-foreground size-6"
-							title={t('chat.attach_add')}
-							disabled={disabled || streaming}
+							title={vaultOff ? notInPlan(vaultOff) : t('chat.attach_add')}
+							disabled={off || streaming || vaultOff !== null}
 							onclick={() => picker?.click()}
 						>
 							<Plus class="size-4" />

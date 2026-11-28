@@ -132,7 +132,8 @@ export const CONSOLE_PERMISSIONS: { key: string; label: TranslationKey; descript
 	{ key: 'console.workspaces.restore', label: 'console.permissions.workspaces_restore.label', description: 'console.permissions.workspaces_restore.description' },
 	{ key: 'console.operators.manage', label: 'console.permissions.operators_manage.label', description: 'console.permissions.operators_manage.description' },
 	{ key: 'console.roles.manage', label: 'console.permissions.roles_manage.label', description: 'console.permissions.roles_manage.description' },
-	{ key: 'console.audit.read', label: 'console.permissions.audit_read.label', description: 'console.permissions.audit_read.description' }
+	{ key: 'console.audit.read', label: 'console.permissions.audit_read.label', description: 'console.permissions.audit_read.description' },
+	{ key: 'console.plans.manage', label: 'console.permissions.plans_manage.label', description: 'console.permissions.plans_manage.description' }
 ];
 
 /** A permission's label key; null for one this build does not know, which then shows as its key. */
@@ -151,7 +152,11 @@ const AUDIT_ACTIONS: Record<string, TranslationKey> = {
 	'role.deleted': 'console.audit.actions.role_deleted',
 	'operator.granted': 'console.audit.actions.operator_granted',
 	'operator.changed': 'console.audit.actions.operator_changed',
-	'operator.revoked': 'console.audit.actions.operator_revoked'
+	'operator.revoked': 'console.audit.actions.operator_revoked',
+	'plan.created': 'console.audit.actions.plan_created',
+	'plan.updated': 'console.audit.actions.plan_updated',
+	'plan.deleted': 'console.audit.actions.plan_deleted',
+	'workspace.plan_changed': 'console.audit.actions.workspace_plan_changed'
 };
 
 /** An audit action's label key; null for one this build does not know. */
@@ -169,6 +174,8 @@ export function auditEntityHref(entity: string, id: string): string | null {
 			return `/console/feedback?feedback=${at}`;
 		case 'console_role':
 			return '/console/roles';
+		case 'plan':
+			return '/console/plans';
 		default:
 			return null;
 	}
@@ -194,4 +201,34 @@ export function auditDiff(
 		const now = shown(after?.[key]);
 		return { key, before: was, after: now, changed: was !== now };
 	});
+}
+
+/** What a plan may include (PLN-1, D128): `Feature` in the API, a fixed list. */
+export const PLAN_FEATURES: { key: string; label: TranslationKey; description: TranslationKey }[] = [
+	{ key: 'chat', label: 'console.plans.features.chat.label', description: 'console.plans.features.chat.description' },
+	{ key: 'telegram', label: 'console.plans.features.telegram.label', description: 'console.plans.features.telegram.description' },
+	{ key: 'receipt_scan', label: 'console.plans.features.receipt_scan.label', description: 'console.plans.features.receipt_scan.description' },
+	{ key: 'statement_import', label: 'console.plans.features.statement_import.label', description: 'console.plans.features.statement_import.description' },
+	{ key: 'mcp', label: 'console.plans.features.mcp.label', description: 'console.plans.features.mcp.description' },
+	{ key: 'vault', label: 'console.plans.features.vault.label', description: 'console.plans.features.vault.description' }
+];
+
+/** A feature's label key; null for one this build does not know, which then shows as its key. */
+export const featureLabel = (feature: string): TranslationKey | null =>
+	PLAN_FEATURES.find((entry) => entry.key === feature)?.label ?? null;
+
+/** The storage limit is typed in MB, as `formatBytes` counts them. */
+export const MB = 1024 * 1024;
+
+/**
+ * A limit as typed: empty is unlimited (null), a whole number from zero
+ * times `unit` is the limit, anything else is undefined, so a typo is never
+ * read as unlimited. Capped where a JavaScript number stops being exact,
+ * as the API is.
+ */
+export function parseLimit(raw: string, unit = 1): number | null | undefined {
+	if (raw === '') return null;
+	if (!/^\d+$/.test(raw)) return undefined;
+	const value = Number(raw) * unit;
+	return Number.isSafeInteger(value) ? value : undefined;
 }

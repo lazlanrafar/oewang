@@ -231,6 +231,14 @@ pub async fn begin(
 ) -> std::result::Result<(StatusCode, Json<Envelope<BegunView>>), ApiError> {
     let id = request_id.0;
 
+    // Here rather than in `service::begin`, which the bot's receipt path
+    // also calls: that one is a receipt scan, checked as one (PLN-6).
+    if let Err(error) =
+        crate::plans::require(&state.db, &auth.workspace_id, oewang_domain::Feature::Vault).await
+    {
+        return Err(ApiError::new(error, id));
+    }
+
     match service::begin(
         &state.db,
         auth.actor(),

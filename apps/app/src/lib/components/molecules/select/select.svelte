@@ -209,7 +209,7 @@
 			     three-letter value to one letter when the row had no mark. -->
 			<span class="flex min-w-0 items-center space-x-2">
 				{@render markOf(byValue.get(entry.id))}
-				<span class="text-body truncate text-left font-medium">{entry.label}</span>
+				<span class="truncate text-left font-medium">{entry.label}</span>
 			</span>
 		{/snippet}
 		{#snippet create(typed)}

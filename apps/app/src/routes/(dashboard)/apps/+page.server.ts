@@ -46,7 +46,8 @@ export const actions: Actions = {
 
 			return { link: { deepLink: link.deep_link, expiresAt: link.expires_at, qrSvg } };
 		} catch (error) {
-			if (error instanceof ApiError) return fail(error.status, { code: error.code });
+			// A plan without `telegram` names it (PLN-7).
+			if (error instanceof ApiError) return fail(error.status, { code: error.code, feature: error.feature });
 			throw error;
 		}
 	},

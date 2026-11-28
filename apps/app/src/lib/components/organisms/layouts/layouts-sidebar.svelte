@@ -17,6 +17,7 @@
 	import type { NavGroup } from '$lib/nav';
 
 	import SidebarNav from './layouts-sidebar-nav.svelte';
+	import SidebarUsageBlock, { type SidebarUsage } from './layouts-sidebar-usage.svelte';
 	import WorkspaceSwitcher from './layouts-workspace-switcher.svelte';
 	import { cn } from '$lib/utils';
 
@@ -26,6 +27,7 @@
 		groups,
 		top,
 		collapsed = false,
+		usage = null,
 		onNavigate,
 		class: className
 	}: {
@@ -38,6 +40,8 @@
 		top?: Snippet<[boolean]>;
 		/** Icon rail instead of the full panel. Ignored in the mobile sheet. */
 		collapsed?: boolean;
+		/** The workspace's usage at the foot; none in the console. Hidden on the rail. */
+		usage?: SidebarUsage | null;
 		onNavigate?: () => void;
 		class?: string;
 	} = $props();
@@ -62,5 +66,8 @@
 		<div class="flex-1 overflow-x-hidden overflow-y-auto">
 			<SidebarNav {groups} {collapsed} {onNavigate} />
 		</div>
+		{#if usage && !collapsed}
+			<SidebarUsageBlock {usage} {onNavigate} />
+		{/if}
 	</div>
 </div>

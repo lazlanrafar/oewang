@@ -17,6 +17,7 @@
 		app,
 		installed,
 		available = true,
+		planReason = null,
 		busy = false,
 		onOpenChange,
 		onConnect,
@@ -26,6 +27,8 @@
 		app: AppDefinition | null;
 		installed: boolean;
 		available?: boolean;
+		/** Why the workspace's plan keeps Connect off, or null (PLN-7). */
+		planReason?: string | null;
 		busy?: boolean;
 		onOpenChange?: (open: boolean) => void;
 		onConnect: () => void;
@@ -60,7 +63,9 @@
 						{t('apps.disconnect')}
 					</Button>
 				{:else}
-					<Button size="sm" disabled={!available || busy} onclick={onConnect}>{t('apps.connect')}</Button>
+					<Button size="sm" disabled={!available || planReason !== null || busy} onclick={onConnect}>
+						{t('apps.connect')}
+					</Button>
 				{/if}
 			</div>
 
@@ -71,7 +76,9 @@
 						<p class="text-subtle text-sm">{t(key)}</p>
 					{/each}
 				</section>
-				{#if !available}
+				{#if planReason && !installed}
+					<p class="text-subtle text-xs">{planReason}</p>
+				{:else if !available}
 					<p class="text-subtle text-xs">{t('apps.unavailable_hint')}</p>
 				{/if}
 			</div>

@@ -129,6 +129,9 @@ pub async fn call(
 
     let workspace_id = resolve_workspace(&state.db, caller, &mut arguments).await?;
     let role = current_role(&state.db, &workspace_id, &caller.user_id).await?;
+    // Per workspace, so a token that reaches several is refused only where
+    // the plan leaves MCP out (PLN-6).
+    crate::plans::require(&state.db, &workspace_id, oewang_domain::Feature::Mcp).await?;
 
     let confirmed = take_confirmed(&mut arguments);
     if tool.spend.needs_confirmation() {

@@ -20,7 +20,7 @@ PostgreSQL 16. This doc is the source of truth for every table and column. No ot
 | Timestamps | `created_at` and `updated_at`, both `timestamptz` with `DEFAULT now()`. Every timestamp column is `timestamptz`: a naive timestamp means whatever the writer's clock meant, which is wrong for a product with a workspace timezone (changed at US-002, from the old app's `timestamp`). |
 | Money | `decimal(19,4)`. Read in Rust as `rust_decimal::Decimal`. Serialized as a string (D12). |
 | Naming | `snake_case` for tables and columns, plural table names. |
-| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. Later changes are numbered after them; the newest is `0020_debts.sql` (D120). |
+| Migrations | sqlx SQL files under `apps/api/migrations/`, one per logical group: identity, accounts, vault, ledger, chat, audit. Vault precedes ledger because `transaction_attachments` references it. Later changes are numbered after them; the newest is `0025_plans.sql` (D128). |
 
 ## Tables in scope
 
@@ -97,9 +97,10 @@ Dropped from the old table: `oauth_provider`, `providers` (D21), `system_role` (
 | `country` | text | Nullable, ISO 3166-1 alpha-2 |
 | `currency_code` | text | Not null, default `IDR`. ISO 4217 |
 | `suspended_at` | timestamptz | Nullable. Set while an operator has suspended the workspace (CSL-5, D127). Data untouched; every channel refuses it |
+| `plan_id` | text | Not null, FK `plans`, default `free`, indexed. The plan the workspace holds (PLN-2, D128). The default gives every new workspace the system plan, whichever path inserts it |
 | `created_at`, `updated_at`, `deleted_at` | timestamp | |
 
-Dropped: every `plan_*`, `pending_plan_*`, `mayar_*`, `ai_tokens_*`, `extra_*`, `vault_size_used_bytes`, `storage_violation_at`. Billing is out of scope.
+Dropped: every `plan_*`, `pending_plan_*`, `mayar_*`, `ai_tokens_*`, `extra_*`, `vault_size_used_bytes`, `storage_violation_at`. Billing is out of scope; plans came back without it as `plan_id` (D128).
 
 #### `user_workspaces`
 
@@ -332,12 +333,38 @@ Migration `0023`, CSL-14. What operators did in the console, one row per change,
 |---|---|---|
 | `id` | text | CUID2, primary key |
 | `operator_id` | text | FK users. Who did it |
-| `action` | text | `workspace.suspended`, `workspace.unsuspended`, `workspace.restored`, `user.disabled`, `user.enabled`; role and operator changes from US-085 |
-| `entity`, `entity_id` | text | `workspace` or `user`, and its id |
+| `action` | text | `workspace.suspended`, `workspace.unsuspended`, `workspace.restored`, `user.disabled`, `user.enabled`; role and operator changes from US-085; `plan.created`, `plan.updated`, `plan.deleted`, `workspace.plan_changed` (D128) |
+| `entity`, `entity_id` | text | `workspace`, `user`, `console_role` or `plan`, and its id |
 | `before`, `after` | jsonb | The console's row for the entity, which holds no money (CSL-13) |
 | `created_at` | timestamptz | |
 
 Indexes: `(created_at DESC)` and `(entity, entity_id)`.
+
+#### `plans`, `plan_features`
+
+Migration `0025`, D128, PLN-1 and PLN-2. What a workspace may use. Not workspace-scoped: many workspaces hold one plan, so its queries filter by `deleted_at` and never by `workspace_id`, and the console's live in `repositories/console.rs`. The read the limit checks use is `repositories/plans.rs` (`workspace_plan`).
+
+`plans`:
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | Primary key. The seeded system plan is `free`; new ones get a CUID2 |
+| `name` | text | 1 to 60 characters, unique among live plans (case-insensitive) |
+| `max_tokens_month` | bigint | Nullable, at least 0. Input plus output tokens over a calendar month in UTC; null is unlimited |
+| `max_storage_bytes` | bigint | Nullable, at least 0. Stored vault bytes; null is unlimited |
+| `is_system` | boolean | Default false. `free` is the only system plan: never renamed or deleted; its limits and features are set in the console |
+| `created_at`, `updated_at`, `deleted_at` | timestamptz | Soft delete only, and only while no workspace holds it (`PLAN_IN_USE`) |
+
+`plan_features`:
+
+| Column | Type | Notes |
+|---|---|---|
+| `plan_id` | text | FK `plans`, cascade |
+| `feature` | text | `CHECK` against the keys of `Feature`: `chat`, `telegram`, `receipt_scan`, `statement_import`, `mcp`, `vault` |
+
+Primary key `(plan_id, feature)`. A link table like `console_role_permissions`: changing a plan's features replaces its rows, and the change is recorded in the operator audit.
+
+Seeded: `free`, "Free", both limits null, every feature, so the deploy that starts enforcing blocks nobody.
 
 #### `mcp_tokens`, `oauth_clients`, `oauth_codes`
 

@@ -82,17 +82,21 @@
 	import { FilePreview } from '$lib/components/molecules/file-preview';
 	import { filePreview } from '$lib/files';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
-	import { messageForCode } from '$lib/errors';
+	import { messageForCode, readRefusal } from '$lib/errors';
 	import { t } from '$lib/i18n';
 	import { pageTitle } from '$lib/page-title';
 	import type { ReceiptForm } from '$lib/receipt';
 	import { rangeLabel } from '$lib/reports';
 	import type { ChatRole } from '$lib/server/chat';
 	import { writeParams } from '$lib/url-state';
+	import { featureGate } from '$lib/workspace-data.svelte';
 
 	let { data } = $props();
 
 	const chatHistory = getContext<ChatHistoryContext>(CHAT_HISTORY);
+	/** The composer turns itself off without `chat`; the suggestions follow (PLN-7). */
+	const gate = featureGate();
+	const chatOff = $derived(gate('chat'));
 
 	let draft = $state('');
 	/** The files the next turn carries, already in the vault (VLT-1). */
@@ -231,7 +235,9 @@
 			});
 
 			if (!response.ok || !response.body) {
-				turn = advance(turn, { kind: 'failed', code: 'STREAM_FAILED' });
+				// A refusal before the stream opens says why, a plan's above all.
+				const code = response.ok ? 'STREAM_FAILED' : (await readRefusal(response)).code;
+				turn = advance(turn, { kind: 'failed', code });
 				return;
 			}
 
@@ -519,7 +525,7 @@
 			onArtifact={openArtifact}
 		>
 			{#snippet emptyActions()}
-				<ChatSuggestions disabled={isActive(turn)} onSelect={send} />
+				<ChatSuggestions disabled={isActive(turn) || chatOff !== null} onSelect={send} />
 			{/snippet}
 		</ChatMessages>
 
@@ -529,7 +535,8 @@
 
 		{#if turn.status === 'failed'}
 			<p class="text-destructive text-caption" role="alert">
-				{messageForCode(turn.errorCode ?? 'STREAM_FAILED')}
+				<!-- The stream route refuses only `chat` (plans.md), so that is the feature to name. -->
+				{messageForCode(turn.errorCode ?? 'STREAM_FAILED', 'chat')}
 			</p>
 		{/if}
 

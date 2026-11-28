@@ -124,6 +124,7 @@ The old app's layout: a search box and an All/Connected toggle on one line, then
 - Each update id is handled once (`telegram_updates`), and claims older than 48 hours are pruned.
 - A chat's updates run one at a time, in order; chats run in parallel.
 - A failed update is logged by its error code and answered with "Something went wrong"; it never stops the chat's queue.
+- A workspace whose plan leaves out `telegram` cannot mint a link, and every message or button from a linked chat gets one plain line saying so; the link stays and `/disconnect` still works. Without `receipt_scan` a photo is refused before it is downloaded ([plans](plans.md#features)).
 - 409 from Telegram (another poller) pauses the loop for a minute; a 429 waits as long as Telegram says.
 
 ## What is not built

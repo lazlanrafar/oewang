@@ -12,7 +12,32 @@ const _shutOut = {
   'WORKSPACE_SUSPENDED':
       'This workspace is suspended by Oewang. Its data is kept. Switch to '
       'another workspace in More, or contact Oewang support.',
+  // The workspace's plan stops here (D128, PLN-7).
+  'QUOTA_TOKENS_EXCEEDED':
+      'This workspace has used its AI tokens for this month. They renew on '
+      'the 1st, or contact Oewang support to change the plan.',
+  'QUOTA_STORAGE_EXCEEDED':
+      "This workspace's storage is full. Delete files in the vault, or "
+      'contact Oewang support to change the plan.',
 };
+
+/// What each plan feature is called in a refusal (`details.feature`).
+const _featureNames = {
+  'chat': 'the assistant',
+  'telegram': 'Telegram',
+  'receipt_scan': 'receipt scanning',
+  'statement_import': 'statement import',
+  'mcp': 'MCP',
+  'vault': 'file uploads',
+};
+
+/// `FEATURE_NOT_IN_PLAN` names the feature when the API says which one.
+String? _planMessage(String? code, Object? details) {
+  if (code != 'FEATURE_NOT_IN_PLAN') return null;
+  final feature = details is Map ? _featureNames[details['feature']] : null;
+  return "This workspace's plan does not include ${feature ?? 'this feature'}. "
+      'Contact Oewang support to change the plan.';
+}
 
 /// Single conversion from [DioException] to [AppError], reading the API's
 /// envelope (docs/api/conventions.md#the-envelope).
@@ -23,6 +48,7 @@ AppError mapDioError(DioException e) {
   final code = error is Map ? error['code'] as String? : null;
   final message =
       _shutOut[code] ??
+      _planMessage(code, error is Map ? error['details'] : null) ??
       (error is Map ? error['message'] as String? : null) ??
       'Something went wrong';
   // Never the body: it is a decrypted payload (OPS-3).

@@ -27,6 +27,7 @@ Stateless Streamable HTTP: one JSON-RPC message per POST, one JSON answer. No se
 - **Reach:** every workspace the person belongs to (including ones joined later), or a picked set. Either way the membership row is read on every call, so leaving a workspace or being removed ends access to it at once.
 - **Expiry:** 30, 90 or 365 days, or none. Revoking ends it immediately. A password change, a password reset and "sign out everywhere" revoke every MCP token too.
 - A token is the person's, not a workspace's: any role may make one. What it can do in a workspace is what that person's role allows there.
+- A `tools/call` in a workspace whose plan leaves out `mcp` is refused with `FEATURE_NOT_IN_PLAN`; the token keeps working in the person's other workspaces and stays listed and revocable ([plans](plans.md#features)).
 
 ## OAuth for connector apps (MCP-9)
 

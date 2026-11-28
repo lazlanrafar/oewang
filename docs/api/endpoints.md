@@ -15,6 +15,7 @@ The full route catalog, grouped by module. This doc is the source of truth for r
 - The workspace is never in the path. It comes from the JWT (AUTH-4). A `workspace_id` at the top level of a body, or in the query string, is refused with `WORKSPACE_ID_NOT_ALLOWED`, except on `POST /v1/auth/switch-workspace` and `POST /v1/internal/tools/execute`, whose job is to name one ([conventions](conventions.md#resources-and-urls)).
 - Role column values: `public` (no token), `any` (any member), `admin+` (`owner` or `admin`), `owner`, `service` (service key only).
 - Role rules are in [auth](../security/auth.md#permission-matrix).
+- Routes marked *plan: `<feature>`* also answer `403 FEATURE_NOT_IN_PLAN` when the workspace's plan leaves that feature out, checked on every request (PLN-6, [plans](../features/plans.md#features)): `POST /v1/ai/chat/stream` (`chat`), `POST /v1/ai/receipt/parse` and `POST /v1/receipts/pending` (`receipt_scan`), `POST /v1/transactions/import` (`statement_import`), `POST /v1/vault/files` (`vault`), `POST /v1/integrations/telegram/link-token` (`telegram`), and each `tools/call` on `POST /v1/mcp` (`mcp`, as a tool result with `isError` and the code, like every tool refusal). No read route answers it.
 
 ## Health and transport
 
@@ -90,7 +91,7 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
 | DELETE | `/v1/workspaces/current/invites/{id}` | admin+ | Revoke an invite. Audited `member.invite_revoked` |
 | POST | `/v1/workspaces/accept-invite` | any session | Accept an invite by token. Returns `{ workspace_id }`. `INVITE_INVALID` unless the caller's email is the invited one; a live membership keeps its role. Audited `member.joined` |
 | DELETE | `/v1/workspaces/current` | owner | Soft-delete the workspace |
-| GET | `/v1/workspaces/current/usage` | any | Storage used and model tokens, by month and feature (USG-1, USG-3, D92) |
+| GET | `/v1/workspaces/current/usage` | any | Storage used and model tokens, by month and feature, and the plan's limits (USG-1, USG-3, D92, PLN-7) |
 | POST | `/v1/feedback` | any | Send feedback: `{ type: bug\|feature\|other, message }`, 5000 characters at most. 201 `{ id }`. Audited `feedback.sent` (FB-1) |
 
 ### `GET /v1/workspaces/current/usage` response
@@ -105,11 +106,13 @@ Returns `NOT_A_MEMBER` if the user has no live membership row.
         { "feature": "receipt", "month": { "input": 80211, "output": 4410 },
           "total": { "input": 610002, "output": 40120 }, "calls": 57 }
       ]
-    }
+    },
+    "plan": { "id": "free", "name": "Free", "max_tokens_month": null, "max_storage_bytes": null,
+              "features": ["chat", "telegram", "receipt_scan", "statement_import", "mcp", "vault"] }
 } }
 ```
 
-`storage` is `SUM(size)` and the count over ready, live files; nothing stores it. `month` is since the first of the current calendar month in UTC. The headline `month` and `total` are summed from the `by_feature` rows, so the cards and the table on the settings page cannot disagree. `calls` counts all time. Nothing here is a limit ([usage](../features/usage.md)).
+`storage` is `SUM(size)` and the count over ready, live files; nothing stores it. `month` is since the first of the current calendar month in UTC. The headline `month` and `total` are summed from the `by_feature` rows, so the cards and the table on the settings page cannot disagree. `calls` counts all time. `plan` is the workspace's plan and the limits these figures are measured against: `ai.month` input plus output against `max_tokens_month`, `storage.bytes` against `max_storage_bytes`. A null limit is unlimited. `features` lists the keys the plan includes, so the app can hide or disable what it leaves out ([usage](../features/usage.md), [plans](../features/plans.md)).
 
 ## Wallet groups
 
@@ -256,7 +259,7 @@ Either `{ "transaction_id" }`, a live `expense` (otherwise `SPLIT_SOURCE_NOT_EXP
 | POST | `/v1/transactions/bulk` | admin+ | Create many. Used by the CSV wizard commit (TXN-11) |
 | POST | `/v1/transactions/bulk-update` | admin+ | Set the category of many; `category_id: null` clears it (TXN-14) |
 | POST | `/v1/transactions/bulk-delete` | admin+ | Soft-delete many, reversing each balance (TXN-14) |
-| POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4) |
+| POST | `/v1/transactions/import` | admin+ | Read an already-uploaded statement image or PDF. Returns `202 {job_id}` (AI-4). *plan: `statement_import`* |
 | POST | `/v1/transactions/import/csv` | admin+ | A file's rows as they came out of it, plus a column mapping. Every figure and date is parsed in Rust (TXN-11, D28). Returns created, duplicate and skipped counts |
 | POST | `/v1/transactions/import/xlsx` | admin+ | An `.xlsx` as base64 in, its first sheet out as column names and rows of text, the shape a parsed CSV has. Writes nothing (TXN-11, D111) |
 | POST | `/v1/transactions/import/map-columns` | admin+ | Column names plus two sample rows in, a proposed mapping out (AI-9). Proxies the AI service, because the browser never calls it directly (PLT-4) |
@@ -426,7 +429,7 @@ Bytes travel through the API in encrypted chunks, not through a signed object-st
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/vault/files` | any | The workspace's ready, live files, paged. Query below (VLT-6) |
-| POST | `/v1/vault/files` | admin+ | Begin an upload: `{filename, content_type, size_bytes}`. Returns `{id, chunk_size, chunk_count, status:"pending"}` (VLT-1) |
+| POST | `/v1/vault/files` | admin+ | Begin an upload: `{filename, content_type, size_bytes}`. Returns `{id, chunk_size, chunk_count, status:"pending"}` (VLT-1). *plan: `vault`* |
 | PUT | `/v1/vault/files/{id}/chunks/{index}` | admin+ | Send one 512 KiB chunk as `{"data":"<base64>"}` |
 | POST | `/v1/vault/files/{id}/complete` | admin+ | Verify every chunk, record the SHA-256, set status `ready` |
 | GET | `/v1/vault/files/{id}` | any | Metadata, tags, `thumbnail`, `used_by`, and the newest 20 transactions carrying it (VLT-7, VLT-10) |
@@ -490,9 +493,9 @@ Soft-deletes the file and its live `transaction_attachments` rows in one databas
 | GET | `/v1/ai/sessions/{id}` | any | Session with its messages |
 | PATCH | `/v1/ai/sessions/{id}` | any | Rename |
 | DELETE | `/v1/ai/sessions/{id}` | any | Soft delete |
-| POST | `/v1/ai/chat/stream` | any | Server-sent events. Persists both messages (CHAT-2) |
-| POST | `/v1/ai/receipt/parse` | admin+ | Image to receipt draft. Persists nothing (AI-1, AI-2) |
-| POST | `/v1/receipts/pending` | admin+ | `{vault_file_id}`. Queue a receipt the reader could not answer for; 202 with `{id, status, next_attempt_at}`. Queuing a file twice returns the same job (AI-12, D95) |
+| POST | `/v1/ai/chat/stream` | any | Server-sent events. Persists both messages (CHAT-2). *plan: `chat`* |
+| POST | `/v1/ai/receipt/parse` | admin+ | Image to receipt draft. Persists nothing (AI-1, AI-2). *plan: `receipt_scan`* |
+| POST | `/v1/receipts/pending` | admin+ | `{vault_file_id}`. Queue a receipt the reader could not answer for; 202 with `{id, status, next_attempt_at}`. Queuing a file twice returns the same job (AI-12, D95). *plan: `receipt_scan`* |
 | GET | `/v1/receipts/notices` | any | The caller's queued web receipts that ended and were not told yet: `{id, status, code, file_name, transaction_id, transaction_name, amount, currency_code}` |
 | POST | `/v1/receipts/notices/seen` | any | `{ids}`. Mark them told |
 | GET | `/v1/ai/settings` | any | Read agent settings |
@@ -545,7 +548,7 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 | Method | Path | Role | Description |
 |---|---|---|---|
 | GET | `/v1/integrations/telegram` | any | `{ enabled, bot_username, linked, telegram_username, linked_at }` |
-| POST | `/v1/integrations/telegram/link-token` | any | `{ deep_link, expires_at }`: a one-time `t.me` link, ten minutes (D85). `TELEGRAM_DISABLED` when no bot is configured |
+| POST | `/v1/integrations/telegram/link-token` | any | `{ deep_link, expires_at }`: a one-time `t.me` link, ten minutes (D85). `TELEGRAM_DISABLED` when no bot is configured. *plan: `telegram`* |
 | POST | `/v1/integrations/telegram/unlink` | any | 204. Ends the caller's link and tells the chat; ending none is not an error |
 
 ## MCP
@@ -554,7 +557,7 @@ The Apps page's routes (D83). Each acts on the caller's own Telegram link in the
 
 | Method | Path | Role | Purpose |
 |---|---|---|---|
-| POST | `/v1/mcp` | MCP token | One JSON-RPC message, relayed by the app's `/mcp`. `data` is the JSON-RPC response, or null for a notification. A refused token is `MCP_TOKEN_INVALID` (401) |
+| POST | `/v1/mcp` | MCP token | One JSON-RPC message, relayed by the app's `/mcp`. `data` is the JSON-RPC response, or null for a notification. A refused token is `MCP_TOKEN_INVALID` (401). *plan: `mcp`*, per `tools/call`, in the workspace the call resolves to |
 | GET | `/v1/mcp/tokens` | any | The person's live personal access tokens |
 | POST | `/v1/mcp/tokens` | any | `{ name, workspace_ids: string[] \| null, expires_in_days: 30 \| 90 \| 365 \| null }`. 201 with the token's view and `secret`, shown once |
 | DELETE | `/v1/mcp/tokens/{id}` | any | Revoke one of the person's tokens |
@@ -576,7 +579,7 @@ The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, 
 | GET | `/v1/console/me` | any operator | `{ id, email, name, role: { id, name }, permissions: string[] }`. The app builds its menu from `permissions` (CSL-2) |
 | GET | `/v1/console/users` | `console.read` | Paged. `search` (email or name), `status` `active` or `disabled`, `operator` `true` or `false`, `sort` `created_at` (default, newest first) or `email`, `order`. Rows `{ id, email, name, created_at, disabled_at, console_role, workspaces, last_active_at }`: `workspaces` counts live memberships of live workspaces, `last_active_at` is the newest refresh token (CSL-3) |
 | GET | `/v1/console/users/{id}` | `console.read` | The row plus `memberships: [{ workspace_id, workspace_name, role, joined_at, workspace_deleted_at }]`, deleted workspaces included. 404 `NOT_FOUND` |
-| GET | `/v1/console/workspaces` | `console.read` | Paged. `search` (name or slug), `status` `active`, `suspended` or `deleted` (absent is all), `sort` `created_at` (default, newest first) or `name`, `order`. Rows `{ id, name, slug, currency_code, created_at, deleted_at, suspended_at, members, owner_email, last_activity_at }`; `last_activity_at` is the newest audit row (CSL-4) |
+| GET | `/v1/console/workspaces` | `console.read` | Paged. `search` (name or slug), `status` `active`, `suspended` or `deleted` (absent is all), `sort` `created_at` (default, newest first) or `name`, `order`. Rows `{ id, name, slug, currency_code, created_at, deleted_at, suspended_at, members, owner_email, last_activity_at, plan_id, plan_name }`; `last_activity_at` is the newest audit row, `plan_*` the plan it holds (CSL-4, PLN-2) |
 | GET | `/v1/console/workspaces/{id}` | `console.read` | The row plus `member_list: [{ user_id, email, name, role, joined_at }]`, `counts: { wallets, transactions }`, `storage: { bytes, files }` and `tokens_month: { input, output }`. Counts only, never an amount (CSL-13). 404 `NOT_FOUND` |
 | POST | `/v1/console/workspaces/{id}/suspend`, `/unsuspend` | `console.workspaces.suspend` | Returns the workspace row. A deleted workspace is refused (`VALIDATION_FAILED`, `fields.workspace`). Asking for the current state changes nothing and writes no audit row. Audited `workspace.suspended` / `workspace.unsuspended` in `operator_audit` (CSL-5, CSL-14) |
 | POST | `/v1/console/workspaces/{id}/restore` | `console.workspaces.restore` | Clears `deleted_at`; a live workspace is left alone. Audited `workspace.restored` (CSL-6) |
@@ -594,6 +597,11 @@ The public OAuth URLs are the app's (`/.well-known/oauth-*`, `/oauth/register`, 
 | GET | `/v1/console/operators` | `console.operators.manage` | `[{ user_id, email, name, role_id, role_name, last_active_at }]` (CSL-11) |
 | PUT | `/v1/console/operators/{user_id}` | `console.operators.manage` | `{ role_id }`: grant or change a registered user's role. Returns the operator row. Refused for oneself and for a disabled user (`VALIDATION_FAILED`), `CONSOLE_FORBIDDEN` when either the old or the new role holds a permission the caller does not, `LAST_OWNER` when it would leave no owner. Audited `operator.granted` / `operator.changed` |
 | DELETE | `/v1/console/operators/{user_id}` | `console.operators.manage` | 204. Revokes the role, with the same guards. Audited `operator.revoked` |
+| PUT | `/v1/console/workspaces/{id}/plan` | `console.plans.manage` | `{ plan_id }`. Returns the workspace row. Suspended and deleted workspaces too, so a plan held only by deleted ones can be emptied. An unknown or deleted plan: `VALIDATION_FAILED`, field `plan_id`. The plan it already holds changes nothing; otherwise audited `workspace.plan_changed` (PLN-3) |
+| GET | `/v1/console/plans` | `console.plans.manage` | Live plans, the system plan first, then by name: `[{ id, name, max_tokens_month, max_storage_bytes, is_system, features, workspaces, created_at }]`. Limits are integers, null is unlimited; `features` are keys from the fixed list in [plans](../features/plans.md#features); `workspaces` counts holders, deleted workspaces included (PLN-1) |
+| POST | `/v1/console/plans` | `console.plans.manage` | `{ name, max_tokens_month?: integer\|null, max_storage_bytes?: integer\|null, features: string[] }`. 201 with the plan. Name 1 to 60 characters, unique among live plans; a limit is 0 to 9007199254740991 or null; an unknown feature key: `VALIDATION_FAILED`. Audited `plan.created` |
+| PATCH | `/v1/console/plans/{id}` | `console.plans.manage` | `{ name?, max_tokens_month?, max_storage_bytes?, features? }`. Absent leaves a field alone, a null limit makes it unlimited, `features` replaces the set. The system plan's limits and features change like any plan's; a different `name` for it: `VALIDATION_FAILED`, field `name`. Audited `plan.updated` |
+| DELETE | `/v1/console/plans/{id}` | `console.plans.manage` | 204. Soft. The system plan: `VALIDATION_FAILED`; a plan any workspace holds: `PLAN_IN_USE`. Audited `plan.deleted` |
 | GET | `/v1/console/audit` | `console.audit.read` | Paged, newest first: `[{ id, operator_id, operator_email, action, entity, entity_id, before, after, created_at }]` (CSL-14) |
 | GET | `/v1/console/audit/{id}` | `console.audit.read` | One entry, so a link opens it whatever page it is on. 404 `NOT_FOUND` |
 

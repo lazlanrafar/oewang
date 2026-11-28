@@ -1102,3 +1102,36 @@ Requirements: CSL-11, CSL-12
 - [x] Guards: own role, last owner, permissions the granter lacks, a role in use
 - [x] Operator audit screen
 - [x] Verify in browser
+
+## M17. Plans
+
+Plans limit a workspace's tokens, storage and features, managed in the console (D128, epic OEW-130).
+
+### US-086: Plans and their assignment (OEW-131)
+Requirements: PLN-1, PLN-2, PLN-3, PLN-8
+
+- [x] `plans`, `plan_features`, `workspaces.plan_id`; Free seeded unlimited with every feature
+- [x] Console routes to list, create, edit, delete and assign, each audited in the same transaction
+- [x] Free: limits and features editable, name fixed, never deleted; a held plan is not deleted (`PLAN_IN_USE`)
+- [x] Console plans screen and the workspace plan picker
+- [x] Verify in browser
+
+### US-087: Token and storage limits (OEW-132)
+Requirements: PLN-4, PLN-5
+
+- [x] A model call at or past the monthly token limit is refused before the AI service is asked (`QUOTA_TOKENS_EXCEEDED`)
+- [x] An upload past the storage limit is refused (`QUOTA_STORAGE_EXCEEDED`); stored files are untouched
+- [x] The usage endpoint names the plan and its limits
+
+### US-088: Feature gating (OEW-133)
+Requirements: PLN-6
+
+- [x] One check at every entry point (`FEATURE_NOT_IN_PLAN`); data already made stays readable
+
+### US-089: Plan, limits and refusals in the app (OEW-134)
+Requirements: PLN-7
+
+- [x] Sidebar bars and the usage page measure against the plan
+- [x] Plain messages for the three refusal codes, web and mobile
+- [x] Verify in browser
+

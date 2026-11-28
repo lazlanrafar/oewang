@@ -128,6 +128,7 @@ pub async fn parse_receipt(
     workspace_currency: &str,
     document: Document,
 ) -> Result<ReceiptResponse> {
+    meter.check().await?;
     let answer: ReceiptResponse = call(
         ai,
         RECEIPT_PATH,
@@ -149,6 +150,7 @@ pub async fn extract_statement(
     workspace_currency: &str,
     document: Document,
 ) -> Result<StatementResponse> {
+    meter.check().await?;
     let answer: StatementResponse = call(
         ai,
         EXTRACT_PATH,
@@ -183,6 +185,7 @@ pub async fn map_columns(
     columns: &[String],
     sample_rows: &[std::collections::BTreeMap<String, String>],
 ) -> Result<oewang_domain::csv_import::ColumnMapping> {
+    meter.check().await?;
     let answer: MapColumnsResponse = ai
         .post(
             MAP_COLUMNS_PATH,
@@ -246,7 +249,8 @@ pub async fn categorize(
     items: &[&str],
     categories: &[&str],
 ) -> Option<String> {
-    if categories.is_empty() {
+    // Past the plan's tokens is one more failure that means "no category".
+    if categories.is_empty() || meter.check().await.is_err() {
         return None;
     }
 
@@ -292,7 +296,7 @@ pub async fn categorize_items(
     categories: &[&str],
 ) -> Vec<Option<String>> {
     let mut chosen = vec![None; items.len()];
-    if items.is_empty() || categories.is_empty() {
+    if items.is_empty() || categories.is_empty() || meter.check().await.is_err() {
         return chosen;
     }
 

@@ -50,6 +50,7 @@
 		name: t('console.workspaces.columns.name'),
 		owner_email: t('console.workspaces.columns.owner'),
 		members: t('console.workspaces.columns.members'),
+		plan: t('console.workspaces.columns.plan'),
 		status: t('console.workspaces.columns.status'),
 		created_at: t('console.workspaces.columns.created'),
 		last_activity_at: t('console.workspaces.columns.last_activity')
@@ -84,6 +85,8 @@
 			<span class="text-muted-foreground truncate px-4">{workspace.owner_email ?? '—'}</span>
 		{:else if column.key === 'members'}
 			<span class="px-4 tabular-nums">{formatCount(workspace.members)}</span>
+		{:else if column.key === 'plan'}
+			<span class="truncate px-4">{workspace.plan_name}</span>
 		{:else if column.key === 'status'}
 			<span class="px-4"><ConsoleWorkspaceStatusBadge {workspace} /></span>
 		{:else if column.key === 'created_at'}

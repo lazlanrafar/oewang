@@ -45,12 +45,22 @@
 		type VaultListFile
 	} from '$lib/files';
 	import { t } from '$lib/i18n';
+	import { notInPlan } from '$lib/plans';
 	import { pageTitle } from '$lib/page-title';
 	import { readParam, readText, reloading, writeParams } from '$lib/url-state';
+	import { featureGate } from '$lib/workspace-data.svelte';
 
 	let { data } = $props();
 
 	const canEdit = $derived(data.me.role !== 'member');
+	/*
+	 * Without `vault` in the plan the files stay listed and open, and only
+	 * uploading stops: the button is off with the reason under the title,
+	 * and a drop does nothing (PLN-7).
+	 */
+	const gate = featureGate();
+	const vaultOff = $derived(gate('vault'));
+	const canUpload = $derived(canEdit && vaultOff === null);
 	const view = $derived(readParam(page.url, 'view', ['grid', 'list'] as const, 'grid'));
 
 	// ------------------------------------------------------------- search
@@ -214,13 +224,13 @@
 <div
 	class="relative flex min-h-0 flex-1 flex-col gap-6 overflow-hidden"
 	ondragenter={(event) => {
-		if (!canEdit || !event.dataTransfer?.types.includes('Files')) return;
+		if (!canUpload || !event.dataTransfer?.types.includes('Files')) return;
 		event.preventDefault();
 		dragDepth += 1;
 		dragging = true;
 	}}
 	ondragover={(event) => {
-		if (canEdit) event.preventDefault();
+		if (canUpload) event.preventDefault();
 	}}
 	ondragleave={() => {
 		dragDepth = Math.max(0, dragDepth - 1);
@@ -230,7 +240,7 @@
 		event.preventDefault();
 		dragDepth = 0;
 		dragging = false;
-		if (canEdit) upload(event.dataTransfer?.files);
+		if (canUpload) upload(event.dataTransfer?.files);
 	}}
 >
 	{#if dragging}
@@ -251,6 +261,9 @@
 				<h1 class="text-2xl tracking-tight">{t('vault.title')}</h1>
 			</div>
 			<p class="text-muted-foreground text-sm">{t('vault.description')}</p>
+			{#if canEdit && vaultOff}
+				<p class="text-muted-foreground text-sm" role="status">{notInPlan(vaultOff)}</p>
+			{/if}
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
 			{#if data.storage}
@@ -292,7 +305,7 @@
 				</Button>
 			</div>
 			{#if canEdit}
-				<Button size="sm" onclick={() => input?.click()}>
+				<Button size="sm" disabled={!canUpload} onclick={() => input?.click()}>
 					<Plus class="h-4 w-4" />
 					{t('vault.upload_button')}
 				</Button>
@@ -316,8 +329,8 @@
 					<DataTableEmptyState
 						title={t('vault.empty.title')}
 						description={t('vault.empty.get_started')}
-						actionLabel={canEdit ? t('vault.empty.action') : undefined}
-						onAction={canEdit ? () => input?.click() : undefined}
+						actionLabel={canUpload ? t('vault.empty.action') : undefined}
+						onAction={canUpload ? () => input?.click() : undefined}
 					/>
 				{/if}
 			{:else if view === 'list'}

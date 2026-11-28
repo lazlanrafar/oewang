@@ -56,6 +56,7 @@ Public keys are not secrets. The FCM config files (`google-services.json`, `Goog
 - `Authorization: Bearer <access>`; on `401 UNAUTHENTICATED` the auth interceptor calls `/v1/auth/refresh` once with the stored refresh token, stores the rotated pair, and retries. Concurrent 401s share that one refresh, because reusing a rotated refresh token revokes the family (AUTH-9). A refresh the API refuses (400, 401, 403) clears the tokens and signs out; no answer, a rate limit or a 5xx keeps them and surfaces the error.
 - Money arrives and leaves as decimal strings and is held as `Decimal` (package `decimal`). A `double` amount is a bug.
 - Nothing logs a token, a key, a decrypted body or file contents (OPS-3). The Dio log interceptor is off in release and prints method, path and status only in debug.
+- `dio_error_mapper.dart` turns the API's refusals a person can act on into plain words instead of the developer message: `USER_DISABLED` and `WORKSPACE_SUSPENDED` (D127), and the plan's `QUOTA_TOKENS_EXCEEDED`, `QUOTA_STORAGE_EXCEEDED` and `FEATURE_NOT_IN_PLAN`, the last naming the feature from `details.feature` (D128, PLN-7). The app hides no entry point by plan yet: a refused action shows that message where the error already appears.
 
 ## Screen port map
 

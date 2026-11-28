@@ -14,7 +14,7 @@ const PAGE_SIZE = 50;
  * (`?workspace=`) live in the URL (UI-8, D55), so a user's membership list
  * can link to one workspace. No status means all three, as the API has it.
  */
-export const load: PageServerLoad = async ({ locals, url }) => {
+export const load: PageServerLoad = async ({ locals, url, parent }) => {
 	const token = locals.accessToken;
 	const search = (url.searchParams.get('search') ?? '').trim();
 	const status = readValues(url, 'status').find((value) => (WORKSPACE_STATUSES as readonly string[]).includes(value));
@@ -28,21 +28,29 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const openId = url.searchParams.get('workspace');
 
-	const [workspaces, open] = await Promise.all([
+	// The plan picker needs the plans, which only `console.plans.manage` may read.
+	const canAssignPlan = (await parent()).operator.permissions.includes('console.plans.manage');
+
+	const [workspaces, open, plans] = await Promise.all([
 		consoleApi.listConsoleWorkspaces(new URLSearchParams([...query, ['page', String(page)]]), token),
-		openId ? consoleApi.consoleWorkspace(openId, token) : null
+		openId ? consoleApi.consoleWorkspace(openId, token) : null,
+		canAssignPlan && openId ? consoleApi.listConsolePlans(token) : null
 	]);
 
 	return {
 		workspaces: workspaces.data ?? [],
 		meta: workspaces.meta,
 		open,
+		plans,
 		filterKey: query.toString(),
 		filtered: search !== '' || status !== undefined
 	};
 };
 
-/** Suspend, unsuspend and restore (CSL-5, CSL-6, US-082). The API checks the permission. */
+/**
+ * Suspend, unsuspend and restore (CSL-5, CSL-6, US-082), and the plan
+ * (PLN-3, OEW-131). The API checks the permission.
+ */
 export const actions: Actions = {
 	suspend: async ({ request, locals }) =>
 		run(request, (form) => consoleApi.actOnWorkspace(text(form, 'id'), 'suspend', locals.accessToken)),
@@ -51,5 +59,10 @@ export const actions: Actions = {
 		run(request, (form) => consoleApi.actOnWorkspace(text(form, 'id'), 'unsuspend', locals.accessToken)),
 
 	restore: async ({ request, locals }) =>
-		run(request, (form) => consoleApi.actOnWorkspace(text(form, 'id'), 'restore', locals.accessToken))
+		run(request, (form) => consoleApi.actOnWorkspace(text(form, 'id'), 'restore', locals.accessToken)),
+
+	plan: async ({ request, locals }) =>
+		run(request, (form) =>
+			consoleApi.setConsoleWorkspacePlan(text(form, 'id'), text(form, 'plan_id'), locals.accessToken)
+		)
 };

@@ -6,10 +6,12 @@
 	 *
 	 * Opened through `?workspace=`, so a user's membership list can link here.
 	 * Suspend, unsuspend and restore (US-082) are offered by the page, which
-	 * owns the confirmation and the form.
+	 * owns the confirmation and the form. So is the plan (OEW-131): given the
+	 * plans, the sheet shows a picker posting to the page's `?/plan`.
 	 */
 	import { Button } from '$lib/components/atoms/button';
 	import * as Sheet from '$lib/components/atoms/sheet';
+	import { SelectPlan } from '$lib/components/molecules/select-plan';
 	import { formatCount, formatDay, type WorkspaceAction } from '$lib/console';
 	import { formatBytes } from '$lib/files';
 	import { t } from '$lib/i18n';
@@ -23,7 +25,10 @@
 		workspace,
 		actions = [],
 		busy = null,
-		onAction
+		onAction,
+		plans = null,
+		savingPlan = false,
+		planEnhance
 	}: {
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -33,7 +38,18 @@
 		/** The action on its way, which shows as loading. */
 		busy?: WorkspaceAction | null;
 		onAction?: (action: WorkspaceAction) => void;
+		/** The plans to choose from; null when this operator cannot assign one. */
+		plans?: { id: string; name: string }[] | null;
+		savingPlan?: boolean;
+		/** The plan change, owned by the page. */
+		planEnhance?: (node: HTMLFormElement) => void;
 	} = $props();
+
+	let planId = $state('');
+	$effect(() => {
+		planId = workspace?.plan_id ?? '';
+	});
+	const progressive = (node: HTMLFormElement) => planEnhance?.(node);
 
 	const ROLE: Record<MemberRole, string> = {
 		owner: t('workspaces.role_owner'),
@@ -92,6 +108,10 @@
 							{workspace.last_activity_at ? formatDay(workspace.last_activity_at) : t('console.never')}
 						</dd>
 					</div>
+					<div class="space-y-1">
+						<dt class={capsLabel}>{t('console.workspaces.sheet.plan')}</dt>
+						<dd class="truncate text-sm">{workspace.plan_name}</dd>
+					</div>
 					{#if workspace.suspended_at}
 						<div class="space-y-1">
 							<dt class={capsLabel}>{t('console.workspaces.sheet.suspended')}</dt>
@@ -105,6 +125,37 @@
 						</div>
 					{/if}
 				</dl>
+
+				{#if plans}
+					<form method="POST" action="?/plan" use:progressive class="border-border/50 space-y-3 border-b p-6">
+						<label for="workspace-plan" class={capsLabel}>{t('console.workspaces.sheet.plan')}</label>
+						<input type="hidden" name="id" value={workspace.id} />
+						<div class="flex items-center gap-2">
+							<!-- The flex child is the picker's own wrapper, not its trigger,
+							     so the width goes on a box around it. -->
+							<div class="min-w-0 flex-1">
+								<SelectPlan
+									id="workspace-plan"
+									name="plan_id"
+									{plans}
+									bind:value={planId}
+									placeholder={t('console.workspaces.sheet.plan_placeholder')}
+									searchPlaceholder={t('console.workspaces.sheet.plan_search')}
+									ariaLabel={t('console.workspaces.sheet.plan')}
+									class="w-full"
+								/>
+							</div>
+							<Button
+								type="submit"
+								variant="outline"
+								loading={savingPlan}
+								disabled={!planId || planId === workspace.plan_id}
+							>
+								{t('console.workspaces.sheet.plan_save')}
+							</Button>
+						</div>
+					</form>
+				{/if}
 
 				<section class="border-border/50 space-y-3 border-b p-6">
 					<h3 class={capsLabel}>{t('console.workspaces.sheet.contents')}</h3>

@@ -19,3 +19,6 @@ export { CONSOLE_AUDIT_COLUMNS } from './console-audit-data-table-column.js';
 export { default as ConsolePageHeader } from './console-page-header.svelte';
 export { default as ConsoleUsageDataTable } from './console-usage-data-table.svelte';
 export { CONSOLE_USAGE_COLUMNS } from './console-usage-data-table-column.js';
+export { default as ConsolePlanSheet } from './console-plan-sheet.svelte';
+export { default as ConsolePlansDataTable } from './console-plans-data-table.svelte';
+export { CONSOLE_PLAN_COLUMNS } from './console-plans-data-table-column.js';

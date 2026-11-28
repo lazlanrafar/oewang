@@ -17,6 +17,7 @@ pub mod ledger;
 pub mod money;
 pub mod owe1;
 pub mod passkeys;
+pub mod plan;
 pub mod receipt;
 pub mod secret;
 pub mod spreadsheet;
@@ -30,6 +31,7 @@ pub use error::{AppError, ErrorBody, FieldErrors};
 pub use money::{
     currency_digits, currency_symbol, format_money, normalize_currency_code, validate_currency_code,
 };
+pub use plan::Feature;
 pub use secret::Secret;
 
 pub type Result<T> = std::result::Result<T, AppError>;

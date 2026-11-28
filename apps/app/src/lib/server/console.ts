@@ -184,6 +184,9 @@ export type ConsoleWorkspaceRow = {
 	members: number;
 	owner_email: string | null;
 	last_activity_at: string | null;
+	/** The plan it holds (PLN-2). */
+	plan_id: string;
+	plan_name: string;
 };
 
 export type ConsoleWorkspace = ConsoleWorkspaceRow & {
@@ -434,4 +437,53 @@ export function consoleAuditEntry(id: string, token?: string): Promise<ConsoleAu
 
 export function listConsoleAudit(query: URLSearchParams, token?: string): Promise<Envelope<ConsoleAuditEntry[]>> {
 	return consoleRead('/v1/console/audit', token, query);
+}
+
+/** A plan (PLN-1). A null limit is unlimited; `features` are keys of `PLAN_FEATURES`. */
+export type ConsolePlan = {
+	id: string;
+	name: string;
+	max_tokens_month: number | null;
+	max_storage_bytes: number | null;
+	is_system: boolean;
+	features: string[];
+	/** How many workspaces hold it, deleted ones included. */
+	workspaces: number;
+	created_at: string;
+};
+
+export type ConsolePlanBody = {
+	name?: string;
+	max_tokens_month?: number | null;
+	max_storage_bytes?: number | null;
+	features?: string[];
+};
+
+/** Every live plan, the system plan first. */
+export async function listConsolePlans(token?: string): Promise<ConsolePlan[]> {
+	return (await consoleRead<ConsolePlan[]>('/v1/console/plans', token)).data ?? [];
+}
+
+export function createConsolePlan(body: ConsolePlanBody, token?: string) {
+	return api<ConsolePlan>({ method: 'POST', path: '/v1/console/plans', body, token });
+}
+
+/** `features`, when sent, replaces the whole set; a null limit is unlimited. */
+export function updateConsolePlan(id: string, body: ConsolePlanBody, token?: string) {
+	return api<ConsolePlan>({ method: 'PATCH', path: `/v1/console/plans/${encodeURIComponent(id)}`, body, token });
+}
+
+/** 409 PLAN_IN_USE while any workspace holds it. */
+export function deleteConsolePlan(id: string, token?: string) {
+	return api<null>({ method: 'DELETE', path: `/v1/console/plans/${encodeURIComponent(id)}`, token });
+}
+
+/** Give a workspace a plan (PLN-3). */
+export function setConsoleWorkspacePlan(workspaceId: string, planId: string, token?: string) {
+	return api<ConsoleWorkspaceRow>({
+		method: 'PUT',
+		path: `/v1/console/workspaces/${encodeURIComponent(workspaceId)}/plan`,
+		body: { plan_id: planId },
+		token
+	});
 }

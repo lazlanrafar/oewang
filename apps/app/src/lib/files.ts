@@ -13,6 +13,7 @@
  */
 
 import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
+import { planRefusalMessage } from '$lib/errors';
 import { t } from '$lib/i18n';
 
 /** What this product accepts. Nothing that runs when it is opened. */
@@ -110,7 +111,7 @@ export function uploadErrorMessage(error: unknown): string {
 	const raw = error instanceof Error ? error.message : '';
 	if (raw.includes('UNSUPPORTED_FILE_TYPE')) return t('files.error_unsupported_type');
 	if (raw.includes('FILE_TOO_LARGE')) return t('files.error_too_large');
-	return t('files.error_failed');
+	return planRefusalMessage(raw) ?? t('files.error_failed');
 }
 
 /**
@@ -157,11 +158,12 @@ export function thumbnailSrc(file: { id: string; type: string; thumbnail?: boole
 	return `${FILES}/${file.id}/thumbnail`;
 }
 
-/** Bytes as the old app showed them: B, then KB and MB to one decimal. */
+/** Bytes as the old app showed them: B, then KB, MB and GB to one decimal. */
 export function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
 /** The subtype, upper-cased by the caller's class, as the old app labelled a format. */
@@ -238,8 +240,15 @@ export async function uploadMany(
 		.filter((result): result is PromiseFulfilledResult<UploadedFile> => result.status === 'fulfilled')
 		.map((result) => result.value);
 
+	// A plan refusal says why, rather than "some failed" (PLN-7).
+	const refused = results.find((result) => result.status === 'rejected');
+	const planReason =
+		refused?.status === 'rejected' && refused.reason instanceof Error
+			? planRefusalMessage(refused.reason.message)
+			: null;
+
 	if (stored.length === files.length) notify.success(t('vault.toasts.upload_success'), id);
-	else notify.error(t('vault.toasts.upload_failed_some'), id);
+	else notify.error(planReason ?? t('vault.toasts.upload_failed_some'), id);
 
 	return stored;
 }

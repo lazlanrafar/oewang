@@ -419,6 +419,10 @@ pub async fn begin_turn(
     // rather than answered (AUTH-4).
     let session = require(pool, workspace_id, session_id).await?;
 
+    // Before the user's message is written, so a refused turn leaves no
+    // half-turn behind (PLN-4). The web chat and Telegram both start here.
+    crate::usage::ensure_tokens_left(pool, workspace_id).await?;
+
     let mut attachments = Vec::with_capacity(attachment_ids.len());
     for id in attachment_ids {
         let file = vault::find_file(pool, workspace_id, id)
@@ -737,6 +741,8 @@ pub async fn parse_receipt(
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)?;
+    // Every receipt read passes here: the web's parse, the bot, the queue.
+    crate::plans::require(pool, workspace_id, oewang_domain::Feature::ReceiptScan).await?;
 
     let document = crate::ai::extraction::document(pool, store, workspace_id, file_id).await?;
     let answer = crate::ai::extraction::parse_receipt(

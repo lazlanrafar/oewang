@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id, p.name, p.max_tokens_month, p.max_storage_bytes,\n                  COALESCE((SELECT array_agg(f.feature ORDER BY f.feature)\n                              FROM plan_features f WHERE f.plan_id = p.id), '{}') AS \"features!\"\n             FROM workspaces w\n             JOIN plans p ON p.id = w.plan_id AND p.deleted_at IS NULL\n            WHERE w.id = $1 AND w.deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plans",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "plans",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "max_tokens_month",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "plans",
+            "name": "max_tokens_month"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "max_storage_bytes",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "plans",
+            "name": "max_storage_bytes"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "features!",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "25caa608c4fe3c1f1563290e60ac828d850a038b360582dc2421aa3afadde30d"
+}

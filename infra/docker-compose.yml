@@ -48,7 +48,8 @@ services:
 
   # Creates the bucket once, then exits. Keeps first-run setup out of the README.
   minio-init:
-    image: minio/mc:latest
+    # minio/mc is no longer pullable from Docker Hub; the server image ships mc.
+    image: minio/minio:latest
     depends_on:
       minio:
         condition: service_healthy

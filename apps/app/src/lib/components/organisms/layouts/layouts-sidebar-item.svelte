@@ -11,8 +11,14 @@
 	 * border, the accent fill, weight 500, and a 45 degree hatch drawn with
 	 * `--chart-pattern-stroke` at 5 percent. Copied exactly, because the
 	 * hatch is what makes it read as the current page rather than as a
-	 * hovered one: a hovered row is the same fill at half strength. It lives
-	 * here once, so the two sidebars cannot disagree about it (D81).
+	 * hovered one. It lives here once, so the two sidebars cannot disagree
+	 * about it (D81).
+	 *
+	 * Unlike the old app, the border, fill, hatch and icon take the primary
+	 * colour, so the current page carries the brand accent (and a workspace's
+	 * own colour, which overrides `--primary`). The text stays the sidebar's
+	 * own: primary on a light ground is about 2.5:1, under the 4.5:1 that
+	 * text this size needs.
 	 *
 	 * The hatch is written out in the markup rather than held in a constant,
 	 * because Tailwind reads the source for class names and never sees one
@@ -84,7 +90,7 @@
 			'flex h-9 items-center gap-2 border-l-2 border-transparent px-2 text-sm transition-colors',
 			'hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground',
 			active &&
-				'border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent font-medium [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_srgb,var(--chart-pattern-stroke)_5%,transparent)_5px_6px)]',
+				'border-primary bg-primary/10 text-sidebar-foreground hover:bg-primary/10 font-medium [&>svg]:text-primary [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_srgb,var(--color-primary)_15%,transparent)_5px_6px)]',
 			collapsed && 'justify-center px-0'
 		)}
 	>

@@ -215,6 +215,9 @@ pub struct ConsoleWorkspaceRow {
     /// The earliest live owner, the person a support question goes to.
     pub owner_email: Option<String>,
     pub last_activity_at: Option<DateTime<Utc>>,
+    /// The plan it holds (PLN-2).
+    pub plan_id: String,
+    pub plan_name: String,
 }
 
 // shortcut: last activity is a max over the workspace's audit rows, once
@@ -226,8 +229,10 @@ const WORKSPACE_SELECT: &str =
         (SELECT u.email FROM user_workspaces m JOIN users u ON u.id = m.user_id
           WHERE m.workspace_id = w.id AND m.deleted_at IS NULL AND m.role = 'owner'
           ORDER BY m.joined_at LIMIT 1) AS owner_email,
-        (SELECT max(a.created_at) FROM audit_logs a WHERE a.workspace_id = w.id) AS last_activity_at
+        (SELECT max(a.created_at) FROM audit_logs a WHERE a.workspace_id = w.id) AS last_activity_at,
+        w.plan_id, p.name AS plan_name
    FROM workspaces w
+   JOIN plans p ON p.id = w.plan_id
   WHERE true";
 
 fn push_workspace_filters(
@@ -992,4 +997,182 @@ pub async fn find_operator_audit(
     .bind(id)
     .fetch_optional(executor)
     .await
+}
+
+// ------------------------------------------------------------------ plans
+
+/// A plan as the console lists it (PLN-1).
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
+pub struct PlanRow {
+    pub id: String,
+    pub name: String,
+    /// Null is unlimited.
+    pub max_tokens_month: Option<i64>,
+    pub max_storage_bytes: Option<i64>,
+    pub is_system: bool,
+    pub features: Vec<String>,
+    /// How many workspaces hold it, deleted ones included.
+    pub workspaces: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+const PLAN_SELECT: &str =
+    "SELECT p.id, p.name, p.max_tokens_month, p.max_storage_bytes, p.is_system,
+        COALESCE((SELECT array_agg(f.feature ORDER BY f.feature)
+                    FROM plan_features f WHERE f.plan_id = p.id), '{}') AS features,
+        (SELECT count(*) FROM workspaces w WHERE w.plan_id = p.id) AS workspaces,
+        p.created_at
+   FROM plans p
+  WHERE p.deleted_at IS NULL";
+
+pub async fn list_plans(executor: impl PgExecutor<'_>) -> Result<Vec<PlanRow>, sqlx::Error> {
+    sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "{PLAN_SELECT} ORDER BY p.is_system DESC, lower(p.name)"
+    )))
+    .fetch_all(executor)
+    .await
+}
+
+pub async fn find_plan(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<PlanRow>, sqlx::Error> {
+    sqlx::query_as(sqlx::AssertSqlSafe(format!("{PLAN_SELECT} AND p.id = $1")))
+        .bind(id)
+        .fetch_optional(executor)
+        .await
+}
+
+/// Lock a live plan: `is_system`, none when it does not exist.
+pub async fn lock_plan(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<bool>, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT is_system FROM plans WHERE id = $1 AND deleted_at IS NULL FOR UPDATE",
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await
+}
+
+/// True when a live plan already has this name (case-insensitive).
+pub async fn plan_name_taken(
+    executor: impl PgExecutor<'_>,
+    name: &str,
+    except_id: Option<&str>,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM plans
+                         WHERE lower(name) = lower($1) AND deleted_at IS NULL
+                           AND ($2::text IS NULL OR id <> $2))",
+    )
+    .bind(name)
+    .bind(except_id)
+    .fetch_one(executor)
+    .await
+}
+
+pub struct PlanFields<'a> {
+    pub name: &'a str,
+    pub max_tokens_month: Option<i64>,
+    pub max_storage_bytes: Option<i64>,
+}
+
+pub async fn insert_plan(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    fields: &PlanFields<'_>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO plans (id, name, max_tokens_month, max_storage_bytes) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(id)
+    .bind(fields.name)
+    .bind(fields.max_tokens_month)
+    .bind(fields.max_storage_bytes)
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+pub async fn update_plan(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    fields: &PlanFields<'_>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE plans
+            SET name = $2, max_tokens_month = $3, max_storage_bytes = $4, updated_at = now()
+          WHERE id = $1",
+    )
+    .bind(id)
+    .bind(fields.name)
+    .bind(fields.max_tokens_month)
+    .bind(fields.max_storage_bytes)
+    .execute(executor)
+    .await
+    .map(|_| ())
+}
+
+/// Replace a plan's features with this set.
+pub async fn set_plan_features(
+    executor: &mut sqlx::PgConnection,
+    id: &str,
+    features: &[String],
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM plan_features WHERE plan_id = $1")
+        .bind(id)
+        .execute(&mut *executor)
+        .await?;
+    sqlx::query("INSERT INTO plan_features (plan_id, feature) SELECT $1, unnest($2::text[])")
+        .bind(id)
+        .bind(features)
+        .execute(&mut *executor)
+        .await
+        .map(|_| ())
+}
+
+pub async fn soft_delete_plan(executor: impl PgExecutor<'_>, id: &str) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE plans SET deleted_at = now(), updated_at = now() WHERE id = $1")
+        .bind(id)
+        .execute(executor)
+        .await
+        .map(|_| ())
+}
+
+/// How many workspaces hold the plan. Deleted workspaces count: restoring
+/// one must find its plan still there.
+pub async fn plan_holders(
+    executor: impl PgExecutor<'_>,
+    plan_id: &str,
+) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar("SELECT count(*) FROM workspaces WHERE plan_id = $1")
+        .bind(plan_id)
+        .fetch_one(executor)
+        .await
+}
+
+/// Lock the workspace for a plan change: its `plan_id`, none when unknown.
+pub async fn lock_workspace_plan(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+) -> Result<Option<String>, sqlx::Error> {
+    sqlx::query_scalar("SELECT plan_id FROM workspaces WHERE id = $1 FOR UPDATE")
+        .bind(id)
+        .fetch_optional(executor)
+        .await
+}
+
+pub async fn set_workspace_plan(
+    executor: impl PgExecutor<'_>,
+    id: &str,
+    plan_id: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE workspaces SET plan_id = $2, updated_at = now() WHERE id = $1")
+        .bind(id)
+        .bind(plan_id)
+        .execute(executor)
+        .await
+        .map(|_| ())
 }

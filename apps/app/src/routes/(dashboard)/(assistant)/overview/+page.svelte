@@ -32,12 +32,17 @@
 	} from '$lib/components/organisms/overview';
 	import type { UploadedFile } from '$lib/components/molecules/file-dropzone';
 	import { t } from '$lib/i18n';
+	import { notInPlan } from '$lib/plans';
+	import { featureGate } from '$lib/workspace-data.svelte';
 	import { currentMonth } from '$lib/month-range';
 	import { pageTitle } from '$lib/page-title';
 	import { rangeLabel } from '$lib/reports';
 	import { readParam, readText, writeParams } from '$lib/url-state';
 
 	let { data } = $props();
+
+	const gate = featureGate();
+	const chatOff = $derived(gate('chat'));
 
 	const chatHistory = getContext<ChatHistoryContext>(CHAT_HISTORY);
 
@@ -96,6 +101,12 @@
 	 */
 	async function ask(message: string) {
 		if (starting) return;
+		// The cards ask too; without `chat` they say why rather than open a
+		// conversation that cannot answer (PLN-7).
+		if (chatOff) {
+			toast.error(notInPlan(chatOff));
+			return;
+		}
 		starting = true;
 
 		try {
@@ -148,7 +159,7 @@
 			debts={data.debts}
 			onAsk={ask}
 		/>
-		<OverviewChips range={words} disabled={starting} onAsk={ask} />
+		<OverviewChips range={words} disabled={starting || chatOff !== null} onAsk={ask} />
 	{/if}
 </div>
 

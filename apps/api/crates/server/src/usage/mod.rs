@@ -1,13 +1,17 @@
 //! What each workspace spends: model tokens and stored bytes (D92).
 //!
-//! Recorded, summed and shown, never limited. Billing and quotas remain a
-//! non-goal; this is the record a limit would one day be built on.
+//! Recorded, summed and shown, and limited by the workspace's plan (D128):
+//! the checks here run before a model call or an upload starts.
 //!
-//! See docs/features/usage.md.
+//! See docs/features/usage.md and docs/features/plans.md.
 
 pub mod handler;
 
-use oewang_db::{repositories::usage, PgPool};
+use oewang_db::{
+    repositories::{plans, usage, vault},
+    PgPool,
+};
+use oewang_domain::{AppError, Result};
 use serde::Deserialize;
 
 /// Which part of the product spent the tokens (USG-2).
@@ -62,6 +66,11 @@ impl<'a> Meter<'a> {
             workspace_id,
             user_id,
         }
+    }
+
+    /// Refuse the call before it is made when the plan's tokens are used up.
+    pub async fn check(&self) -> Result<()> {
+        ensure_tokens_left(self.pool, self.workspace_id).await
     }
 
     /// Write one ledger row. Never fails the call it describes: a reply the
@@ -123,6 +132,54 @@ impl TurnMeter {
             .record(self.feature, parsed.as_ref())
             .await;
     }
+}
+
+/// PLN-4: at or past the plan's monthly tokens, input plus output, no model
+/// call starts. Checked before a call, never during one, so a chat turn that
+/// crosses the limit finishes and the next one is refused.
+pub async fn ensure_tokens_left(pool: &PgPool, workspace_id: &str) -> Result<()> {
+    let Some(limit) = plan(pool, workspace_id).await?.max_tokens_month else {
+        return Ok(());
+    };
+    let used = usage::month_tokens(pool, workspace_id)
+        .await
+        .map_err(internal)?;
+    if used >= limit {
+        return Err(AppError::QuotaTokensExceeded);
+    }
+    Ok(())
+}
+
+/// PLN-5: an upload whose declared size would take the stored bytes (ready,
+/// live files, as the usage page sums them) past the plan's limit does not
+/// start. Files already stored are never touched.
+///
+/// shortcut: not locked, so uploads begun at the same moment can each pass
+/// and overshoot by one file each; lock the workspace row if that matters.
+pub async fn ensure_storage_left(pool: &PgPool, workspace_id: &str, size_bytes: i64) -> Result<()> {
+    let Some(limit) = plan(pool, workspace_id).await?.max_storage_bytes else {
+        return Ok(());
+    };
+    let stored = vault::storage_usage(pool, workspace_id)
+        .await
+        .map_err(internal)?;
+    if stored.bytes.saturating_add(size_bytes) > limit {
+        return Err(AppError::QuotaStorageExceeded);
+    }
+    Ok(())
+}
+
+/// None is a workspace that is gone; the plan it held cannot be deleted
+/// while held (`PLAN_IN_USE`).
+async fn plan(pool: &PgPool, workspace_id: &str) -> Result<plans::WorkspacePlan> {
+    plans::workspace_plan(pool, workspace_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)
+}
+
+fn internal(error: sqlx::Error) -> AppError {
+    AppError::Internal(anyhow::anyhow!(error))
 }
 
 fn clamp(tokens: i64) -> i32 {

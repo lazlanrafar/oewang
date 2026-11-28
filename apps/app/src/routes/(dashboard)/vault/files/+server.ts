@@ -31,7 +31,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 		return json(result.data);
 	} catch (failure) {
-		if (failure instanceof ApiError) error(failure.status, failure.code);
+		if (failure instanceof ApiError) error(failure.status, failure.code, { feature: failure.feature });
 		throw failure;
 	}
 };

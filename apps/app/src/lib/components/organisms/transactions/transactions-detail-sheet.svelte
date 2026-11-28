@@ -61,6 +61,7 @@
 	 * Read first, and read-only: edit and delete are hidden for a member,
 	 * and a delete asks before it happens (UI-4).
 	 */
+	import Ellipsis from '@lucide/svelte/icons/ellipsis';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
@@ -70,6 +71,7 @@
 	import { Badge } from '../../atoms/badge/index.js';
 	import { Button } from '../../atoms/button/index.js';
 	import * as Accordion from '../../atoms/accordion/index.js';
+	import * as DropdownMenu from '../../atoms/dropdown-menu/index.js';
 	import { FilePicker } from '../../molecules/file-picker/index.js';
 	import { FileTile } from '../../molecules/file-tile/index.js';
 	import { SelectCategory } from '../../molecules/select-category/index.js';
@@ -77,6 +79,7 @@
 	import { filePicker, fileTile } from '$lib/files.js';
 	import { t } from '$lib/i18n';
 	import * as Sheet from '../../atoms/sheet/index.js';
+	import * as Table from '../../atoms/table/index.js';
 	import { cn } from '$lib/utils.js';
 	import { formatMoney } from '$lib/money';
 	import type { Debt, TransactionDebts } from '$lib/server/debts';
@@ -297,61 +300,88 @@
 					</div>
 
 					{#if transaction.items?.length}
-						<ul class="divide-border divide-y border">
-							{#each transaction.items as item (item.id)}
-								<li class="space-y-2 px-3 py-2 text-sm">
-									<div class="flex items-center gap-2">
-									<span class="min-w-0 flex-1 truncate">
-										{item.name}
-										{#if item.quantity}
-											<span class="text-subtle text-xs">
-												· {item.quantity}{item.unit ? ` ${item.unit}` : ''}
-											</span>
+							<Table.Root density="compact" class="table-fixed">
+								<Table.Header>
+									<Table.Row>
+										<Table.Head>{t('txn.item_column_name')}</Table.Head>
+										{#if itemType}
+											<Table.Head class="w-40">{t('txn.item_column_category')}</Table.Head>
 										{/if}
-									</span>
-									<span class="shrink-0 font-mono">{item.amount}</span>
-									{#if canEdit}
-										<Button
-											variant="ghost"
-											size="icon"
-											class="size-6"
-											aria-label="Edit {item.name}"
-											onclick={() => onEditItem?.(item.id)}
-										>
-											<Pencil class="size-3" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon"
-											class="text-destructive size-6"
-											aria-label="Remove {item.name}"
-											onclick={() => onDeleteItem?.(item.id)}
-										>
-											<Trash2 class="size-3" />
-										</Button>
-									{/if}
-									</div>
-									<!-- The category the item is counted under, its own when
-									     it has one (TXN-24). A reader sees it only when set. -->
-									{#if itemType && (canEdit || item.categoryId)}
-										<!-- Keyed on the loaded items: a pick the API refused
-										     goes back to what the reload says. -->
-										{#key transaction.items}
-										<SelectCategory
-											type={itemType}
-											creatable={canEdit}
-											disabled={!canEdit}
-											createLabel={(typed) => t('common.create_named', { name: typed })}
-											clearLabel={t('txn.item_no_category')}
-											placeholder={t('txn.item_category')}
-											value={item.categoryId ?? ''}
-											onChange={(value) => onItemCategoryChange?.(item.id, value)}
-										/>
-										{/key}
-									{/if}
-								</li>
-							{/each}
-						</ul>
+										<Table.Head class="w-28 text-right">{t('txn.item_amount')}</Table.Head>
+										{#if canEdit}
+											<Table.Head class="w-10"><span class="sr-only">{t('common.actions')}</span></Table.Head>
+										{/if}
+									</Table.Row>
+								</Table.Header>
+								<Table.Body>
+									{#each transaction.items as item (item.id)}
+										<Table.Row>
+											<Table.Cell class="wrap-break-word">
+												{item.name}
+												{#if item.quantity}
+													<span class="text-subtle text-xs">
+														· {item.quantity}{item.unit ? ` ${item.unit}` : ''}
+													</span>
+												{/if}
+											</Table.Cell>
+											<!-- The category the item is counted under, its own when
+											     it has one (TXN-24). A reader sees it only when set. -->
+											{#if itemType}
+												<Table.Cell>
+													{#if canEdit || item.categoryId}
+														<!-- Keyed on the loaded items: a pick the API refused
+														     goes back to what the reload says. -->
+														{#key transaction.items}
+														<SelectCategory
+															type={itemType}
+															inDataTable
+															creatable={canEdit}
+															disabled={!canEdit}
+															createLabel={(typed) => t('common.create_named', { name: typed })}
+															clearLabel={t('txn.item_no_category')}
+															placeholder={t('txn.item_category')}
+															value={item.categoryId ?? ''}
+															onChange={(value) => onItemCategoryChange?.(item.id, value)}
+														/>
+														{/key}
+													{/if}
+												</Table.Cell>
+											{/if}
+											<Table.Cell class="text-right font-mono whitespace-nowrap">{item.amount}</Table.Cell>
+											{#if canEdit}
+												<Table.Cell class="px-1">
+													<div class="flex justify-center">
+														<DropdownMenu.Root>
+															<DropdownMenu.Trigger>
+																{#snippet child({ props })}
+																	<Button
+																		variant="ghost"
+																		size="icon"
+																		class="size-6"
+																		aria-label="Actions for {item.name}"
+																		{...props}
+																	>
+																		<Ellipsis />
+																	</Button>
+																{/snippet}
+															</DropdownMenu.Trigger>
+															<DropdownMenu.Content align="end" class="w-40">
+																<DropdownMenu.Item onclick={() => onEditItem?.(item.id)}>
+																	{t('common.edit')}
+																</DropdownMenu.Item>
+																<DropdownMenu.Separator />
+																<DropdownMenu.Item class="text-destructive" onclick={() => onDeleteItem?.(item.id)}>
+																	{t('common.delete')}
+																</DropdownMenu.Item>
+															</DropdownMenu.Content>
+														</DropdownMenu.Root>
+													</div>
+												</Table.Cell>
+											{/if}
+										</Table.Row>
+									{/each}
+								</Table.Body>
+							</Table.Root>
 
 						<!--
 							A mismatch is a badge and nothing more: item totals are

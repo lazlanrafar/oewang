@@ -33,6 +33,7 @@ import {
 	PiggyBank,
 	Plug,
 	LayoutDashboard,
+	Layers,
 	Lock,
 	MessageSquareWarning,
 	Palette,
@@ -189,7 +190,8 @@ export const consoleNavGroups: { labelKey?: TranslationKey; items: ConsoleNavIte
 		labelKey: 'console.nav_system_group',
 		items: [
 			{ titleKey: 'console.nav_usage', href: '/console/usage', icon: ChartColumn, permission: 'console.read' },
-			{ titleKey: 'console.nav_health', href: '/console/health', icon: TrendingDown, permission: 'console.read' }
+			{ titleKey: 'console.nav_health', href: '/console/health', icon: TrendingDown, permission: 'console.read' },
+			{ titleKey: 'console.nav_plans', href: '/console/plans', icon: Layers, permission: 'console.plans.manage' }
 		]
 	},
 	{

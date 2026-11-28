@@ -22,6 +22,7 @@
 import { getContext, setContext } from 'svelte';
 
 import { invalidateAll } from '$app/navigation';
+import { missingFeature, type PlanFeature } from '$lib/plans';
 
 export type WorkspaceWallet = { id: string; name: string; currency_code: string };
 export type WorkspaceGroup = { id: string; name: string };
@@ -83,6 +84,28 @@ export function workspaceLists(): WorkspaceLists {
 			return read().currencies;
 		}
 	};
+}
+
+const PLAN_KEY = Symbol('workspace-plan');
+
+/**
+ * Published by the dashboard layout: the plan's feature keys, or null when
+ * the plan could not be read. A getter, so an operator's change reaches
+ * the page on the next navigation without a reload (PLN-7).
+ */
+export function setWorkspaceFeatures(features: () => readonly string[] | null) {
+	setContext(PLAN_KEY, features);
+}
+
+/**
+ * Ask which feature the plan leaves out: `gate('receipt_scan', 'vault')` is
+ * the first of them missing, or null. Call it during component setup; the
+ * function it returns reads the live plan, so a `$derived` over it reruns.
+ * Outside the dashboard nothing is withheld, as with the lists above.
+ */
+export function featureGate(): (...needed: PlanFeature[]) => PlanFeature | null {
+	const read = getContext<(() => readonly string[] | null) | undefined>(PLAN_KEY);
+	return (...needed) => missingFeature(read ? read() : null, needed);
 }
 
 type Created = { id: string; name: string };

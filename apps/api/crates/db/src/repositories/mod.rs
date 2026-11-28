@@ -12,6 +12,7 @@ pub mod ids;
 pub mod items;
 pub mod mcp;
 pub mod passkeys;
+pub mod plans;
 pub mod push;
 pub mod receipts;
 pub mod telegram;

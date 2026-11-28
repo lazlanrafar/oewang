@@ -36,7 +36,7 @@ Each of these exists in the old app and is deliberately left out. Adding any of 
 - ~~Budgets.~~ Budgets came back with D103 (BUD-1 to BUD-4, section 6.15), with their chat canvas. Budget alerts at 80% and 100% came back as push notifications with D116 (PUSH-3); every other kind of notification stays out.
 - ~~Contacts and bill splitting.~~ Contacts and bill splitting came back with D120 (sections 6.20 and 6.21).
 - ~~Vault as a browsable feature: `vault_files` exists only to back attachments and receipts.~~ The vault page came back with D90 (VLT-6 to VLT-13). Still out: document RAG and a `search_documents` tool.
-- Billing: plans, Mayar payments, AI token quotas, storage limits, the upgrade flow. Usage is recorded and shown (section 6.13, D92), never limited.
+- Billing: ~~plans, AI token quotas, storage limits,~~ Mayar payments, the upgrade flow. Plans with token, storage and feature limits came back with D128 (PLN-1 to PLN-8, section 6.23), assigned by an operator; payments and a self-serve upgrade stay out.
 - Integrations: third-party connectors and webhooks. Telegram was on this list until D83 moved it into section 6.11, and MCP until D106 (section 6.17); nothing else on the old Apps page came with them (Gmail, Outlook).
 - ~~The admin dashboard~~ and the marketing website. The admin dashboard came back as the operator console with D124 (CSL-1 to CSL-14, section 6.22), without impersonation and without plans or billing.
 - ~~The Flutter mobile app and offline sync.~~ The mobile app came back with D113 (MOB-1 to MOB-9, section 6.18), with offline writes for transactions, wallets and categories (D114, D115).
@@ -355,7 +355,7 @@ Added by D92. See [Usage](features/usage.md).
 |---|---|
 | USG-1 | A workspace's storage used is derived from its rows: the sum of `size` and the count over ready, non-deleted files. No counter is stored. |
 | USG-2 | Every model call's input and output tokens are recorded per workspace and per feature, with the model and the member it was made for, in an append-only table. A failed record never fails the call. |
-| USG-3 | A settings page, readable by any member, shows storage used and tokens for this calendar month and all time, in total and by feature. Nothing is limited. |
+| USG-3 | A settings page, readable by any member, shows storage used and tokens for this calendar month and all time, in total and by feature. ~~Nothing is limited.~~ Limits came with D128 (section 6.23). |
 
 ### 6.14 Database (FX, ITM)
 
@@ -489,6 +489,21 @@ Added by D124, D125 and D126. Specified in [features/console.md](features/consol
 | CSL-12 | Roles: an operator with `console.roles.manage` creates, edits and deletes roles. System roles are read-only, a role in use is not deleted (`CONSOLE_ROLE_IN_USE`), and no one adds a permission they do not hold. |
 | CSL-13 | Operators never see an amount, a balance, a note or the text of a transaction, and cannot sign in as a user. |
 | CSL-14 | Every console write records the operator, the action, the entity and the before and after in `operator_audit`, in the same database transaction. |
+
+### 6.23 Plans (PLN)
+
+Added by D128. Specified in [features/plans.md](features/plans.md).
+
+| ID | Requirement |
+|---|---|
+| PLN-1 | A plan has a name, a monthly token limit, a storage limit, either of which may be unlimited, and a set of features from a fixed list in code. An operator with `console.plans.manage` creates, edits and deletes plans in the console. |
+| PLN-2 | Every workspace holds exactly one plan. The system plan, Free, is held by every workspace given no other, new ones included, and cannot be deleted. A plan a workspace holds is not deleted (`PLAN_IN_USE`). |
+| PLN-3 | An operator with `console.plans.manage` assigns a plan to a workspace in the console. It applies from the workspace's next request. |
+| PLN-4 | Tokens: at or past the plan's monthly limit, input plus output over the calendar month in UTC, a model call is refused with `QUOTA_TOKENS_EXCEEDED` before the AI service is asked. A turn already running finishes. |
+| PLN-5 | Storage: an upload that would take the stored bytes past the plan's limit is refused with `QUOTA_STORAGE_EXCEEDED`. Files already stored are never touched. |
+| PLN-6 | Features: a feature the plan does not include is refused at its entry point with `FEATURE_NOT_IN_PLAN`. Data it already made stays readable. |
+| PLN-7 | The app shows the workspace's plan, its limits and usage against them, and names the limit or the feature when it refuses. |
+| PLN-8 | Only an operator assigns a plan. There is no payment and no self-serve upgrade. |
 
 ## 7. Success metrics
 

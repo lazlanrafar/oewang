@@ -319,6 +319,11 @@ pub async fn chat_stream(
 ) -> Result<Response, ApiError> {
     let id = request_id.0;
 
+    // Before the rate limit, so a refused turn spends none of it (PLN-6).
+    crate::plans::require(&state.db, &auth.workspace_id, oewang_domain::Feature::Chat)
+        .await
+        .map_err(|error| ApiError::new(error, id.clone()))?;
+
     // Per workspace, not per address: what this bounds is model spend, and
     // spend belongs to a workspace (SEC-17). Counted before the user's
     // message is written, so a refused turn leaves no half-turn behind.

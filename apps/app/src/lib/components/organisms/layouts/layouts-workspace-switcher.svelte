@@ -3,20 +3,20 @@
 	 * The workspace switcher at the top of the sidebar, the old app's
 	 * `WorkspaceSwitcher` (D94).
 	 *
-	 * The same trigger, a 48px row with the black cat tile, the workspace name
+	 * The same trigger, a 48px row with a tile, the workspace name
 	 * over a second line and the up-down chevron, and the same menu: a label,
 	 * one row per workspace with its letter in a bordered square, a rule, and
 	 * "Add workspace". Changed from the old one, each a fix: the current
 	 * workspace is ticked, the second line is the role (there are no plans),
 	 * the ⌘1… shortcuts it printed but never bound are gone (they would also
-	 * fight the browser's own tab shortcuts), and "Manage workspaces" leads to
-	 * the workspaces page.
+	 * fight the browser's own tab shortcuts), "Manage workspaces" leads to
+	 * the workspaces page, and the tile is the Oewang mark on the primary
+	 * colour rather than the old black cat.
 	 *
 	 * Switching posts a plain form, so the whole shell reloads in the new
 	 * workspace, as the old switcher reloaded the page.
 	 */
-	import Cat from '@lucide/svelte/icons/cat';
-	import Check from '@lucide/svelte/icons/check';
+		import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import Loader2 from '@lucide/svelte/icons/loader-circle';
 	import Plus from '@lucide/svelte/icons/plus';
@@ -25,6 +25,7 @@
 
 	import { page } from '$app/state';
 	import * as DropdownMenu from '$lib/components/atoms/dropdown-menu';
+	import { Logo } from '$lib/components/atoms/logo';
 	import { t } from '$lib/i18n';
 	import { cn } from '$lib/utils';
 	import { roleLabel, workspaceInitial } from '$lib/workspaces';
@@ -73,7 +74,8 @@
 	user says what they see. Collapsed, only the icon shows, so the label
 	names it instead. The menu it opens is announced by `aria-haspopup`.
 -->
-<div class={cn('flex flex-col gap-2 p-2', collapsed && 'items-center px-0')}>
+<!-- The extra bottom padding keeps the card off the first nav row. -->
+<div class={cn('flex flex-col gap-2 p-2 pb-4', collapsed && 'items-center px-0 pb-2')}>
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
 			{#snippet child({ props })}
@@ -81,24 +83,27 @@
 					{...props}
 					type="button"
 					class={cn(
-						'flex w-full items-center gap-2 overflow-hidden text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
-						collapsed ? 'size-8 justify-center p-0' : 'h-12 p-2'
+						'flex w-full items-center gap-2 overflow-hidden border text-left text-sm outline-hidden transition-[width,height,padding] hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
+						collapsed
+							? 'size-8 justify-center border-transparent p-0'
+							: // Drawn like the overview's stat card, in the active row's tint and hatch.
+								'border-border bg-primary/10 hover:bg-primary/15 data-[state=open]:bg-primary/15 p-3 [background-image:repeating-linear-gradient(45deg,transparent_0_5px,color-mix(in_srgb,var(--color-primary)_15%,transparent)_5px_6px)]'
 					)}
 					aria-label={collapsed ? t('nav.switch_workspace') : undefined}
 				>
 					<span
-						class="flex aspect-square size-8 shrink-0 items-center justify-center rounded bg-foreground font-semibold text-background text-sm"
+						class="flex aspect-square size-8 shrink-0 items-center justify-center bg-primary font-semibold text-primary-foreground text-sm"
 					>
 						{#if switching}
 							<Loader2 class="size-4 animate-spin" />
 						{:else}
-							<Cat class="size-4" />
+							<Logo class="size-5" />
 						{/if}
 					</span>
 					{#if !collapsed}
-						<span class="grid flex-1 text-left text-sm leading-tight">
-							<span class="truncate font-semibold">{active?.name ?? ''}</span>
-							<span class="truncate text-xs capitalize">{roleLabel(active?.role ?? '')}</span>
+						<span class="grid flex-1 text-left leading-tight">
+							<span class="text-body truncate leading-tight font-medium">{active?.name ?? ''}</span>
+							<span class="text-caption text-subtle truncate leading-none tracking-wider uppercase">{roleLabel(active?.role ?? '')}</span>
 						</span>
 						<ChevronsUpDown class="ml-auto size-4 shrink-0" />
 					{/if}

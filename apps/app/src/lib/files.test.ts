@@ -22,6 +22,7 @@ describe('formatBytes', () => {
 		expect(formatBytes(512)).toBe('512 B');
 		expect(formatBytes(1536)).toBe('1.5 KB');
 		expect(formatBytes(2.5 * 1024 * 1024)).toBe('2.5 MB');
+		expect(formatBytes(1024 * 1024 * 1024)).toBe('1.0 GB');
 	});
 });
 

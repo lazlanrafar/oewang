@@ -11,9 +11,9 @@ Evidence is, in order of preference: a test file that cites the ID (in a
 name or a comment); a backlog story that names the ID and has its "Verify
 in browser" box ticked; or a written reason it is not done.
 
-- 198 with test evidence
-- 29 verified in browser only
-- 14 not done
+- 205 with test evidence
+- 31 verified in browser only
+- 13 not done
 
 | ID | Evidence |
 |---|---|
@@ -143,6 +143,14 @@ in browser" box ticked; or a written reason it is not done.
 | OVR-3 | `apps/api/crates/server/src/reports/tests.rs` |
 | OVR-4 | `apps/app/src/lib/chat-handoff.test.ts` |
 | OVR-5 | `apps/app/src/lib/chat-invalidation.test.ts` |
+| PLN-1 | `apps/api/crates/server/src/console/tests.rs` |
+| PLN-2 | `apps/api/crates/server/src/console/tests.rs` |
+| PLN-3 | verified in browser by US-086 |
+| PLN-4 | `apps/api/crates/server/src/ai/tests.rs`, `apps/api/crates/server/src/usage/db_tests.rs` |
+| PLN-5 | `apps/api/crates/server/src/usage/db_tests.rs` |
+| PLN-6 | `apps/api/crates/server/src/plans_tests.rs`, `apps/api/crates/server/src/telegram/update_tests.rs` |
+| PLN-7 | `apps/api/crates/domain/src/error.rs`, `apps/api/crates/server/src/usage/handler.rs`, `apps/app/src/lib/errors.test.ts`, `apps/app/src/lib/plans.test.ts`, `apps/app/src/lib/receipt.test.ts`, `apps/native/test/unit/dio_error_mapper_test.dart` |
+| PLN-8 | verified in browser by US-086 |
 | PLT-1 | not done: a deployment shape (three processes on 3000, 3002, 3004) fixed in infra/docker-compose.yml, not a behaviour a test can call |
 | PLT-2 | `apps/ai/tests/test_health.py` |
 | PLT-3 | `apps/ai/tests/test_health.py` |
@@ -212,7 +220,7 @@ in browser" box ticked; or a written reason it is not done.
 | TXN-21 | verified in browser by US-018 |
 | TXN-22 | `apps/api/crates/server/src/transactions/tests.rs`, `apps/app/src/routes/(dashboard)/transactions/resave.test.ts` |
 | TXN-23 | `apps/api/crates/server/src/transactions/tests.rs` |
-| TXN-24 | not done:  |
+| TXN-24 | `apps/api/crates/server/src/transactions/tests.rs` |
 | TXN-25 | `apps/app/src/lib/transactions.test.ts` |
 | TXN-26 | `apps/app/src/lib/transactions.test.ts` |
 | TXN-27 | `apps/ai/tests/test_receipt_categorize.py`, `apps/api/crates/server/src/ai/service.rs`, `apps/api/crates/server/src/telegram/update_tests.rs`, `apps/api/crates/server/src/transactions/tests.rs`, `apps/app/src/lib/receipt.test.ts` |

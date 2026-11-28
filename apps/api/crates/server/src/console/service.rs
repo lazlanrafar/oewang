@@ -8,7 +8,7 @@ use oewang_db::repositories::{
     usage,
     vault::{self, StorageUsage},
 };
-use oewang_domain::{AppError, ConsolePermission, Page, Result};
+use oewang_domain::{AppError, ConsolePermission, Feature, Page, Result};
 use serde::Serialize;
 use sqlx::PgPool;
 
@@ -894,4 +894,255 @@ pub async fn operator_audit_entry(pool: &PgPool, id: &str) -> Result<console::Op
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)
+}
+
+// ------------------------------------------------------------------ plans
+
+/// The largest limit a JavaScript number in the app still holds exactly.
+pub const MAX_LIMIT: i64 = 9_007_199_254_740_991;
+
+fn plan_name(name: &str) -> Result<&str> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().count() > 60 {
+        return Err(AppError::validation([("name", "Use 1 to 60 characters.")]));
+    }
+    Ok(name)
+}
+
+/// Null is unlimited; anything else is a whole number from zero.
+fn plan_limit(field: &'static str, value: Option<i64>) -> Result<Option<i64>> {
+    match value {
+        Some(limit) if !(0..=MAX_LIMIT).contains(&limit) => Err(AppError::validation([(
+            field,
+            "Use a whole number from 0, or leave it empty for unlimited.",
+        )])),
+        _ => Ok(value),
+    }
+}
+
+/// The keys of known features, sorted and once each.
+fn plan_features(keys: &[String]) -> Result<Vec<String>> {
+    let mut parsed = keys
+        .iter()
+        .map(|key| {
+            Feature::parse(key)
+                .ok_or_else(|| AppError::validation([("features", "Unknown feature.")]))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    parsed.sort();
+    parsed.dedup();
+    Ok(parsed
+        .iter()
+        .map(|feature| feature.key().to_string())
+        .collect())
+}
+
+async fn ensure_plan_name_free(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    name: &str,
+    except_id: Option<&str>,
+) -> Result<()> {
+    if console::plan_name_taken(&mut **tx, name, except_id)
+        .await
+        .map_err(internal)?
+    {
+        return Err(AppError::validation([(
+            "name",
+            "Another plan has this name.",
+        )]));
+    }
+    Ok(())
+}
+
+pub async fn plans(pool: &PgPool) -> Result<Vec<console::PlanRow>> {
+    console::list_plans(pool).await.map_err(internal)
+}
+
+/// Create a plan (PLN-1).
+pub async fn create_plan(
+    pool: &PgPool,
+    operator_id: &str,
+    name: &str,
+    max_tokens_month: Option<i64>,
+    max_storage_bytes: Option<i64>,
+    features: &[String],
+) -> Result<console::PlanRow> {
+    let fields = console::PlanFields {
+        name: plan_name(name)?,
+        max_tokens_month: plan_limit("max_tokens_month", max_tokens_month)?,
+        max_storage_bytes: plan_limit("max_storage_bytes", max_storage_bytes)?,
+    };
+    let features = plan_features(features)?;
+
+    let mut tx = pool.begin().await.map_err(internal)?;
+    ensure_plan_name_free(&mut tx, fields.name, None).await?;
+    let id = cuid2::create_id();
+    console::insert_plan(&mut *tx, &id, &fields)
+        .await
+        .map_err(internal)?;
+    console::set_plan_features(&mut tx, &id, &features)
+        .await
+        .map_err(internal)?;
+    let after = console::find_plan(&mut *tx, &id).await.map_err(internal)?;
+    audit(
+        &mut tx,
+        operator_id,
+        "plan.created",
+        "plan",
+        &id,
+        None,
+        snapshot(&after)?,
+    )
+    .await?;
+    tx.commit().await.map_err(internal)?;
+    after.ok_or(AppError::NotFound)
+}
+
+/// Edit a plan (PLN-1). Absent fields are left alone; a null limit is
+/// unlimited. The system plan's limits and features are set here like any
+/// plan's, so they need no migration (D128); its name, which every new
+/// workspace shows, stays.
+pub async fn update_plan(
+    pool: &PgPool,
+    operator_id: &str,
+    id: &str,
+    name: Option<&str>,
+    max_tokens_month: Option<Option<i64>>,
+    max_storage_bytes: Option<Option<i64>>,
+    features: Option<&[String]>,
+) -> Result<console::PlanRow> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let is_system = console::lock_plan(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    let before = console::find_plan(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    if is_system && name.is_some_and(|name| name.trim() != before.name) {
+        return Err(AppError::validation([(
+            "name",
+            "The system plan keeps its name.",
+        )]));
+    }
+    let fields = console::PlanFields {
+        name: plan_name(name.unwrap_or(&before.name))?,
+        max_tokens_month: plan_limit(
+            "max_tokens_month",
+            max_tokens_month.unwrap_or(before.max_tokens_month),
+        )?,
+        max_storage_bytes: plan_limit(
+            "max_storage_bytes",
+            max_storage_bytes.unwrap_or(before.max_storage_bytes),
+        )?,
+    };
+    ensure_plan_name_free(&mut tx, fields.name, Some(id)).await?;
+    console::update_plan(&mut *tx, id, &fields)
+        .await
+        .map_err(internal)?;
+    if let Some(features) = features {
+        console::set_plan_features(&mut tx, id, &plan_features(features)?)
+            .await
+            .map_err(internal)?;
+    }
+    let after = console::find_plan(&mut *tx, id).await.map_err(internal)?;
+    audit(
+        &mut tx,
+        operator_id,
+        "plan.updated",
+        "plan",
+        id,
+        snapshot(&before)?,
+        snapshot(&after)?,
+    )
+    .await?;
+    tx.commit().await.map_err(internal)?;
+    after.ok_or(AppError::NotFound)
+}
+
+/// Delete a plan no workspace holds (PLN-2). Soft: the audit trail names it.
+pub async fn delete_plan(pool: &PgPool, operator_id: &str, id: &str) -> Result<()> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    // The lock also waits out an assignment in flight, which locks it too.
+    let is_system = console::lock_plan(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    if is_system {
+        return Err(AppError::validation([(
+            "plan",
+            "The system plan cannot be deleted.",
+        )]));
+    }
+    if console::plan_holders(&mut *tx, id)
+        .await
+        .map_err(internal)?
+        > 0
+    {
+        return Err(AppError::PlanInUse);
+    }
+    let before = console::find_plan(&mut *tx, id).await.map_err(internal)?;
+    console::soft_delete_plan(&mut *tx, id)
+        .await
+        .map_err(internal)?;
+    audit(
+        &mut tx,
+        operator_id,
+        "plan.deleted",
+        "plan",
+        id,
+        snapshot(&before)?,
+        None,
+    )
+    .await?;
+    tx.commit().await.map_err(internal)
+}
+
+/// Give a workspace a plan (PLN-3). Suspended and deleted workspaces too: a
+/// plan held only by deleted workspaces must be movable to be deleted.
+/// Asking for the plan it already holds changes nothing and writes no audit.
+pub async fn set_workspace_plan(
+    pool: &PgPool,
+    operator_id: &str,
+    workspace_id: &str,
+    plan_id: &str,
+) -> Result<ConsoleWorkspaceRow> {
+    let mut tx = pool.begin().await.map_err(internal)?;
+    let current = console::lock_workspace_plan(&mut *tx, workspace_id)
+        .await
+        .map_err(internal)?
+        .ok_or(AppError::NotFound)?;
+    if current != plan_id {
+        // Locked so a delete of the same plan cannot pass between the check
+        // and the update.
+        console::lock_plan(&mut *tx, plan_id)
+            .await
+            .map_err(internal)?
+            .ok_or_else(|| AppError::validation([("plan_id", "Unknown plan.")]))?;
+        let before = console::find_workspace(&mut *tx, workspace_id)
+            .await
+            .map_err(internal)?;
+        console::set_workspace_plan(&mut *tx, workspace_id, plan_id)
+            .await
+            .map_err(internal)?;
+        let after = console::find_workspace(&mut *tx, workspace_id)
+            .await
+            .map_err(internal)?;
+        audit(
+            &mut tx,
+            operator_id,
+            "workspace.plan_changed",
+            "workspace",
+            workspace_id,
+            snapshot(&before)?,
+            snapshot(&after)?,
+        )
+        .await?;
+    }
+    let row = console::find_workspace(&mut *tx, workspace_id)
+        .await
+        .map_err(internal)?;
+    tx.commit().await.map_err(internal)?;
+    row.ok_or(AppError::NotFound)
 }

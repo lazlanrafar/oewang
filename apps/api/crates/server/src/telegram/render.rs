@@ -28,6 +28,13 @@ pub const NO_LONGER_MEMBER: &str =
 pub const SUSPENDED: &str =
     "This Oewang workspace is unavailable right now. Contact Oewang support.";
 
+/// The workspace's plan leaves Telegram out (PLN-6). The link stays.
+pub const TELEGRAM_NOT_IN_PLAN: &str =
+    "This Oewang workspace's plan doesn't include Telegram. Contact Oewang support to change it.";
+
+/// The workspace's plan leaves receipt scanning out (PLN-6).
+pub const RECEIPT_NOT_IN_PLAN: &str = "This Oewang workspace's plan doesn't include reading receipts. Ask me questions instead, or contact Oewang support to change it.";
+
 pub const HELP: &str = "Send a photo or a PDF of a receipt and I'll save it as an expense.\n\nOr ask me anything about your money, like \"how much did I spend on food this month?\"\n\n/disconnect stops this chat acting for your account.";
 
 pub const MEMBER_CANNOT_WRITE: &str = "Your role in this workspace can't add transactions. Ask an owner or an admin, or ask me questions instead.";
@@ -57,6 +64,13 @@ pub const AI_UNAVAILABLE: &str =
 pub const DELETED: &str = "🗑️ Deleted. It's no longer in your transactions.";
 
 pub const SLOW_DOWN: &str = "That's a lot of messages at once. Please wait a minute and try again.";
+
+/// The plan's limits (PLN-4, PLN-5).
+pub const QUOTA_TOKENS: &str =
+    "This workspace has used its AI allowance for this month. It renews on the 1st.";
+
+pub const QUOTA_STORAGE: &str =
+    "This workspace's storage is full. Delete files from the vault in the app, then send it again.";
 
 pub fn linked(workspace_name: &str) -> String {
     if workspace_name.is_empty() {

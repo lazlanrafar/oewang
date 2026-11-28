@@ -22,9 +22,10 @@
 		PageSkeleton
 	} from '$lib/components/organisms/layouts';
 	import { t } from '$lib/i18n';
-	import { setWorkspaceLists } from '$lib/workspace-data.svelte';
+	import { setWorkspaceFeatures, setWorkspaceLists } from '$lib/workspace-data.svelte';
 	import { applyColors, colorStyle } from '$lib/colors';
 	import { formatMoney } from '$lib/money';
+	import { roleLabel } from '$lib/workspaces';
 
 	let { children, data } = $props();
 
@@ -35,6 +36,7 @@
 	 * reaches the pickers already on screen.
 	 */
 	setWorkspaceLists(() => data.lists);
+	setWorkspaceFeatures(() => data.usage?.plan.features ?? null);
 
 	/*
 	 * Queued receipts that ended while the person was away (D95): each is
@@ -104,7 +106,7 @@
 
 <AppShell sidebarOpen={data.sidebarOpen} style={colorStyle(userColors) || undefined}>
 	{#snippet sidebar(props)}
-		<AppSidebar workspaces={data.workspaces} activeId={data.me.workspace.id} {...props} />
+		<AppSidebar workspaces={data.workspaces} activeId={data.me.workspace.id} usage={data.usage} {...props} />
 	{/snippet}
 
 	{#snippet account()}
@@ -114,6 +116,7 @@
 			photo={data.me.user.profile_picture
 				? `/account/photo?v=${encodeURIComponent(data.me.user.profile_picture)}`
 				: null}
+			role={roleLabel(data.me.role)}
 		/>
 	{/snippet}
 

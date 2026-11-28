@@ -9,6 +9,7 @@
 
 import { toast } from 'svelte-sonner';
 
+import { featureLabel } from '$lib/console';
 import { t, type TranslationKey } from '$lib/i18n';
 
 const CODE_TO_KEY: Record<string, TranslationKey> = {
@@ -18,8 +19,12 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	INSUFFICIENT_ROLE: 'errors.insufficient_role',
 	CONSOLE_FORBIDDEN: 'errors.console_forbidden',
 	CONSOLE_ROLE_IN_USE: 'errors.console_role_in_use',
+	PLAN_IN_USE: 'errors.plan_in_use',
 	USER_DISABLED: 'errors.user_disabled',
 	WORKSPACE_SUSPENDED: 'errors.workspace_suspended',
+	QUOTA_TOKENS_EXCEEDED: 'errors.quota_tokens_exceeded',
+	QUOTA_STORAGE_EXCEEDED: 'errors.quota_storage_exceeded',
+	FEATURE_NOT_IN_PLAN: 'errors.feature_not_in_plan',
 	NOT_A_MEMBER: 'errors.not_a_member',
 	NO_WORKSPACE: 'errors.no_workspace',
 	LAST_OWNER: 'errors.last_owner',
@@ -62,9 +67,53 @@ const CODE_TO_KEY: Record<string, TranslationKey> = {
 	PAYMENT_TRANSACTION_LOCKED: 'errors.payment_transaction_locked'
 };
 
-export function messageForCode(code: string): string {
+/**
+ * `feature` is the one a `FEATURE_NOT_IN_PLAN` refusal names (PLN-7). A
+ * feature this build does not know falls back to the sentence that names
+ * none.
+ */
+export function messageForCode(code: string, feature?: unknown): string {
+	const label = code === 'FEATURE_NOT_IN_PLAN' && typeof feature === 'string' ? featureLabel(feature) : null;
+	if (label) return t('errors.feature_not_in_plan_named', { feature: t(label) });
+
 	const key = CODE_TO_KEY[code];
 	return key ? t(key) : t('errors.unexpected');
+}
+
+/** The refusals a workspace's plan answers with (D128). */
+const PLAN_CODES = ['QUOTA_TOKENS_EXCEEDED', 'QUOTA_STORAGE_EXCEEDED', 'FEATURE_NOT_IN_PLAN'];
+
+export type Refusal = { code: string; feature?: string };
+
+/**
+ * What one of this app's routes refused with: the body `error()` sends,
+ * `{ message: code, feature? }` (`App.Error`). Anything
+ * else reads as a failed request.
+ */
+export function parseRefusal(body: unknown): Refusal {
+	const record = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
+	const code = typeof record.message === 'string' ? record.message : 'STREAM_FAILED';
+	return typeof record.feature === 'string' ? { code, feature: record.feature } : { code };
+}
+
+export async function readRefusal(response: Response): Promise<Refusal> {
+	return parseRefusal(await response.json().catch(() => null));
+}
+
+/**
+ * The sentence for a plan refusal carried as a response's text, or null
+ * when the text is anything else. For the upload path, whose failures
+ * travel as `Error(responseText)`.
+ */
+export function planRefusalMessage(text: string): string | null {
+	let body: unknown = null;
+	try {
+		body = JSON.parse(text);
+	} catch {
+		return null;
+	}
+	const refused = parseRefusal(body);
+	return PLAN_CODES.includes(refused.code) ? messageForCode(refused.code, refused.feature) : null;
 }
 
 /**

@@ -6,7 +6,8 @@ const ENTITY: Record<string, string> = {
 	user: t('console.audit.entities.user'),
 	workspace: t('console.audit.entities.workspace'),
 	feedback: t('console.audit.entities.feedback'),
-	console_role: t('console.audit.entities.console_role')
+	console_role: t('console.audit.entities.console_role'),
+	plan: t('console.audit.entities.plan')
 };
 
 /** An action this build does not know shows as its key rather than as nothing. */

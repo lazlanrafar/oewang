@@ -1,6 +1,6 @@
 # Feature: Operator console
 
-Status: v0.1, 2026-11-25. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) CSL-1 to CSL-14. Decisions D124, D125, D126. Epic OEW-123, stories US-080 to US-085.
+Status: v0.1, 2026-11-25. Part of the [oewang docs](../README.md). Implements [PRD](../prd.md) CSL-1 to CSL-14, and the plan screens of PLN-1 to PLN-3. Decisions D124, D125, D126, D128. Epic OEW-123, stories US-080 to US-085.
 
 Where the people who run oewang see users, workspaces, feedback and usage across every workspace, and suspend, restore or disable when they must. It is built for privacy first: an operator manages accounts, never reads anyone's money.
 
@@ -45,6 +45,7 @@ An operator is a user with `users.console_role_id` set. A role is a row in `cons
 | `console.operators.manage` | ✓ | | |
 | `console.roles.manage` | ✓ | | |
 | `console.audit.read` | ✓ | | |
+| `console.plans.manage` | ✓ | | |
 
 These are the seeded roles. `owner` is a system role: its permissions cannot be changed and it cannot be deleted, so there is always a role that can manage the rest. `support` and `viewer` can be edited like any role made later (US-085).
 
@@ -87,15 +88,16 @@ A role somebody holds cannot be deleted (`CONSOLE_ROLE_IN_USE`); deleting is sof
 
 ## The shell
 
-The console is drawn in the app's own shell, not a look of its own: `organisms/layouts/layouts-app-shell.svelte` is the dashboard's sidebar, header and content area, shared by both. The console passes its own sidebar groups (`consoleNavFor`, filtered by the operator's permissions) and a brand row in place of the workspace switcher; the account menu shows the role and has no account links, because `/account` is not served on the console host. Every console table is `molecules/data-table` with a column file per D81, and list screens carry no visible title. Overview, usage and health are stat cards and hatched charts (D93), as the app's overview is.
+The console is drawn in the app's own shell, not a look of its own: `organisms/layouts/layouts-app-shell.svelte` is the dashboard's sidebar, header and content area, shared by both. The console passes its own sidebar groups (`consoleNavFor`, filtered by the operator's permissions) and a brand row in place of the workspace switcher; the account menu shows the operator's role under the email, and has no account links, because `/account` is not served on the console host. Every console table is `molecules/data-table` with a column file per D81, and list screens carry no visible title. Overview, usage and health are stat cards and hatched charts (D93), as the app's overview is.
 
 ## Screens
 
 | Screen | Permission | Story |
 |---|---|---|
 | Users, a user | `console.read` | US-081. `/console/users`, the user's sheet at `?user=`: email, name, status, joined, last active, console role and memberships |
-| Workspaces, a workspace | `console.read` | US-081. `/console/workspaces` with an Active, Suspended or Deleted facet, the sheet at `?workspace=`: owner, members, counts, storage, tokens this month |
+| Workspaces, a workspace | `console.read` | US-081. `/console/workspaces` with an Active, Suspended or Deleted facet and a plan column, the sheet at `?workspace=`: owner, plan, members, counts, storage, tokens this month |
 | Suspend, restore, disable | the matching write permission | US-082 |
 | Feedback | `console.read`, `console.feedback.write` to change status | US-083. `/console/feedback`, the sheet at `?feedback=`, read on its own so it stays open when the filter hides the row |
 | Usage, health, overview | `console.read` | US-084 |
 | Operators, roles, operator audit | `console.operators.manage`, `console.roles.manage`, `console.audit.read` | US-085 |
+| Plans, a workspace's plan | `console.plans.manage` | OEW-131. `/console/plans`: the search in `?search=`, New plan on the right, the plan sheet (name, tokens a month, storage in MB, empty for unlimited, and the six features); the system plan keeps its name and cannot be deleted, but its limits and features are edited like any plan's. The workspace sheet shows a plan picker (`molecules/select-plan`) to an operator with the permission, saved through the page's `?/plan` action. See [plans](plans.md#console-oew-131) |

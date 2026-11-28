@@ -5,6 +5,8 @@ import {
 	auditEntityHref,
 	feedbackPatch,
 	formatShortDay,
+	MB,
+	parseLimit,
 	readMonth,
 	readSort,
 	shiftMonth,
@@ -146,6 +148,7 @@ describe('US-085 the operator audit', () => {
 		expect(auditEntityHref('workspace', 'w1')).toBe('/console/workspaces?workspace=w1');
 		expect(auditEntityHref('feedback', 'f1')).toBe('/console/feedback?feedback=f1');
 		expect(auditEntityHref('console_role', 'r1')).toBe('/console/roles');
+		expect(auditEntityHref('plan', 'p1')).toBe('/console/plans');
 		expect(auditEntityHref('session', 's1')).toBeNull();
 	});
 });
@@ -164,5 +167,31 @@ describe('the console sidebar marks the current page', () => {
 		expect(navActive(users, '/console/users')).toBe(true);
 		expect(navActive(users, '/console/users/search')).toBe(true);
 		expect(navActive(users, '/console/workspaces')).toBe(false);
+	});
+});
+
+describe('OEW-131 a plan limit as typed', () => {
+	it('should read empty as unlimited and a whole number as the limit', () => {
+		expect(parseLimit('')).toBeNull();
+		expect(parseLimit('0')).toBe(0);
+		expect(parseLimit('250000')).toBe(250000);
+		expect(parseLimit('5', MB)).toBe(5 * 1024 * 1024);
+	});
+
+	it('should refuse anything else rather than read it as unlimited', () => {
+		for (const raw of ['-1', '1.5', '1e3', 'abc', ' 1', '9007199254740992']) {
+			expect(parseLimit(raw), raw).toBeUndefined();
+		}
+		expect(parseLimit('9007199254740', MB)).toBeUndefined();
+	});
+});
+
+describe('OEW-131 the plans row in the sidebar', () => {
+	const hrefs = (permissions: string[]) =>
+		consoleNavFor(permissions).flatMap((group) => group.items.map((item) => item.href));
+
+	it('should show plans only with console.plans.manage', () => {
+		expect(hrefs(['console.read'])).not.toContain('/console/plans');
+		expect(hrefs(['console.read', 'console.plans.manage'])).toContain('/console/plans');
 	});
 });

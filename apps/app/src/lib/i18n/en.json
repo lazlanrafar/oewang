@@ -363,7 +363,17 @@
 		"console_forbidden": "Your console role does not allow that.",
 		"user_disabled": "This account is disabled. Contact oewang support.",
 		"workspace_suspended": "This workspace is suspended. Contact oewang support.",
-		"console_role_in_use": "Operators still hold this role. Give them another role first."
+		"console_role_in_use": "Operators still hold this role. Give them another role first.",
+		"plan_in_use": "Workspaces still hold this plan. Give them another plan first.",
+		"quota_tokens_exceeded": "This workspace has used its AI tokens for this month. They renew on the first of next month (UTC), or oewang support can change the plan.",
+		"quota_storage_exceeded": "This workspace has no storage left on its plan. Delete files from the vault, or ask oewang support to change the plan.",
+		"feature_not_in_plan": "This workspace's plan does not include this. Contact oewang support to change the plan.",
+		"feature_not_in_plan_named": "This workspace's plan does not include {feature}. Contact oewang support to change the plan."
+	},
+	"plan": {
+		"not_included": "{feature} is not in this workspace's plan.",
+		"not_included_badge": "Not in plan",
+		"mcp_note": "The plan of {workspace} does not include MCP, so an AI app's calls in it are refused. Your tokens still work in the other workspaces they reach."
 	},
 	"style": {
 		"title": "Design system",
@@ -444,9 +454,13 @@
 		"assistant_unavailable": "The assistant's settings could not be read just now, so they are not shown. Nothing has changed. Reload to try again.",
 		"nav_usage": "Usage",
 		"usage_title": "Usage",
-		"usage_description": "What this workspace stores and what the assistant has spent. Recorded and shown, with no limit for now.",
+		"usage_description": "What this workspace stores and what the assistant has spent, against the limits of its plan.",
+		"usage_plan": "Plan: {name}",
+		"usage_limit": "limit {limit}",
+		"usage_no_limit": "no limit",
 		"usage_storage": "Storage",
 		"usage_storage_detail": "{count} {count|file|files} in the vault",
+		"usage_of_reference": "{used} / {reference}",
 		"usage_tokens_month": "AI tokens this month",
 		"usage_tokens_total": "AI tokens, all time",
 		"usage_tokens_detail": "{input} in · {output} out",
@@ -580,6 +594,10 @@
 		"quantity": "Quantity",
 		"unit": "Unit",
 		"item_amount": "Amount",
+		"item_column_name": "Item",
+		"item_name_placeholder": "Pick or type an item",
+		"item_name_search": "Search items you bought",
+		"item_column_category": "Category",
 		"item_category": "Item category",
 		"item_no_category": "No category",
 		"categorise_items": "Categorise items",
@@ -1419,6 +1437,7 @@
 		"nav_system_group": "System",
 		"nav_usage": "Usage",
 		"nav_health": "Health",
+		"nav_plans": "Plans",
 		"nav_access_group": "Access",
 		"nav_operators": "Operators",
 		"nav_roles": "Roles",
@@ -1470,7 +1489,8 @@
 				"members": "Members",
 				"status": "Status",
 				"created": "Created",
-				"last_activity": "Last activity"
+				"last_activity": "Last activity",
+				"plan": "Plan"
 			},
 			"empty": {
 				"title": "No workspaces yet",
@@ -1500,8 +1520,13 @@
 				"tokens_output": "Output",
 				"members": "Members",
 				"no_members": "No members.",
-				"no_name": "No name"
-			}
+				"no_name": "No name",
+				"plan": "Plan",
+				"plan_placeholder": "Choose a plan",
+				"plan_search": "Search plans",
+				"plan_save": "Change plan"
+			},
+			"plan_changed": "Plan changed"
 		},
 		"actions": {
 			"suspend": {
@@ -1658,6 +1683,10 @@
 			"audit_read": {
 				"label": "Read the audit",
 				"description": "See every change an operator made, with its before and after."
+			},
+			"plans_manage": {
+				"label": "Manage plans",
+				"description": "Create, edit and delete plans, and choose the plan a workspace holds."
 			}
 		},
 		"operators": {
@@ -1760,7 +1789,8 @@
 				"user": "User",
 				"workspace": "Workspace",
 				"feedback": "Feedback",
-				"console_role": "Role"
+				"console_role": "Role",
+				"plan": "Plan"
 			},
 			"actions": {
 				"workspace_suspended": "Suspended a workspace",
@@ -1774,7 +1804,11 @@
 				"role_deleted": "Deleted a role",
 				"operator_granted": "Granted console access",
 				"operator_changed": "Changed an operator's role",
-				"operator_revoked": "Revoked console access"
+				"operator_revoked": "Revoked console access",
+				"plan_created": "Created a plan",
+				"plan_updated": "Updated a plan",
+				"plan_deleted": "Deleted a plan",
+				"workspace_plan_changed": "Changed a workspace's plan"
 			},
 			"sheet": {
 				"by": "By",
@@ -1785,6 +1819,81 @@
 				"after": "After",
 				"no_fields": "No fields recorded.",
 				"open_entity": "Open"
+			}
+		},
+		"plans": {
+			"search_placeholder": "Search by name",
+			"add": "New plan",
+			"columns": {
+				"name": "Name",
+				"tokens": "Tokens a month",
+				"storage": "Storage",
+				"features": "Features",
+				"workspaces": "Workspaces",
+				"actions": "Actions"
+			},
+			"unlimited": "Unlimited",
+			"system": "System",
+			"empty": {
+				"title": "No plans yet",
+				"description": "Create a plan to limit what a workspace may use."
+			},
+			"empty_filtered": {
+				"title": "No plans match",
+				"description": "Try another name, or clear the search.",
+				"action": "Clear search"
+			},
+			"open_menu": "Open plan menu",
+			"edit": "Edit plan",
+			"delete": "Delete plan",
+			"features": {
+				"chat": {
+					"label": "Chat",
+					"description": "The assistant in the web and mobile app."
+				},
+				"telegram": {
+					"label": "Telegram",
+					"description": "Linking a Telegram chat and talking to the assistant there."
+				},
+				"receipt_scan": {
+					"label": "Receipt scan",
+					"description": "Reading a receipt photo into a transaction."
+				},
+				"statement_import": {
+					"label": "Statement import",
+					"description": "Reading a bank statement into transactions."
+				},
+				"mcp": {
+					"label": "MCP",
+					"description": "Connecting an AI client through MCP."
+				},
+				"vault": {
+					"label": "Vault",
+					"description": "Uploading files to the vault."
+				}
+			},
+			"form": {
+				"create_title": "New plan",
+				"edit_title": "Edit plan",
+				"view_title": "Plan",
+				"name_label": "Name",
+				"system_name_hint": "Every workspace starts on this plan under this name, so it stays.",
+				"tokens_label": "Tokens a month",
+				"storage_label": "Storage (MB)",
+				"limit_hint": "Leave empty for unlimited.",
+				"limit_invalid": "Use a whole number from 0, or leave it empty for unlimited.",
+				"features_label": "Features",
+				"save": "Save plan"
+			},
+			"delete_confirm": {
+				"title": "Delete this plan?",
+				"description": "{name} goes for good. A plan a workspace still holds cannot be deleted.",
+				"confirm": "Delete"
+			},
+			"toasts": {
+				"created": "Plan created",
+				"updated": "Plan updated",
+				"deleted": "Plan deleted"
 			}
 		}
 	}

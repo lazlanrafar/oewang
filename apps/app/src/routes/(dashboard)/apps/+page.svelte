@@ -31,8 +31,10 @@
 	import { INVALIDATION_KEYS } from '$lib/chat-invalidation';
 	import { messageForCode } from '$lib/errors';
 	import { t } from '$lib/i18n';
+	import { notInPlan } from '$lib/plans';
 	import { pageTitle } from '$lib/page-title';
 	import { readParam, readText, writeParams } from '$lib/url-state';
+	import { featureGate } from '$lib/workspace-data.svelte';
 
 	let { data, form } = $props();
 
@@ -52,6 +54,14 @@
 	}
 
 	const installed = (app: AppDefinition) => app.id === 'telegram' && data.telegram.linked;
+	/*
+	 * Without `telegram` in the plan, connecting is off with the reason. An
+	 * existing link stays shown and can still be disconnected (PLN-7).
+	 */
+	const gate = featureGate();
+	const telegramOff = $derived(gate('telegram'));
+	const planReason = (app: AppDefinition) =>
+		app.id === 'telegram' && telegramOff ? notInPlan(telegramOff) : null;
 	const available = (app: AppDefinition) => app.id !== 'telegram' || data.telegram.enabled;
 
 	const query = $derived(readText(page.url, 'search').trim().toLowerCase());
@@ -117,7 +127,7 @@
 		</Tabs.Root>
 	</div>
 
-	<FormError message={form?.code ? messageForCode(form.code) : undefined} />
+	<FormError message={form?.code ? messageForCode(form.code, 'feature' in form ? form.feature : undefined) : undefined} />
 
 	{#if visible.length === 0}
 		{#if query}
@@ -142,6 +152,7 @@
 					{app}
 					installed={installed(app)}
 					available={available(app)}
+					planReason={planReason(app)}
 					{busy}
 					onDetails={() => writeParams({ app: app.id }, { push: true })}
 					onConnect={() => connectForm?.requestSubmit()}
@@ -157,6 +168,7 @@
 	app={openApp}
 	installed={openApp ? installed(openApp) : false}
 	available={openApp ? available(openApp) : true}
+	planReason={openApp ? planReason(openApp) : null}
 	{busy}
 	onOpenChange={(open) => {
 		if (!open) writeParams({ app: null });

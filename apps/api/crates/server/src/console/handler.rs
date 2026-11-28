@@ -6,7 +6,7 @@ use axum::{
 };
 use chrono::Datelike;
 use oewang_db::repositories::console::{
-    ConsoleFeedbackRow, ConsoleUserRow, ConsoleWorkspaceRow, FeedbackFilter, UserSort,
+    ConsoleFeedbackRow, ConsoleUserRow, ConsoleWorkspaceRow, FeedbackFilter, PlanRow, UserSort,
     WorkspaceSort, WorkspaceStatus,
 };
 use oewang_domain::{AppError, ConsolePermission, Envelope, Page, PageMeta};
@@ -633,6 +633,130 @@ pub async fn audit_entry(
 {
     operator.require(ConsolePermission::AuditRead)?;
     match service::operator_audit_entry(&state.db, &entry_id).await {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+// ------------------------------------------------------------------ plans
+
+/// `GET /v1/console/plans` (PLN-1).
+pub async fn plans(
+    State(state): State<AppState>,
+    operator: Operator,
+    request_id: RequestId,
+) -> std::result::Result<Json<Envelope<Vec<PlanRow>>>, ApiError> {
+    operator.require(ConsolePermission::PlansManage)?;
+    match service::plans(&state.db).await {
+        Ok(rows) => Ok(Json(Envelope::data(rows, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PlanBody {
+    pub name: String,
+    /// Null or absent is unlimited.
+    pub max_tokens_month: Option<i64>,
+    pub max_storage_bytes: Option<i64>,
+    #[serde(default)]
+    pub features: Vec<String>,
+}
+
+/// `POST /v1/console/plans` (PLN-1).
+pub async fn create_plan(
+    State(state): State<AppState>,
+    operator: Operator,
+    request_id: RequestId,
+    Json(body): Json<PlanBody>,
+) -> std::result::Result<(axum::http::StatusCode, Json<Envelope<PlanRow>>), ApiError> {
+    operator.require(ConsolePermission::PlansManage)?;
+    let result = service::create_plan(
+        &state.db,
+        &operator.user_id,
+        &body.name,
+        body.max_tokens_month,
+        body.max_storage_bytes,
+        &body.features,
+    )
+    .await;
+    match result {
+        Ok(row) => Ok((
+            axum::http::StatusCode::CREATED,
+            Json(Envelope::data(row, request_id.0)),
+        )),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PlanPatch {
+    pub name: Option<String>,
+    /// Absent leaves it alone; null makes it unlimited.
+    #[serde(default, deserialize_with = "crate::contacts::handler::explicit_null")]
+    pub max_tokens_month: Option<Option<i64>>,
+    #[serde(default, deserialize_with = "crate::contacts::handler::explicit_null")]
+    pub max_storage_bytes: Option<Option<i64>>,
+    pub features: Option<Vec<String>>,
+}
+
+/// `PATCH /v1/console/plans/{id}` (PLN-1).
+pub async fn update_plan(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(plan_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<PlanPatch>,
+) -> std::result::Result<Json<Envelope<PlanRow>>, ApiError> {
+    operator.require(ConsolePermission::PlansManage)?;
+    let result = service::update_plan(
+        &state.db,
+        &operator.user_id,
+        &plan_id,
+        body.name.as_deref(),
+        body.max_tokens_month,
+        body.max_storage_bytes,
+        body.features.as_deref(),
+    )
+    .await;
+    match result {
+        Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+/// `DELETE /v1/console/plans/{id}` (PLN-2).
+pub async fn delete_plan(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(plan_id): Path<String>,
+    request_id: RequestId,
+) -> std::result::Result<axum::http::StatusCode, ApiError> {
+    operator.require(ConsolePermission::PlansManage)?;
+    match service::delete_plan(&state.db, &operator.user_id, &plan_id).await {
+        Ok(()) => Ok(axum::http::StatusCode::NO_CONTENT),
+        Err(error) => Err(ApiError::new(error, request_id.0)),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorkspacePlanBody {
+    pub plan_id: String,
+}
+
+/// `PUT /v1/console/workspaces/{id}/plan` (PLN-3).
+pub async fn set_workspace_plan(
+    State(state): State<AppState>,
+    operator: Operator,
+    Path(workspace_id): Path<String>,
+    request_id: RequestId,
+    Json(body): Json<WorkspacePlanBody>,
+) -> std::result::Result<Json<Envelope<ConsoleWorkspaceRow>>, ApiError> {
+    operator.require(ConsolePermission::PlansManage)?;
+    let result =
+        service::set_workspace_plan(&state.db, &operator.user_id, &workspace_id, &body.plan_id)
+            .await;
+    match result {
         Ok(row) => Ok(Json(Envelope::data(row, request_id.0))),
         Err(error) => Err(ApiError::new(error, request_id.0)),
     }
