@@ -16,8 +16,10 @@
 
 	let { usage, onNavigate }: { usage: SidebarUsage; onNavigate?: () => void } = $props();
 
-	// Counts of tokens and bytes, not money, so a number is the right type.
-	const numbers = new Intl.NumberFormat();
+	// Counts of tokens, not money, so a number is the right type. Compact
+	// ("153.3K", "1.2M") because the sidebar is narrow; the settings page
+	// keeps the exact figure.
+	const numbers = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 </script>
 
 <a
