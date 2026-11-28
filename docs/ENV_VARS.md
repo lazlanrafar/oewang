@@ -81,7 +81,7 @@ Read by `apps/ai/app/config.py`. This process is never given
 | `AI_API_KEY` | secret |
 | `AI_BASE_URL` | `""` |
 | `AI_CHAT_MODEL` | `"claude-sonnet-5-5"` |
-| `AI_EXTRACTION_BUDGET_MS` | `80_000` |
+| `AI_EXTRACTION_BUDGET_MS` | `85_000` |
 | `AI_MAX_OUTPUT_TOKENS` | `2048` |
 | `AI_MAX_STEPS` | `8` |
 | `AI_QUALITY_THRESHOLD` | `70` |
@@ -94,7 +94,7 @@ Read by `apps/ai/app/config.py`. This process is never given
 | `APP_ENV` | `"development"` |
 | `CRYPTO_SIGNING_KEY_FILE` | `Path("./.secrets/ai-owe1-signing-key.pem")` |
 | `CRYPTO_SIGNING_PUBLIC_KEYS` | `""` |
-| `EXTRACTION_CALL_TIMEOUT_SECS` | `45.0` |
+| `EXTRACTION_CALL_TIMEOUT_SECS` | `75.0` |
 | `HANDSHAKE_RATE_LIMIT_PER_MINUTE` | `30` |
 | `MODEL_MAX_RETRIES` | `2` |
 | `MODEL_TIMEOUT_SECS` | `20.0` |

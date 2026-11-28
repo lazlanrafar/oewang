@@ -38,12 +38,13 @@ class Settings(BaseSettings):
     ai_vision_secondary: str = "claude-sonnet-5-5"
     ai_vision_tertiary: str = "claude-opus-5"
     ai_quality_threshold: int = 70
-    # A long receipt (twenty-odd lines) takes one vision pass 30 to 45 s, so
-    # the ladder's budget and its per-pass ceiling are their own, above the
-    # chat's 20 s. The api waits AI_REQUEST_TIMEOUT_SECS (90) for this, and
+    # A long receipt (twenty-odd lines) takes one vision pass 30 to 70 s on
+    # the gateway, so the ladder's budget and its per-pass ceiling are their
+    # own, above the chat's 20 s. One pass gets nearly all of the budget: a
+    # second pass squeezed into what is left times out too. The api waits AI_REQUEST_TIMEOUT_SECS (90) for this, and
     # Cloudflare cuts a browser request at 100.
-    ai_extraction_budget_ms: int = 80_000
-    extraction_call_timeout_secs: float = 45.0
+    ai_extraction_budget_ms: int = 85_000
+    extraction_call_timeout_secs: float = 75.0
     ai_max_steps: int = 8
     # One turn's ceiling on generated tokens. A bound on the answer is also
     # a bound on how long the user watches it arrive.
