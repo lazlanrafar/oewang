@@ -190,6 +190,32 @@ def _error_payload(error: owe1_client.ApiError) -> dict[str, Any]:
     return body
 
 
+_NO_VALUE = re.compile(r"[^\W_]")
+
+
+def drop_placeholders(value: Any) -> Any:
+    """The arguments without the filler some models put in optional fields.
+
+    A model that fills every property it is shown sends `to_wallet_id: " "`
+    or `"."` and `to_amount: ""` on an expense; the API rightly refuses a
+    destination on an expense, and the model then repeats the same call
+    until the turn's tool cap ends it. A string with no letter or digit
+    carries no value any schema here accepts (ids, amounts, dates and names
+    all have one), so it is dropped as if the field were left out. A
+    required field dropped this way still gets the API's own validation
+    error, which the model can act on.
+    """
+    if isinstance(value, dict):
+        return {
+            key: drop_placeholders(item)
+            for key, item in value.items()
+            if not (isinstance(item, str) and not _NO_VALUE.search(item))
+        }
+    if isinstance(value, list):
+        return [drop_placeholders(item) for item in value]
+    return value
+
+
 async def execute_tool(
     api: Any,
     body: ChatStreamRequest,
@@ -216,7 +242,7 @@ async def execute_tool(
         # artifact never comes back through here (D88).
         "call_id": call_id,
         "tool": name,
-        "args": args,
+        "args": drop_placeholders(args),
     }
 
     try:

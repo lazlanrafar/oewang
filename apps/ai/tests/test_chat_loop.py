@@ -195,6 +195,47 @@ def test_one_tool_call_runs_and_its_result_goes_back_to_the_model(
     )
 
 
+def test_filler_in_an_optional_field_never_reaches_the_api(owe1_client: Owe1TestClient) -> None:
+    """Seen in production: an expense sent with `to_wallet_id: " "` or `"."`
+    and `to_amount: ""` was refused as a destination on an expense, and the
+    model repeated it until the tool cap ended the turn."""
+    client = ScriptedClient(
+        Turn(
+            tool_block(
+                "t1",
+                "create_transaction",
+                type="expense",
+                amount="20000",
+                wallet_id="clxwallet1",
+                to_wallet_id=".",
+                to_amount="",
+                name="galon",
+                description=" ",
+                items=[{"name": "galon", "amount": "20000", "category_id": "-"}],
+            )
+        ),
+        Turn(),
+    )
+    api = FakeApi()
+
+    run(owe1_client, client, api)
+
+    _, body = api.calls[0]
+    assert body["args"] == {
+        "type": "expense",
+        "amount": "20000",
+        "wallet_id": "clxwallet1",
+        "name": "galon",
+        "items": [{"name": "galon", "amount": "20000"}],
+    }
+
+
+def test_drop_placeholders_keeps_every_real_value() -> None:
+    kept = {"amount": "0", "date": "2026-11-28", "name": "Es teh", "limit": 5, "flag": False}
+    assert loop.drop_placeholders(kept) == kept
+    assert loop.drop_placeholders({"a": "  ", "b": "—", "c": "_", "d": None}) == {"d": None}
+
+
 def test_a_tool_call_names_the_turn_the_api_minted(owe1_client: Owe1TestClient) -> None:
     """Never a fresh one: the per-turn caps are counted against it, so a
     service that minted its own per call would have no cap at all (D68)."""
