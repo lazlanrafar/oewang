@@ -1114,7 +1114,7 @@ Requirements: PLN-1, PLN-2, PLN-3, PLN-8
 - [x] Console routes to list, create, edit, delete and assign, each audited in the same transaction
 - [x] Free: limits and features editable, name fixed, never deleted; a held plan is not deleted (`PLAN_IN_USE`)
 - [x] Console plans screen and the workspace plan picker
-- [ ] Verify in browser
+- [x] Verify in browser
 
 ### US-087: Token and storage limits (OEW-132)
 Requirements: PLN-4, PLN-5

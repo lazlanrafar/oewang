@@ -1777,7 +1777,8 @@
 				"user": "User",
 				"workspace": "Workspace",
 				"feedback": "Feedback",
-				"console_role": "Role"
+				"console_role": "Role",
+				"plan": "Plan"
 			},
 			"actions": {
 				"workspace_suspended": "Suspended a workspace",

@@ -484,6 +484,7 @@ export type TranslationKey =
 	| 'console.audit.empty.title'
 	| 'console.audit.entities.console_role'
 	| 'console.audit.entities.feedback'
+	| 'console.audit.entities.plan'
 	| 'console.audit.entities.user'
 	| 'console.audit.entities.workspace'
 	| 'console.audit.sheet.after'

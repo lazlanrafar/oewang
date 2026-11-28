@@ -131,16 +131,20 @@
 						<label for="workspace-plan" class={capsLabel}>{t('console.workspaces.sheet.plan')}</label>
 						<input type="hidden" name="id" value={workspace.id} />
 						<div class="flex items-center gap-2">
-							<SelectPlan
-								id="workspace-plan"
-								name="plan_id"
-								{plans}
-								bind:value={planId}
-								placeholder={t('console.workspaces.sheet.plan_placeholder')}
-								searchPlaceholder={t('console.workspaces.sheet.plan_search')}
-								ariaLabel={t('console.workspaces.sheet.plan')}
-								class="min-w-0 flex-1"
-							/>
+							<!-- The flex child is the picker's own wrapper, not its trigger,
+							     so the width goes on a box around it. -->
+							<div class="min-w-0 flex-1">
+								<SelectPlan
+									id="workspace-plan"
+									name="plan_id"
+									{plans}
+									bind:value={planId}
+									placeholder={t('console.workspaces.sheet.plan_placeholder')}
+									searchPlaceholder={t('console.workspaces.sheet.plan_search')}
+									ariaLabel={t('console.workspaces.sheet.plan')}
+									class="w-full"
+								/>
+							</div>
 							<Button
 								type="submit"
 								variant="outline"
