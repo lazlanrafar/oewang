@@ -168,9 +168,18 @@ mod tests {
         ("COCA-COLA", "Coca-Cola"),
         ("CAFÉ LATTE", "Café Latte"),
         ("SEDAAP MIE GORENG 91 GR", "Sedaap Mie Goreng 91 GR"),
-        ("ULTRA STRAWBERRY MILK 250 ML", "Ultra Strawberry Milk 250 ML"),
-        ("GRANDAIRY UHT FULL CREAM 1 L", "Grandairy UHT Full Cream 1 L"),
-        ("SO KLIN LIQ VIOLET RF BANDED 2X720 G", "So Klin Liq Violet Rf Banded 2X720 G"),
+        (
+            "ULTRA STRAWBERRY MILK 250 ML",
+            "Ultra Strawberry Milk 250 ML",
+        ),
+        (
+            "GRANDAIRY UHT FULL CREAM 1 L",
+            "Grandairy UHT Full Cream 1 L",
+        ),
+        (
+            "SO KLIN LIQ VIOLET RF BANDED 2X720 G",
+            "So Klin Liq Violet Rf Banded 2X720 G",
+        ),
         ("susu 250 ml", "Susu 250 ML"),
         ("telur 1 kg", "Telur 1 KG"),
         ("Gr Coffee", "Gr Coffee"),
