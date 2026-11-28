@@ -70,6 +70,7 @@
 		ChatHistory,
 		ChatInput,
 		ChatMessages,
+		ChatReceiptSaved,
 		ChatReceiptStatus,
 		ChatSuggestions,
 		type ReceiptStatus
@@ -89,6 +90,7 @@
 	import { pageTitle } from '$lib/page-title';
 	import type { ReceiptForm } from '$lib/receipt';
 	import { rangeLabel } from '$lib/reports';
+	import { receiptCard } from '$lib/transaction-card';
 	import type { ChatRole } from '$lib/server/chat';
 	import { writeParams } from '$lib/url-state';
 	import { featureGate } from '$lib/workspace-data.svelte';
@@ -528,6 +530,23 @@
 		else void openCanvas('receipt', fileId);
 	}
 
+	/**
+	 * The saved card that confirmed the receipt the panel is on, read from
+	 * the conversation (OEW-135). With one, the panel shows the saved
+	 * receipt and never mounts `ReceiptCanvas`, so it is not read again and
+	 * cannot be confirmed twice. A deleted row confirms nothing.
+	 */
+	const savedReceipt = $derived(
+		canvas?.kind === 'receipt'
+			? receiptCard(
+					messages.flatMap((message) =>
+						message.toolCalls.flatMap((call) => (call.card ? [call.card] : []))
+					),
+					canvas.id
+				)
+			: null
+	);
+
 	/** The newest message of files alone that carries the receipt being read. */
 	const receiptNoteFor = $derived.by(() => {
 		const fileId = receiptStatus?.fileId;
@@ -686,14 +705,18 @@
 		? artifactKindTitle(canvas)
 		: canvas?.kind === 'transaction'
 			? t('canvas.transaction_title')
-			: t('canvas.receipt_title')}
+			: savedReceipt
+				? t('canvas.receipt_saved_title')
+				: t('canvas.receipt_title')}
 	description={activeArtifact
 		? rangeLabel(activeArtifact.payload.from, activeArtifact.payload.to)
 		: isArtifactCanvas(canvas)
 			? undefined
 			: canvas?.kind === 'transaction'
 				? t('canvas.transaction_description')
-				: t('canvas.receipt_description')}
+				: savedReceipt
+					? t('canvas.receipt_saved_description')
+					: t('canvas.receipt_description')}
 	onClose={closeCanvas}
 	toolbar={isArtifactCanvas(canvas) && artifacts.length > 1 ? tabs : undefined}
 >
@@ -730,6 +753,8 @@
 			action="/transactions?/create"
 			enhance={(node) => enhance(node, afterCreate)}
 		/>
+	{:else if savedReceipt}
+		<ChatReceiptSaved card={savedReceipt} file={data.canvasFile} />
 	{:else}
 		<ReceiptCanvas
 			fileId={canvas?.kind === 'receipt' ? canvas.id : null}

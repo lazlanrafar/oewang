@@ -31,6 +31,7 @@
 		ChatInput,
 		ChatMessages,
 		ChatSuggestions,
+		ChatReceiptSaved,
 		ChatTransactionTable,
 		ToolCallGroup
 	} from '$lib/components/organisms/chat';
@@ -292,6 +293,15 @@
 			canEdit
 		/>
 		<ChatTransactionTable cards={[{ ...savedCard, items: [] }]} />
+	</div>
+</Specimen>
+
+<Specimen
+	title="Chat receipt saved"
+	note="The receipt panel once its receipt is saved (OEW-135): the receipt image, the saved fields and items read-only, and one link to the transaction. Shown here without a file, so it asks the vault nothing."
+>
+	<div class="max-w-[560px] border">
+		<ChatReceiptSaved card={savedCard} file={null} />
 	</div>
 </Specimen>
 

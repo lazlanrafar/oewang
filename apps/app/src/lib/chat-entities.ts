@@ -71,7 +71,7 @@ export function entityTargetFromDataset(
 }
 
 /** A transaction's detail sheet, for a caller that already holds its id. */
-export function transactionTarget(id: string): EntityTarget {
+export function transactionTarget(id: string): Extract<EntityTarget, { kind: 'transaction' }> {
 	return { kind: 'transaction', id, href: query('detail', id) };
 }
 

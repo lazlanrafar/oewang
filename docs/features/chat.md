@@ -161,14 +161,16 @@ The capture path that makes the assistant worth using (AI-1 to AI-3).
 
 The state is the panel's own: `ReceiptCanvas` reports each read through `onStatus(fileId, status)`, and the page keeps the last one after the panel closes, so the receipt is read once. A read that fails outright shows nothing here; the panel says why and offers a retry. A confirmed create clears the line, and the saved table takes its place. A reload reads the receipt again when the URL still opens the panel, so the line comes back with it.
 
-**The receipt's chip opens it** (OEW-135). A files-only message shows each file as a **Receipt** chip rather than a plain file chip, and the status line has no button of its own. The chip has two states:
+**The receipt's chip opens it** (OEW-135). A files-only message shows each file as a **Receipt** chip rather than a plain file chip, and the status line has no button of its own. The chip has one behaviour whether the receipt is confirmed or not: the `PanelRight` icon, the label "Receipt", pressed (`aria-pressed`) while `?canvas=receipt&id=<file>` is open, the same `chat/chat-canvas-chip.svelte` the analysis toggles use. A click opens the panel, or closes it when it is showing, through the URL (UI-8). It never leaves the chat.
 
-| Receipt | Chip | Click |
-|---|---|---|
-| Not confirmed | `PanelRight` icon, pressed (`aria-pressed`) while `?canvas=receipt&id=<file>` is open, the same `chat/chat-canvas-chip.svelte` the analysis toggles use | Opens the receipt panel, or closes it when it is showing, through the URL (UI-8) |
-| Confirmed | `ArrowUpRight` icon, title naming the saved transaction | `/transactions?detail=<transaction id>`, the transaction's detail sheet |
+What the panel shows depends on the receipt:
 
-"Confirmed" is read from the conversation, not kept in the page: a live [saved card](#saved-transaction-cards) whose `attachment_ids` carry the file (`receiptCard` in `src/lib/transaction-card.ts`). A confirmed receipt never reopens the panel from its chip, so a second confirm cannot save it twice. A deleted transaction confirms nothing, so its receipt's chip goes back to opening the panel. A message with typed words keeps plain file chips, which open the file in a dialog.
+| Receipt | Panel |
+|---|---|
+| Not confirmed | "Check this receipt": `ReceiptCanvas` reads the receipt and shows the confirmation sheet, as above |
+| Confirmed | "Receipt saved", `chat/chat-receipt-saved.svelte`: the receipt image (the vault preview), the saved name, amount, category, wallet and date, the items as the chat's compact items table without pickers, and an "Open in Transactions" button to `/transactions?detail=<transaction id>`. Read-only; changes happen in the chat table or on the transactions page |
+
+"Confirmed" is read from the conversation, not kept in the page: a live [saved card](#saved-transaction-cards) whose `attachment_ids` carry the file (`receiptCard` in `src/lib/transaction-card.ts`). The chat page derives it for the file in the URL and, when there is one, renders the saved view instead of mounting `ReceiptCanvas`, so a confirmed receipt is never read again (a read takes a minute) and cannot be confirmed twice. A deleted transaction confirms nothing, so its receipt's panel goes back to the confirmation sheet. A message with typed words keeps plain file chips, which open the file in a dialog.
 
 One promise in the queued line is not kept yet: the queue's later save is told by the next page's toast (`GET /v1/receipts/notices`), not by a message in this conversation.
 

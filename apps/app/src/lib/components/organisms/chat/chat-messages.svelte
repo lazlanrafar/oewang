@@ -21,21 +21,16 @@
 	 */
 	import type { Snippet } from 'svelte';
 
-	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import PanelRight from '@lucide/svelte/icons/panel-right';
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 
 	import type { MessageItem } from '$lib/chat';
 	import type { TurnPhase } from '$lib/chat-stream';
-	import {
-		entityTargetFromDataset,
-		transactionTarget,
-		type EntityTarget
-	} from '$lib/chat-entities';
+	import { entityTargetFromDataset, type EntityTarget } from '$lib/chat-entities';
 	import { t } from '$lib/i18n';
 	import { renderAssistantMarkdown } from '$lib/markdown';
-	import { closingTotal, receiptCard, type TransactionCard } from '$lib/transaction-card';
+	import { closingTotal, type TransactionCard } from '$lib/transaction-card';
 
 	import * as Empty from '../../molecules/empty/index.js';
 	import { artifactTitle } from './canvas/artifact-title.js';
@@ -78,7 +73,7 @@
 		onArtifact?: (id: string) => void;
 		/** The analysis the canvas is showing, so its toggle reads as pressed. */
 		activeArtifactId?: string | null;
-		/** Toggle a receipt's confirmation panel, by its vault file id (OEW-135). */
+		/** Toggle a receipt's panel, by its vault file id (OEW-135). */
 		onReceipt?: (fileId: string) => void;
 		/** The receipt the panel is showing, so its chip reads as pressed. */
 		activeReceiptId?: string | null;
@@ -105,9 +100,6 @@
 	/** The saved cards a message carries (OEW-135). */
 	const cardsOf = (message: MessageItem): TransactionCard[] =>
 		message.toolCalls.flatMap((call) => (call.card ? [call.card] : []));
-
-	/** Every saved card in the conversation, to tell which receipts are confirmed. */
-	const savedCards = $derived(messages.flatMap(cardsOf));
 
 	/** A message of files alone is a receipt the chat sent to the panel. */
 	const isReceiptMessage = (message: MessageItem) =>
@@ -208,21 +200,10 @@
 							aria-label={t('chat.attachments')}
 						>
 							{#each message.files as file (file.id)}
-								{@const saved = isReceiptMessage(message) ? receiptCard(savedCards, file.id) : null}
 								<li>
-									{#if saved}
-										<!-- Confirmed: the saved row, never the panel again, so a
-										     second confirm cannot save it twice. -->
-										<ChatCanvasChip
-											title={t('chat.receipt_chip_saved', {
-												name: saved.name ?? saved.amount_formatted
-											})}
-											onclick={() => onEntity(transactionTarget(saved.transaction_id))}
-										>
-											<ArrowUpRight class="size-3.5" aria-hidden="true" />
-											{t('chat.receipt_chip')}
-										</ChatCanvasChip>
-									{:else if isReceiptMessage(message)}
+									<!-- Confirmed or not, the chip toggles the panel; the page
+									     decides what the panel shows (OEW-135). -->
+									{#if isReceiptMessage(message)}
 										<ChatCanvasChip
 											pressed={file.id === activeReceiptId}
 											title={file.name}

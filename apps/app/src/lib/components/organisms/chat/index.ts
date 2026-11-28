@@ -11,3 +11,4 @@ export * from './canvas/index.js';
 export { default as ChatActivity } from './chat-activity.svelte';
 export { default as ChatTransactionTable } from './chat-transaction-table.svelte';
 export { default as ChatReceiptStatus, type ReceiptStatus } from './chat-receipt-status.svelte';
+export { default as ChatReceiptSaved } from './chat-receipt-saved.svelte';
