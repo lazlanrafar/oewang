@@ -141,6 +141,7 @@ def test_a_telegram_turn_is_asked_for_plain_text_without_links() -> None:
     assert "Write plain text for a phone chat" in prompt
     assert "Markdown table" not in prompt
     assert "## Entity links" not in prompt
+    assert "## Saved card" not in prompt
     assert "#txn:" not in prompt
     # Everything that is a control stays.
     assert "You do no arithmetic" in prompt

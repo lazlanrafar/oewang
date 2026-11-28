@@ -214,7 +214,8 @@ Assembled per turn, in this order:
 6. **Language rule.** From `response_language`: match the user, or force English, or force Indonesian.
 7. **Custom instructions.** The workspace's own text, if any (CHAT-10).
 
-8. **Entity link scheme** (D33). The model writes these, the web app intercepts them:
+8. **Analysis panel and saved card** (web only). After an analysis tool the model answers in one to three sentences, because the panel shows the rest (D88). After a successful `create_transaction` it says at most one short line and repeats nothing the [saved card](../features/chat.md#saved-transaction-cards) shows: name, amount, category, wallet, date, items and the month total (OEW-135). A Telegram turn gets neither section; the bot answers a write with its own reply (TG-6).
+9. **Entity link scheme** (D33, web only). The model writes these, the web app intercepts them:
 
 ```
 Transactions: [Name](#txn:TRANSACTION_ID)
@@ -260,7 +261,7 @@ A model told its result was truncated asks for the next page. A model handed a q
 | `token` | `{"text": "You spent "}` | A chunk of assistant text |
 | `tool_call` | `{"id": "t1", "name": "get_spending_summary", "args": {…}}` | The model asked for a tool |
 | `tool_result` | `{"id": "t1", "ok": true, "summary": "6 categories"}` | The API answered |
-| `artifact` | `{"id": "t1", "type": "spending", "payload": {…}}` | A canvas artifact for that call (D88). **Sent by the API's stream pump, never by this service**: the API built it during the tool call, holds it in the turn store under the call id this service sends as `call_id`, and injects it after the result. An `artifact` event from this service is dropped |
+| `artifact` | `{"id": "t1", "type": "spending", "payload": {…}}` | A canvas artifact for that call (D88), or with `type: "transaction"` the saved card a successful `create_transaction` left ([chat](../features/chat.md#saved-transaction-cards)). **Sent by the API's stream pump, never by this service**: the API built it during the tool call, holds it in the turn store under the call id this service sends as `call_id`, and injects it after the result. An `artifact` event from this service is dropped |
 | `receipt_draft` | `{"draft": {…}}` | A parsed receipt, pending confirmation |
 | `done` | `{"message_id": "clx…", "usage": {"input": 1204, "output": 311, "model": "claude-sonnet-5-5"}}` | Turn complete. `usage` is summed over every model round in the turn; `model` is `AI_CHAT_MODEL`. The API records it in `ai_usage` (D92) |
 | `error` | `{"code": "TOOL_FAILED", "message": "…"}` | Failure after the stream opened |

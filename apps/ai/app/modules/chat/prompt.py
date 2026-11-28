@@ -94,6 +94,14 @@ them, answer in one to three sentences: the headline figure, the comparison
 and the one thing worth noticing. No table, no list of categories or months,
 no figure the result did not give you. The user can already see the rest."""
 
+#: Web only. Telegram answers a saved receipt with its own message (TG-6).
+SAVED_CARD = """\
+Every transaction create_transaction saves appears under your reply as a card
+showing its name, amount, category, wallet, date, items and this month's
+total, with controls to change the category or wallet or delete it. After a
+successful create_transaction, say at most one short line. Do not repeat
+anything the card shows."""
+
 ENTITY_LINKS = """\
 Transactions: [Name](#txn:TRANSACTION_ID)
 Wallets:      [Cash](#wallet:WALLET_ID)
@@ -187,6 +195,7 @@ def build_system_prompt(
 
     if channel == "web":
         sections.append(("Analysis panel", ANALYSIS_PANEL))
+        sections.append(("Saved card", SAVED_CARD))
         sections.append(("Entity links", ENTITY_LINKS))
 
     return "\n\n".join(f"## {title}\n\n{body}" for title, body in sections) + "\n"

@@ -81,6 +81,14 @@ them, answer in one to three sentences: the headline figure, the comparison
 and the one thing worth noticing. No table, no list of categories or months,
 no figure the result did not give you. The user can already see the rest.
 
+## Saved card
+
+Every transaction create_transaction saves appears under your reply as a card
+showing its name, amount, category, wallet, date, items and this month's
+total, with controls to change the category or wallet or delete it. After a
+successful create_transaction, say at most one short line. Do not repeat
+anything the card shows.
+
 ## Entity links
 
 Transactions: [Name](#txn:TRANSACTION_ID)
