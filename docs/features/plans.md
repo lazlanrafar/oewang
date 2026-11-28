@@ -37,6 +37,8 @@ Every route and screen needs `console.plans.manage`, which the seeded `owner` ro
 | `DELETE /v1/console/plans/{id}` | Soft delete; refused for the system plan and with `PLAN_IN_USE` while any workspace, deleted ones included, holds it. Audited `plan.deleted` |
 | `PUT /v1/console/workspaces/{id}/plan` | Assign. Audited `workspace.plan_changed` with the workspace row before and after |
 
+The screen is `/console/plans`, in the System group of the sidebar: the standard list screen, with the name search in `?search=` and two empty states, none yet and none matching. A row opens the plan sheet: name, tokens a month and storage in MB, each empty for unlimited, and a checkbox per feature; a new plan starts with every feature ticked. The system plan opens read only and has no row menu. Deleting asks first. The workspaces table has a plan column, and the workspace sheet a plan picker for an operator with the permission.
+
 Bodies and answers are in [endpoints](../api/endpoints.md#console). A limit is a whole number from 0 to 9007199254740991, the largest a JavaScript number holds exactly, or null for unlimited. Each change writes its `operator_audit` row in the same transaction (CSL-14). Deleted workspaces count as holders because restoring one must find its plan; the console assigns a plan to a deleted workspace for that reason.
 
 ## Features

@@ -363,7 +363,8 @@
 		"console_forbidden": "Your console role does not allow that.",
 		"user_disabled": "This account is disabled. Contact oewang support.",
 		"workspace_suspended": "This workspace is suspended. Contact oewang support.",
-		"console_role_in_use": "Operators still hold this role. Give them another role first."
+		"console_role_in_use": "Operators still hold this role. Give them another role first.",
+		"plan_in_use": "Workspaces still hold this plan. Give them another plan first."
 	},
 	"style": {
 		"title": "Design system",
@@ -1424,6 +1425,7 @@
 		"nav_system_group": "System",
 		"nav_usage": "Usage",
 		"nav_health": "Health",
+		"nav_plans": "Plans",
 		"nav_access_group": "Access",
 		"nav_operators": "Operators",
 		"nav_roles": "Roles",
@@ -1475,7 +1477,8 @@
 				"members": "Members",
 				"status": "Status",
 				"created": "Created",
-				"last_activity": "Last activity"
+				"last_activity": "Last activity",
+				"plan": "Plan"
 			},
 			"empty": {
 				"title": "No workspaces yet",
@@ -1505,8 +1508,13 @@
 				"tokens_output": "Output",
 				"members": "Members",
 				"no_members": "No members.",
-				"no_name": "No name"
-			}
+				"no_name": "No name",
+				"plan": "Plan",
+				"plan_placeholder": "Choose a plan",
+				"plan_search": "Search plans",
+				"plan_save": "Change plan"
+			},
+			"plan_changed": "Plan changed"
 		},
 		"actions": {
 			"suspend": {
@@ -1663,6 +1671,10 @@
 			"audit_read": {
 				"label": "Read the audit",
 				"description": "See every change an operator made, with its before and after."
+			},
+			"plans_manage": {
+				"label": "Manage plans",
+				"description": "Create, edit and delete plans, and choose the plan a workspace holds."
 			}
 		},
 		"operators": {
@@ -1779,7 +1791,11 @@
 				"role_deleted": "Deleted a role",
 				"operator_granted": "Granted console access",
 				"operator_changed": "Changed an operator's role",
-				"operator_revoked": "Revoked console access"
+				"operator_revoked": "Revoked console access",
+				"plan_created": "Created a plan",
+				"plan_updated": "Updated a plan",
+				"plan_deleted": "Deleted a plan",
+				"workspace_plan_changed": "Changed a workspace's plan"
 			},
 			"sheet": {
 				"by": "By",
@@ -1790,6 +1806,81 @@
 				"after": "After",
 				"no_fields": "No fields recorded.",
 				"open_entity": "Open"
+			}
+		},
+		"plans": {
+			"search_placeholder": "Search by name",
+			"add": "New plan",
+			"columns": {
+				"name": "Name",
+				"tokens": "Tokens a month",
+				"storage": "Storage",
+				"features": "Features",
+				"workspaces": "Workspaces",
+				"actions": "Actions"
+			},
+			"unlimited": "Unlimited",
+			"system": "System",
+			"empty": {
+				"title": "No plans yet",
+				"description": "Create a plan to limit what a workspace may use."
+			},
+			"empty_filtered": {
+				"title": "No plans match",
+				"description": "Try another name, or clear the search.",
+				"action": "Clear search"
+			},
+			"open_menu": "Open plan menu",
+			"edit": "Edit plan",
+			"delete": "Delete plan",
+			"features": {
+				"chat": {
+					"label": "Chat",
+					"description": "The assistant in the web and mobile app."
+				},
+				"telegram": {
+					"label": "Telegram",
+					"description": "Linking a Telegram chat and talking to the assistant there."
+				},
+				"receipt_scan": {
+					"label": "Receipt scan",
+					"description": "Reading a receipt photo into a transaction."
+				},
+				"statement_import": {
+					"label": "Statement import",
+					"description": "Reading a bank statement into transactions."
+				},
+				"mcp": {
+					"label": "MCP",
+					"description": "Connecting an AI client through MCP."
+				},
+				"vault": {
+					"label": "Vault",
+					"description": "Uploading files to the vault."
+				}
+			},
+			"form": {
+				"create_title": "New plan",
+				"edit_title": "Edit plan",
+				"view_title": "Plan",
+				"system_note": "The system plan every workspace starts on. It cannot be changed or deleted.",
+				"name_label": "Name",
+				"tokens_label": "Tokens a month",
+				"storage_label": "Storage (MB)",
+				"limit_hint": "Leave empty for unlimited.",
+				"limit_invalid": "Use a whole number from 0, or leave it empty for unlimited.",
+				"features_label": "Features",
+				"save": "Save plan"
+			},
+			"delete_confirm": {
+				"title": "Delete this plan?",
+				"description": "{name} goes for good. A plan a workspace still holds cannot be deleted.",
+				"confirm": "Delete"
+			},
+			"toasts": {
+				"created": "Plan created",
+				"updated": "Plan updated",
+				"deleted": "Plan deleted"
 			}
 		}
 	}

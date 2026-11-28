@@ -95,8 +95,9 @@ The console is drawn in the app's own shell, not a look of its own: `organisms/l
 | Screen | Permission | Story |
 |---|---|---|
 | Users, a user | `console.read` | US-081. `/console/users`, the user's sheet at `?user=`: email, name, status, joined, last active, console role and memberships |
-| Workspaces, a workspace | `console.read` | US-081. `/console/workspaces` with an Active, Suspended or Deleted facet, the sheet at `?workspace=`: owner, members, counts, storage, tokens this month |
+| Workspaces, a workspace | `console.read` | US-081. `/console/workspaces` with an Active, Suspended or Deleted facet and a plan column, the sheet at `?workspace=`: owner, plan, members, counts, storage, tokens this month |
 | Suspend, restore, disable | the matching write permission | US-082 |
 | Feedback | `console.read`, `console.feedback.write` to change status | US-083. `/console/feedback`, the sheet at `?feedback=`, read on its own so it stays open when the filter hides the row |
 | Usage, health, overview | `console.read` | US-084 |
 | Operators, roles, operator audit | `console.operators.manage`, `console.roles.manage`, `console.audit.read` | US-085 |
+| Plans, a workspace's plan | `console.plans.manage` | OEW-131. `/console/plans`: the search in `?search=`, New plan on the right, the plan sheet (name, tokens a month, storage in MB, empty for unlimited, and the six features); the system plan opens read only. The workspace sheet shows a plan picker (`molecules/select-plan`) to an operator with the permission, saved through the page's `?/plan` action. See [plans](plans.md#console-oew-131) |

@@ -81,6 +81,23 @@
 			await update({ navigate: false });
 		};
 	};
+
+	// --------------------------------------------------------------- plan
+
+	let savingPlan = $state(false);
+	const submitPlan: SubmitFunction = () => {
+		savingPlan = true;
+		return async ({ result, update }) => {
+			savingPlan = false;
+			if (result.type === 'failure') {
+				toast.error(messageForCode(String(result.data?.code ?? '')));
+				return;
+			}
+			if (result.type === 'success') toast.success(t('console.workspaces.plan_changed'));
+			await update({ navigate: false });
+		};
+	};
+	const planAction = (node: HTMLFormElement) => enhance(node, submitPlan);
 </script>
 
 <svelte:head><title>{pageTitle(t('console.nav_workspaces'))}</title></svelte:head>
@@ -125,6 +142,9 @@
 	actions={offered}
 	{busy}
 	onAction={ask}
+	plans={data.plans}
+	{savingPlan}
+	planEnhance={planAction}
 />
 
 <form
