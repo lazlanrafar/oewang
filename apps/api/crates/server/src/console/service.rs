@@ -999,7 +999,9 @@ pub async fn create_plan(
 }
 
 /// Edit a plan (PLN-1). Absent fields are left alone; a null limit is
-/// unlimited. The system plan is fixed, as the system console role is.
+/// unlimited. The system plan's limits and features are set here like any
+/// plan's, so they need no migration (D128); its name, which every new
+/// workspace shows, stays.
 pub async fn update_plan(
     pool: &PgPool,
     operator_id: &str,
@@ -1014,16 +1016,16 @@ pub async fn update_plan(
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)?;
-    if is_system {
-        return Err(AppError::validation([(
-            "plan",
-            "The system plan cannot be changed.",
-        )]));
-    }
     let before = console::find_plan(&mut *tx, id)
         .await
         .map_err(internal)?
         .ok_or(AppError::NotFound)?;
+    if is_system && name.is_some_and(|name| name.trim() != before.name) {
+        return Err(AppError::validation([(
+            "name",
+            "The system plan keeps its name.",
+        )]));
+    }
     let fields = console::PlanFields {
         name: plan_name(name.unwrap_or(&before.name))?,
         max_tokens_month: plan_limit(

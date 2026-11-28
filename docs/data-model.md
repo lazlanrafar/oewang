@@ -352,7 +352,7 @@ Migration `0025`, D128, PLN-1 and PLN-2. What a workspace may use. Not workspace
 | `name` | text | 1 to 60 characters, unique among live plans (case-insensitive) |
 | `max_tokens_month` | bigint | Nullable, at least 0. Input plus output tokens over a calendar month in UTC; null is unlimited |
 | `max_storage_bytes` | bigint | Nullable, at least 0. Stored vault bytes; null is unlimited |
-| `is_system` | boolean | Default false. `free` is the only system plan: never edited or deleted |
+| `is_system` | boolean | Default false. `free` is the only system plan: never renamed or deleted; its limits and features are set in the console |
 | `created_at`, `updated_at`, `deleted_at` | timestamptz | Soft delete only, and only while no workspace holds it (`PLAN_IN_USE`) |
 
 `plan_features`:

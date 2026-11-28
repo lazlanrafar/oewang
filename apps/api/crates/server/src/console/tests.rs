@@ -955,13 +955,35 @@ async fn should_manage_plans_and_assign_them(pool: PgPool) {
     );
     assert_eq!(edited.features, ["mcp"]);
 
-    // The system plan is neither changed nor deleted.
+    // The system plan keeps its name and is not deleted...
     let error = service::update_plan(&pool, USER, "free", Some("Gratis"), None, None, None)
         .await
         .unwrap_err();
-    assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+    assert!(
+        matches!(&error, AppError::Validation(fields) if fields.contains_key("name")),
+        "{error:?}"
+    );
     let error = service::delete_plan(&pool, USER, "free").await.unwrap_err();
     assert!(matches!(error, AppError::Validation(_)), "{error:?}");
+    // ...but its limits and features are set from the console (D128), its
+    // own name sent back unchanged included.
+    let free = service::update_plan(
+        &pool,
+        USER,
+        "free",
+        Some("Free"),
+        Some(Some(200_000)),
+        Some(Some(1_048_576)),
+        Some(&features(&["chat", "vault"])),
+    )
+    .await
+    .unwrap();
+    assert_eq!(free.name, "Free");
+    assert_eq!(
+        (free.max_tokens_month, free.max_storage_bytes),
+        (Some(200_000), Some(1_048_576))
+    );
+    assert_eq!(free.features, ["chat", "vault"]);
 
     // Every workspace starts on Free and the console shows it.
     let row = service::workspace(&pool, WORKSPACE)
@@ -1019,6 +1041,7 @@ async fn should_manage_plans_and_assign_them(pool: PgPool) {
         [
             ("plan.created".to_string(), plan.id.clone()),
             ("plan.updated".to_string(), plan.id.clone()),
+            ("plan.updated".to_string(), "free".to_string()),
             ("workspace.plan_changed".to_string(), GONE.to_string()),
             ("workspace.plan_changed".to_string(), GONE.to_string()),
             ("plan.deleted".to_string(), plan.id.clone()),

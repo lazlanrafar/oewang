@@ -14,7 +14,7 @@ A plan limits a workspace: AI tokens per calendar month, stored bytes, and which
 
 - Every workspace holds exactly one plan (`workspaces.plan_id`).
 - The system plan, Free, is held by every workspace given no other, new ones included, and cannot be deleted. It ships unlimited with every feature, so the deploy that starts enforcing blocks nobody (D128).
-- The system plan is also never edited, as the system console role `owner` is not ([console](console.md#operators-roles-and-permissions-csl-2-d125)): its name, limits and features change only with a migration. The console shows it read-only.
+- The system plan's limits and features are edited in the console like any plan's, because the rollout is Free unlimited first and limits set once real usage is seen, which must not need a migration (D128). Its name stays: it is the plan every new workspace holds, under the readable id `free`. Unlike the system console role, it is not fixed, because nothing depends on Free holding everything.
 - A plan a workspace holds is not deleted (`PLAN_IN_USE`). Plans are soft deleted.
 - A null limit is unlimited.
 - Tokens count input plus output over the calendar month in UTC, the same month as the [usage](usage.md) page.
@@ -33,11 +33,11 @@ Every route and screen needs `console.plans.manage`, which the seeded `owner` ro
 |---|---|
 | `GET /v1/console/plans` | Live plans with their features and how many workspaces hold each |
 | `POST /v1/console/plans` | Create. Audited `plan.created` |
-| `PATCH /v1/console/plans/{id}` | Edit; refused for the system plan. Audited `plan.updated` |
+| `PATCH /v1/console/plans/{id}` | Edit. The system plan's limits and features too; renaming it is refused. Audited `plan.updated` |
 | `DELETE /v1/console/plans/{id}` | Soft delete; refused for the system plan and with `PLAN_IN_USE` while any workspace, deleted ones included, holds it. Audited `plan.deleted` |
 | `PUT /v1/console/workspaces/{id}/plan` | Assign. Audited `workspace.plan_changed` with the workspace row before and after |
 
-The screen is `/console/plans`, in the System group of the sidebar: the standard list screen, with the name search in `?search=` and two empty states, none yet and none matching. A row opens the plan sheet: name, tokens a month and storage in MB, each empty for unlimited, and a checkbox per feature; a new plan starts with every feature ticked. The system plan opens read only and has no row menu. Deleting asks first. The workspaces table has a plan column, and the workspace sheet a plan picker for an operator with the permission.
+The screen is `/console/plans`, in the System group of the sidebar: the standard list screen, with the name search in `?search=` and two empty states, none yet and none matching. A row opens the plan sheet: name, tokens a month and storage in MB, each empty for unlimited, and a checkbox per feature; a new plan starts with every feature ticked. The system plan opens with its name read only and a line saying why; its row menu has Edit but no Delete. Deleting asks first. The workspaces table has a plan column, and the workspace sheet a plan picker for an operator with the permission.
 
 Bodies and answers are in [endpoints](../api/endpoints.md#console). A limit is a whole number from 0 to 9007199254740991, the largest a JavaScript number holds exactly, or null for unlimited. Each change writes its `operator_audit` row in the same transaction (CSL-14). Deleted workspaces count as holders because restoring one must find its plan; the console assigns a plan to a deleted workspace for that reason.
 
