@@ -805,3 +805,62 @@ async fn should_narrow_users_to_who_can_become_an_operator(pool: PgPool) {
         .unwrap();
     assert_eq!(read.action, "user.disabled");
 }
+
+// ------------------------------------------------------------------ plans
+
+/// PLN-2, D128: a new workspace holds Free, unlimited with every feature;
+/// a deleted one has no live plan to read.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_give_a_new_workspace_the_unlimited_free_plan(pool: PgPool) {
+    use oewang_db::repositories::{accounts, plans};
+    use oewang_domain::Feature;
+
+    accounts::insert_workspace(&pool, "ws_new", "New", "new", "IDR")
+        .await
+        .unwrap();
+    let plan = plans::workspace_plan(&pool, "ws_new")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!((plan.plan_id.as_str(), plan.name.as_str()), ("free", "Free"));
+    assert_eq!((plan.max_tokens_month, plan.max_storage_bytes), (None, None));
+    let mut features = plan.features.clone();
+    features.sort();
+    assert_eq!(features, Feature::ALL.to_vec());
+
+    // Usable inside a transaction as well as with the pool.
+    let mut tx = pool.begin().await.unwrap();
+    assert_eq!(
+        plans::workspace_plan(&mut *tx, "ws_new").await.unwrap(),
+        Some(plan)
+    );
+    tx.commit().await.unwrap();
+
+    sqlx::query("UPDATE workspaces SET deleted_at = now() WHERE id = 'ws_new'")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(plans::workspace_plan(&pool, "ws_new").await.unwrap(), None);
+    assert_eq!(plans::workspace_plan(&pool, "ws_nobody").await.unwrap(), None);
+}
+
+/// D128: the database CHECK and the domain enum list the same features.
+#[sqlx::test(migrations = "../../migrations")]
+async fn should_keep_the_feature_check_and_the_enum_in_step(pool: PgPool) {
+    sqlx::query("INSERT INTO plans (id, name) VALUES ('probe', 'Probe')")
+        .execute(&pool)
+        .await
+        .unwrap();
+    for feature in oewang_domain::Feature::ALL {
+        sqlx::query("INSERT INTO plan_features (plan_id, feature) VALUES ('probe', $1)")
+            .bind(feature.key())
+            .execute(&pool)
+            .await
+            .unwrap_or_else(|error| panic!("{}: {error}", feature.key()));
+    }
+    let unknown =
+        sqlx::query("INSERT INTO plan_features (plan_id, feature) VALUES ('probe', 'invoices')")
+            .execute(&pool)
+            .await;
+    assert!(unknown.is_err());
+}

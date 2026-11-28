@@ -2,8 +2,8 @@
 //!
 //! Roles are rows an owner edits; permissions are this list. A permission
 //! means something only because a route checks it, so the list is code, and
-//! the `CHECK` on `console_role_permissions.permission` in migration 0022
-//! holds the same keys.
+//! the `CHECK` on `console_role_permissions.permission` (migration 0022,
+//! widened in 0025) holds the same keys.
 
 use serde::{Serialize, Serializer};
 
@@ -18,10 +18,12 @@ pub enum ConsolePermission {
     OperatorsManage,
     RolesManage,
     AuditRead,
+    /// Plans and which plan a workspace holds (PLN-1, PLN-3, D128).
+    PlansManage,
 }
 
 impl ConsolePermission {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Read,
         Self::FeedbackWrite,
         Self::UsersDisable,
@@ -30,6 +32,7 @@ impl ConsolePermission {
         Self::OperatorsManage,
         Self::RolesManage,
         Self::AuditRead,
+        Self::PlansManage,
     ];
 
     /// The stable key, stored in the database and sent to the app.
@@ -43,6 +46,7 @@ impl ConsolePermission {
             Self::OperatorsManage => "console.operators.manage",
             Self::RolesManage => "console.roles.manage",
             Self::AuditRead => "console.audit.read",
+            Self::PlansManage => "console.plans.manage",
         }
     }
 

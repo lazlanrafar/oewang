@@ -17,6 +17,7 @@ pub mod ledger;
 pub mod money;
 pub mod owe1;
 pub mod passkeys;
+pub mod plan;
 pub mod receipt;
 pub mod secret;
 pub mod spreadsheet;
@@ -25,6 +26,7 @@ pub mod wallet_totals;
 
 pub use auth::Role;
 pub use console::ConsolePermission;
+pub use plan::Feature;
 pub use envelope::{Envelope, Meta, Page, PageMeta};
 pub use error::{AppError, ErrorBody, FieldErrors};
 pub use money::{
