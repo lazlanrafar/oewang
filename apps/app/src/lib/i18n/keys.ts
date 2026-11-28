@@ -1409,6 +1409,8 @@ export type TranslationKey =
 	| 'txn.item_amount'
 	| 'txn.item_amount_hint'
 	| 'txn.item_category'
+	| 'txn.item_column_category'
+	| 'txn.item_column_name'
 	| 'txn.item_no_category'
 	| 'txn.item_saved'
 	| 'txn.items_categorised'
