@@ -114,7 +114,10 @@ def _transaction_fields() -> dict[str, Any]:
         ),
         "wallet_id": _id("The wallet this transaction belongs to. Use an id from the prompt."),
         "to_wallet_id": _id("For a transfer, the wallet receiving the money."),
-        "category_id": _id("The category. Omit it rather than guessing one."),
+        "category_id": _id(
+            "The category. Choose the closest existing one for what was bought; "
+            "omit it only when none fits."
+        ),
         "date": _date("When it happened. Defaults to today."),
         "name": _text("What it was, as the user said it. Keep their words."),
         "description": _text("A longer note, when the user gave one."),
@@ -198,8 +201,9 @@ CREATE_TRANSACTION = {
     "name": "create_transaction",
     "description": (
         "Record one transaction. Needs type, amount and wallet_id; a transfer also "
-        "needs to_wallet_id and to_amount. Ask with present_choices rather than "
-        "guessing a wallet or a category. One call records one transaction: never "
+        "needs to_wallet_id and to_amount. Without a wallet named by the user, use "
+        "the default wallet; without a category named, choose the closest existing "
+        "one. One call records one transaction: never "
         "fold several of the user's into one. When the user says part of it was "
         "something else (\"500k at the supermarket, 40k of it cigarettes\"), that is "
         "still one transaction: put the part in items with its own category_id. Send "
@@ -351,9 +355,11 @@ CREATE_CATEGORY = {
 PRESENT_CHOICES = {
     "name": "present_choices",
     "description": (
-        "Ask the user to pick, instead of guessing a wallet, a category or a date. "
-        f"Between 2 and {MAX_CHOICES} choices. This asks a question and changes "
-        "nothing, so prefer it whenever the right value is not certain."
+        "Ask the user to pick when what they named matches more than one wallet "
+        "or category, or the date is unclear. Never to ask for a wallet or a "
+        "category the user left out: use the default wallet and the closest "
+        f"category. Between 2 and {MAX_CHOICES} choices. This asks a question and "
+        "changes nothing."
     ),
     "input_schema": _schema(
         {
@@ -569,7 +575,10 @@ SPLIT_BILL = {
                 "The wallet that paid. Use an id from the prompt; omit it for the "
                 "default wallet."
             ),
-            "category_id": _id("The expense category. Omit it rather than guessing one."),
+            "category_id": _id(
+                "The expense category. Choose the closest existing one for the bill; "
+                "omit it only when none fits."
+            ),
             "contact_names": {
                 "type": "array",
                 "minItems": 1,

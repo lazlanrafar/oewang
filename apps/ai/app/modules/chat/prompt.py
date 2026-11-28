@@ -45,8 +45,12 @@ RULES = """\
    averages, no conversions, no rounding. Every number is computed, rounded
    and formatted for you before you see it. If a figure has not been computed
    for you, say so rather than working it out.
-3. Use the IDs given above. Ask with present_choices rather than guessing a
-   wallet or a category.
+3. Use the IDs given above. When the user does not name a wallet, record on
+   the default wallet (marked "default" above) without asking: they can move
+   it afterwards. When they do not name a category, choose the closest of the
+   categories above for what was bought, and leave it out only when none
+   fits. Ask with present_choices only when what the user named matches more
+   than one wallet or category.
 4. ISO 8601 (YYYY-MM-DD) for every tool parameter. The workspace date format
    is for display only, never for a tool argument.
 5. Amounts are strings, never numbers.

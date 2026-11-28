@@ -203,7 +203,7 @@ Assembled per turn, in this order:
 3. **Accounts and categories.** The workspace's wallets with balances, and categories by type. This is the block that makes `get_workspace_context` rarely necessary (CHAT-7).
 4. **Rules.** In this order, because the first one is the one that matters:
    - **Never invent or guess a number, amount, date, name or ID.** Every figure comes from a tool result.
-   - Use the IDs given. Ask with `present_choices` rather than guessing a wallet or a category.
+   - Use the IDs given. Without a wallet named, record on the default wallet without asking; without a category named, choose the closest existing one and leave it out only when none fits. Ask with `present_choices` only when what the user named matches more than one wallet or category. Asking for a wallet the user left out was dropped on the owner's request (2026-11-28): the default exists for exactly this, and a wrong pick is one message to fix.
    - **ISO 8601 for every tool parameter.** The workspace date format is for display only, never for a tool argument.
    - Amounts are strings, never numbers.
    - Three or more items render as a Markdown table. One or two render as bullets.
